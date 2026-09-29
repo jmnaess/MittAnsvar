@@ -131,14 +131,39 @@ Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke 
 | Rense sluk 3 mnd etter sist | interval, month, every 3 |
 | Bytte batteri i røykvarsler | calendar, year, every 1, month 12, month_day 1 |
 
-**Beregning av neste frist.** Den skjer i en ren TypeScript-funksjon, `computeNextDue(task, completedOn)` i `src/features/tasks/recurrence.ts`, med enhetstester:
+**Beregning av neste frist** skjer i databasen, i `private.compute_next_due(p_task public.tasks, p_completed_on date) returns date`. Funksjonen er `language plpgsql immutable` og ligger i schemaet `private`, som ikke eksponeres i API-et:
 - `once`: gir `null` (oppgaven er ferdig).
-- `interval`: `completedOn + every × unit`. Det er fra *faktisk utført*, uavhengig av fristen.
-- `calendar`: første forekomst i mønsteret som er **etter** `max(next_due_on, completedOn)`.
+- `interval`: `completed_on + every × unit`. Det er fra *faktisk utført*, uavhengig av fristen. Månedsregning følger Postgres: 31. januar + 1 måned = 28. (eller 29.) februar.
+- `calendar`: første forekomst i mønsteret som er **etter** `max(next_due_on, completed_on)`.
   - Gjort tidlig (lørdag, frist søndag): neste frist blir søndagen etter.
   - Gjort sent (mandag): neste frist blir førstkommende søndag. Tapte forekomster hoper seg ikke opp.
 
-`next_due_on` lagres på oppgaven. Da blir «I dag» og årshjulet enkle spørringer (`next_due_on <= today`). Årshjulet viser i tillegg forekomster fremover i 12 måneder, beregnet med den samme funksjonen.
+Hvorfor i databasen? Regelen finnes ett sted, klienten kan ikke sende en feil frist, og `completed_on` settes uansett av serveren. Funksjonen leser ingen tabeller, så den er lett å teste. Den implementeres som en enkel løkke som går dag for dag til mønsteret treffer. Det er lesbart og raskt nok for MVP.
+
+**pgTAP-tester** (`supabase/tests/compute_next_due.test.sql`), minimum:
+
+| # | Oppgave | Frist | Utført | Forventet neste frist |
+|---|---------|-------|--------|-----------------------|
+| 1 | Engangsoppgave | 2026-10-04 | 2026-10-04 | `null` |
+| 2 | Hver søndag | søn 2026-10-04 | søn 2026-10-04 | 2026-10-11 |
+| 3 | Hver søndag, gjort tidlig | søn 2026-10-04 | lør 2026-10-03 | 2026-10-11 |
+| 4 | Hver søndag, gjort sent | søn 2026-10-04 | man 2026-10-05 | 2026-10-11 |
+| 5 | Man og tors | man 2026-10-05 | man 2026-10-05 | tors 2026-10-08 |
+| 6 | Annenhver lørdag, `anchor_on` 2026-10-03 | lør 2026-10-03 | lør 2026-10-03 | 2026-10-17 |
+| 7 | Den 20. hver måned | 2026-10-20 | 2026-10-20 | 2026-11-20 |
+| 8 | Den 31. hver måned | 2026-10-31 | 2026-10-31 | 2026-11-30 |
+| 9 | Den 31. hver måned, skuddår | 2028-01-31 | 2028-01-31 | 2028-02-29 |
+| 10 | I oktober hvert år (`month_day` null) | 2026-10-01 | 2026-10-15 | 2027-10-01 |
+| 11 | 3 mnd etter sist utført | 2026-10-01 | 2026-10-10 | 2027-01-10 |
+| 12 | 1 mnd etter sist utført | 2027-01-31 | 2027-01-31 | 2027-02-28 |
+
+`next_due_on` lagres på oppgaven. Da blir «I dag» enkel (`next_due_on <= today`).
+
+**Årshjulet** henter fremtidige forekomster med RPC-en `get_upcoming_occurrences(p_household_id uuid, p_from date, p_to date) returns table (task_id uuid, due_on date)`:
+- Starter på `next_due_on` for hver aktiv oppgave og kaller `compute_next_due` gjentatte ganger, som om hver forekomst blir utført på fristen.
+- Tar bare med oppgaver med enhet `month` eller `year`, pluss engangsoppgaver. Daglige og ukentlige rutiner hører til «I dag» og ville druknet årshjulet.
+- Maks 12 måneder (`p_to - p_from <= 366`), ellers feil.
+- Er `stable` og `security invoker`. RLS på `tasks` gjelder dermed som vanlig, og funksjonen trenger ingen egne tilgangssjekker.
 
 **Hvorfor ikke RRULE (iCal)?** Det er kraftig, men vanskelig å validere og vise i UI. De sju kolonnene dekker alle behovene i MVP og kan konverteres til RRULE senere.
 
@@ -155,7 +180,7 @@ Hver avkrysning blir en ny rad. Tabellen er append-only: raden oppdateres aldri,
 | task_id | uuid not null → tasks on delete cascade | |
 | completed_by_member_id | uuid not null → members **on delete cascade** | hvem som gjorde det. Slettes med barneprofilen (GDPR) |
 | recorded_by | uuid null → auth.users on delete set null | hvilken innlogget bruker som registrerte (i kiosk: den voksne) |
-| completed_on | date not null | lokal dato i husstandens tidssone |
+| completed_on | date not null | lokal dato i husstandens tidssone, **settes av serveren** |
 | completed_at | timestamptz not null default now() | |
 | due_on | date null | fristen denne avkrysningen dekket. Brukes til «i tide?» og til angring |
 | feedback_message_id | uuid null → feedback_messages on delete set null | hvilken tekst som ble vist, for å unngå gjentakelser |
@@ -164,11 +189,12 @@ Indekser: `(task_id, completed_at desc)` og `(household_id, completed_on)`.
 
 **Skriving skjer bare via RPC** (`security definer`, `set search_path = ''`):
 
-- `complete_task(p_task_id, p_member_id, p_next_due_on) returns uuid`
+- `complete_task(p_task_id, p_member_id) returns uuid`
   1. Kalleren er medlem av oppgavens husstand, og oppgaven er ikke arkivert.
   2. `private.household_has_access(household_id)`, ellers feil `subscription_required`.
   3. `p_member_id` hører til samme husstand. Er kalleren et barn, må `p_member_id` være kallerens eget medlem.
-  4. Setter inn raden (`due_on` = oppgavens nåværende `next_due_on`) og setter `tasks.next_due_on = p_next_due_on`. Alt skjer i én transaksjon.
+  4. `completed_on = (now() at time zone households.timezone)::date`. Klienten sender verken dato eller frist.
+  5. Setter inn raden (`due_on` = oppgavens nåværende `next_due_on`) og setter `tasks.next_due_on = private.compute_next_due(oppgaven, completed_on)`. Alt skjer i én transaksjon.
 - `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som krysset av, innen 10 minutter. Raden slettes, og `tasks.next_due_on` settes tilbake til `due_on`.
 
 **Historikkspørringer** (vanlig select, ingen egne tabeller):
@@ -277,7 +303,7 @@ grant update (name, type, housing_type, feedback_tone) on public.households to a
 ```
 
 ### RPC-oversikt
-Alle RPC-er er `security definer` og `set search_path = ''`. `execute` er revoked fra `anon` og `public` og granted til `authenticated`.
+Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences`, som bare leser og kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`.
 
 | Funksjon | Hvem | Gjør |
 |----------|------|------|
@@ -285,7 +311,8 @@ Alle RPC-er er `security definer` og `set search_path = ''`. `execute` er revoke
 | `create_link_token(kind, member_id)` | voksen | returnerer råtoken, lagrer hash |
 | `redeem_link_token(token, display_name?, avatar?)` | innlogget (anonym for `child`, e-post for `adult`) | kobler `auth_user_id` eller oppretter voksen-member |
 | `unlink_member_device(member_id)` | voksen | `auth_user_id = null` på barnet |
-| `complete_task(...)` / `undo_completion(...)` | medlem (se §3) | |
+| `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | |
+| `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
 
 ### RLS-tester (pgTAP, `supabase/tests/`)
@@ -296,3 +323,6 @@ Minimum før lansering:
 4. En anonym bruker uten medlemskap ser ingenting.
 5. Ingen klient kan endre `auth_user_id` eller `trial_ends_at`.
 6. `link_tokens` kan ikke leses direkte. Et utløpt eller brukt token avvises.
+7. `get_upcoming_occurrences` med en annen husstands ID gir tomt resultat.
+
+Tester for `compute_next_due`: se §2.

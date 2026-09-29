@@ -1,6 +1,6 @@
 # MittAnsvar – arkitektur og analyse
 
-Status: forslag før koding. Datamodell og RLS i detalj: se [DATABASE.md](DATABASE.md).
+Status: planlagt, beslutningene er tatt (se §7). Datamodell og RLS i detalj: se [DATABASE.md](DATABASE.md).
 
 ---
 
@@ -19,7 +19,7 @@ Status: forslag før koding. Datamodell og RLS i detalj: se [DATABASE.md](DATABA
 | 7 | Når abonnementet utløper | Blir data slettet, låst eller skrivebeskyttet? | Skrivebeskyttet: alt kan leses, men ingen kan krysse av. Ingen data slettes. |
 | 8 | Roller blant voksne | Er alle voksne like, eller finnes en «eier»? Hva skjer ved samlivsbrudd? | Alle voksne er like i MVP. Husstanden slettes når siste voksne forlater den. |
 | 9 | Hva barn kan gjøre | Kan barn se andres oppgaver? Krysse av for andre? Lage oppgaver? | Barn ser hele husstandens liste, men kan bare krysse av for seg selv. De kan ikke redigere. |
-| 10 | Tilbakemeldingstekster | De må passe både for barn og voksne, og det trengs mange nok til at de ikke gjentas. Det er skrivearbeid. | Tekstene får målgruppe (barn/voksen/alle). Start med 100–150 tekster. Fakta om sikkerhet (røykvarsler, el) må kvalitetssikres. |
+| 10 | Tilbakemeldingstekster | De må passe både for barn og voksne, og det trengs mange nok til at de ikke gjentas. Det er skrivearbeid. | Tekstene får målgruppe (barn/voksen/alle). 80–100 tekster til lansering (se §7). Fakta om sikkerhet (røykvarsler, el) må kvalitetssikres. |
 | 11 | Innhold i årshjulet | Råd om el, brann og fukt kan gi ansvar hvis de er feil. | Korte, generelle tekster med henvisning til en fagperson. Lenk til offentlige kilder, f.eks. DSB. |
 | 12 | Butikkregler | Apple krever sletting av konto i appen. De krever også «Logg inn med Apple» hvis Google-innlogging tilbys. | MVP: e-post med engangskode. Sletting i appen fra dag én. |
 | 13 | Butikkavgift | 39 kr gir omtrent 33 kr etter Apple/Googles andel (15 % for små utviklere). | Meld deg på Small Business Program hos Apple og tilsvarende hos Google. |
@@ -27,7 +27,7 @@ Status: forslag før koding. Datamodell og RLS i detalj: se [DATABASE.md](DATABA
 **Tekniske risikoer**
 - **Expo Go-begrensning.** RevenueCat (ekte kjøp) og fjern-push krever en *development build* med EAS, ikke Expo Go. Derfor kommer betaling sent i rekkefølgen. Alt annet kan testes i Expo Go.
 - **Magic link.** Innlogging via e-postlenke er knotete med dyplenker i Expo Go. Bruk heller en 6-sifret engangskode (OTP) på e-post.
-- **Tidssoner.** Frister lagres som `date` i husstandens tidssone (`Europe/Oslo`), ikke som tidspunkt. Da slipper vi feil rundt midnatt og sommertid.
+- **Tidssoner.** Frister lagres som `date` i husstandens tidssone (`Europe/Oslo`), ikke som tidspunkt. Da slipper vi feil rundt midnatt og sommertid. Serveren setter utførelsesdatoen og beregner neste frist i husstandens tidssone, så klokken på mobilen spiller ingen rolle.
 
 ---
 
@@ -52,7 +52,7 @@ Status: forslag før koding. Datamodell og RLS i detalj: se [DATABASE.md](DATABA
 - **Operasjoner som endrer flere tabeller, går gjennom én RPC-funksjon** (`create_household`, `complete_task`, `redeem_link_token`). Da blir de atomiske, og reglene ligger på ett sted.
 - **Edge Functions bare når vi trenger hemmeligheter eller admin-rettigheter:** RevenueCat-webhook og sletting av brukere i `auth.users`.
 - **Ingen global state-manager.** TanStack Query holder serverdata. Lokal UI-tilstand holdes med `useState`.
-- **Gjentakelseslogikken er en ren TypeScript-funksjon med enhetstester** (`computeNextDue`). Den er lett å teste og lett for AI å endre trygt.
+- **Gjentakelseslogikken ligger i databasen** (`private.compute_next_due`, SQL med pgTAP-tester). `complete_task` beregner neste frist selv, og årshjulet henter fremtidige forekomster via RPC. Regelen finnes ett sted, og klienten kan ikke sende en feil frist.
 - **Supabase CLI med migrasjoner i git.** Ingen endringer via Dashboard. Typer genereres med `supabase gen types`.
 
 **Mappestruktur**
@@ -78,7 +78,7 @@ src/
   features/
     auth/         api.ts, hooks.ts
     household/    api.ts, hooks.ts, components/
-    tasks/        api.ts, hooks.ts, recurrence.ts, recurrence.test.ts, components/
+    tasks/        api.ts, hooks.ts, components/
     completions/  api.ts, hooks.ts
     templates/    api.ts, suggest.ts, suggest.test.ts
     feedback/     pickFeedback.ts, components/FeedbackToast.tsx
@@ -94,6 +94,7 @@ supabase/
   functions/delete-account/
   seed/templates.sql, seed/feedback.sql
   tests/rls.test.sql              # pgTAP: RLS-tester
+  tests/compute_next_due.test.sql # pgTAP: gjentakelse
 docs/
 ```
 
@@ -186,7 +187,7 @@ Samme token-mekanisme brukes til å **invitere voksen nummer to** (`kind = 'adul
 
 ## 6. Implementeringsrekkefølge
 
-Hvert steg tar 1–3 timer og kan testes på mobil før neste starter.
+Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–10 timer i uka blir det omtrent ett steg per uke.
 
 | # | Steg | Ferdig når |
 |---|------|------------|
@@ -195,34 +196,75 @@ Hvert steg tar 1–3 timer og kan testes på mobil før neste starter.
 | 3 | Innlogging med e-postkode, sesjon i SecureStore | Kan logge inn og ut |
 | 4 | Oppstart: `create_household` (type, bolig, navn), legg til barneprofiler | Husstand og barn synes i appen |
 | 5 | `tasks`: opprett, rediger, arkiver (uten gjentakelse), «I dag»-liste | Oppgaver kan lages og listes |
-| 6 | `task_completions` + `complete_task` + historikk per oppgave | Avkrysning lagres som historikk |
-| 7 | `computeNextDue` i TS med tester, begge gjentakelsesmodusene i UI | Testene grønne, fristen flyttes riktig |
-| 8 | Maler: tabell og seed, forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
-| 9 | Årshjul-visning (oppgaver gruppert per måned) | 12 måneder vises med oppgaver |
-| 10 | Tilbakemeldingstekster: tabell, seed, valg av tone, visning etter avkrysning | Tekst vises etter avkrysning |
-| 11 | Lokale påminnelser for egne oppgaver | Varsel kommer på forfallsdagen |
-| 12 | Invitere voksen nr. 2 (link-token, `kind = 'adult'`) | To voksne deler husstand |
-| 13 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
-| 14 | QR-kobling av barnets enhet (anonym auth, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
-| 15 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
-| 16 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
-| 17 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |
+| 6 | `task_completions` + `complete_task` (serveren setter `completed_on`) + historikk per oppgave | Avkrysning lagres som historikk |
+| 7 | `private.compute_next_due` i SQL med pgTAP-tester, brukt av `complete_task`. Begge gjentakelsesmodusene i UI | Testene grønne, fristen flyttes riktig |
+| 8 | Egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
+| 9 | Maler: tabell og seed, forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
+| 10 | Årshjul-visning: RPC `get_upcoming_occurrences`, gruppert per måned | 12 måneder vises med oppgaver |
+| 11 | Tilbakemeldingstekster: tabell, seed, valg av tone, visning etter avkrysning | Tekst vises etter avkrysning |
+| 12 | Lokale påminnelser for egne oppgaver | Varsel kommer på forfallsdagen |
+| 13 | Invitere voksen nr. 2 (link-token, `kind = 'adult'`) | To voksne deler husstand |
+| 14 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
+| 15 | QR-kobling av barnets enhet (anonym auth, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
+| 16 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
+| 17 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
+| 18 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |
 
 ---
 
-## 7. Åpne spørsmål du må ta stilling til
+## 7. Beslutninger
 
-Mitt forslag står i parentes. Svarene påvirker datamodellen, så ta dem helst før steg 2.
+Tatt 29.09.2026. Alle forslagene fra analysen i §1 er godkjent.
 
-1. **Boligtype ved oppstart?** (Ja: leilighet, rekkehus, enebolig.)
-2. **Tildeling:** én ansvarlig eller «hvem som helst» i MVP, uten rundgang? (Ja.)
-3. **Glemt kalenderoppgave:** én forfalt forekomst som ikke hoper seg opp? (Ja.)
-4. **Prøvetid i appen uten kort, eller butikkens prøvetid med kort?** (I appen.)
-5. **Etter utløpt abonnement:** skrivebeskyttet, eller helt låst? (Skrivebeskyttet.)
-6. **Er alle voksne like, uten «eier»?** (Ja.)
-7. **Barn med enhet:** skal de se hele husstandens oppgaver eller bare sine egne? (Hele, men bare krysse av egne.)
-8. **Påminnelser i MVP?** (Ja, lokale varsler.)
-9. **Innlogging:** bare e-postkode i MVP, med Apple og Google senere? (Ja.)
-10. **Tone per husstand, eller per medlem** (humor for barn, fakta for voksne)? (Per husstand, som bestemt, men tekstene får målgruppe.)
-11. **Hvem skriver og kvalitetssikrer maler og tilbakemeldingstekster?** AI-utkast + din gjennomgang? Hvor mange trengs til lansering?
-12. **Delt omsorg:** er «én husstand per bruker» godt nok for lansering? (Ja.)
+1. **Boligtype ved oppstart:** ja – leilighet, rekkehus eller enebolig.
+2. **Tildeling:** én ansvarlig eller «hvem som helst». Ingen rundgang i MVP.
+3. **Glemt kalenderoppgave:** én forfalt forekomst vises til den er utført. Ingen opphopning.
+4. **Prøvetid:** i appen, uten kort.
+5. **Etter utløpt abonnement:** skrivebeskyttet. Ingen data slettes.
+6. **Voksne:** alle er like, ingen «eier».
+7. **Barn med enhet:** ser hele husstandens oppgaver, men krysser bare av egne.
+8. **Påminnelser:** lokale varsler i MVP.
+9. **Innlogging:** bare e-postkode i MVP. Apple og Google kommer senere.
+10. **Tone:** velges per husstand. Tekstene har målgruppe (barn, voksen eller alle).
+11. **Innhold:** AI lager utkast, og utvikleren går gjennom alt manuelt. Til lansering: **40–60 maler** og **80–100 tilbakemeldingstekster**. Sikkerhetsfakta (røykvarsler, el) sjekkes mot offentlige kilder.
+12. **Delt omsorg:** én husstand per bruker holder til lansering.
+13. **Neste frist beregnes i databasen**, ikke i klienten. `complete_task` tar ikke imot frist eller dato. Se [DATABASE.md §2](DATABASE.md#2-gjentakelse-fast-kalender-og-intervall).
+
+---
+
+## 8. Måling uten analyseverktøy
+
+Vi har ingen analyse-SDK (se §5). Det viktigste spørsmålet – *bruker husstandene appen etter oppstart?* – kan likevel besvares med tall vi allerede har: `households.created_at` og `task_completions.completed_on`.
+
+Spørringen under viser hvor mange husstander som krysset av minst én oppgave i uke 1, 2 og 4 etter oppstart. Uke 1 er dag 0–6 regnet fra opprettelsesdatoen, uke 2 er dag 7–13 og uke 4 er dag 21–27. En husstand telles bare med for en uke når hele uken er over, ellers blir prosenten for lav.
+
+```sql
+-- Kjøres i Supabase SQL Editor. Gir bare antall, ingen navn eller oppgavetekster.
+with h as (
+  select id,
+         (created_at at time zone timezone)::date as start_on,
+         (now()      at time zone timezone)::date as today
+  from public.households
+),
+activity as (
+  select distinct c.household_id,
+         (c.completed_on - h.start_on) / 7 + 1 as week_no   -- dag 0–6 = uke 1
+  from public.task_completions c
+  join h on h.id = c.household_id
+)
+select w.week_no                                                 as uke,
+       count(*)                                                  as husstander,
+       count(a.household_id)                                     as aktive,
+       round(100.0 * count(a.household_id) / nullif(count(*), 0)) as prosent
+from h
+cross join (values (1), (2), (4)) as w(week_no)
+left join activity a on a.household_id = h.id and a.week_no = w.week_no
+where h.today >= h.start_on + w.week_no * 7   -- bare husstander der uken er over
+group by w.week_no
+order by w.week_no;
+```
+
+Merk:
+- Egne testhusstander bør filtreres bort, f.eks. med `and h.id not in (...)` i `where`.
+- Slettede husstander forsvinner (`on delete cascade`), så tallene gjelder bare husstander som fortsatt finnes.
+- En angret avkrysning slettes og teller ikke.

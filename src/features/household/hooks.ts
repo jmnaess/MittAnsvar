@@ -9,6 +9,7 @@ import {
   listActiveInvites,
   listMembers,
   revokeInvite,
+  setMyAvatar,
   updateChild,
   updateHousehold,
 } from './api';
@@ -26,11 +27,21 @@ export function useMyHousehold() {
   return useQuery({ queryKey: householdKeys.mine, queryFn: getMyHousehold });
 }
 
-export function useMembers(householdId: string | undefined) {
+/**
+ * pollUntil: hent på nytt hvert 3. sekund til funksjonen gir true (brukes mens QR-koden for
+ * barnets enhet vises, så skjermen ser når barnet har koblet til).
+ */
+export function useMembers(
+  householdId: string | undefined,
+  { pollUntil }: { pollUntil?: (members: Member[]) => boolean } = {},
+) {
   return useQuery({
     queryKey: householdKeys.members(householdId ?? ''),
     queryFn: () => listMembers(householdId!),
     enabled: !!householdId,
+    refetchInterval: pollUntil
+      ? (query) => (query.state.data && pollUntil(query.state.data) ? false : 3000)
+      : undefined,
   });
 }
 
@@ -75,6 +86,11 @@ export function useUpdateChild(householdId: string) {
       updateChild(memberId, child),
     onSuccess,
   });
+}
+
+export function useSetMyAvatar(householdId: string) {
+  const onSuccess = useInvalidateMembers(householdId);
+  return useMutation({ mutationFn: setMyAvatar, onSuccess });
 }
 
 export function useDeleteChild(householdId: string) {

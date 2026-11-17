@@ -15,7 +15,7 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
     │  │           └──* payouts                          └──0..1 task_templates
     │  └──1 household_subscriptions
     ├──* invites                      feedback_messages (global, les-bare)
-    └──* link_tokens                  invite_attempts (per auth-bruker, stengt)
+    └──* link_tokens                  invite_attempts, link_attempts (per auth-bruker, stengt)
 
 View: today_tasks (tasks), member_balances (members + task_completions + payouts)
 ```
@@ -52,12 +52,13 @@ View: today_tasks (tasks), member_balances (members + task_completions + payouts
 | display_name | text not null | 1–30 tegn, fornavn/kallenavn |
 | avatar | text not null | nøkkel til innebygd illustrasjon, f.eks. `fox` |
 | birth_year | smallint null | bare for barn, brukes til alderstilpassede forslag |
-| auth_user_id | uuid null **unique** → auth.users on delete set null | voksen: e-postbruker; barn: anonym bruker på egen enhet, ellers null |
+| auth_user_id | uuid null **unique** → auth.users on delete set null | voksen: e-postbruker; barn: anonym bruker på egen enhet (steg 10a), ellers null. Ett barn har høyst én enhet |
 | created_at | timestamptz not null default now() | |
 
 - Check: `role = 'adult'` ⇒ `birth_year is null`.
 - `unique(auth_user_id)` betyr én husstand per bruker i MVP. Fjernes constrainten senere, tillates flere husstander.
 - `on delete set null` (ikke cascade): hvis barnets anonyme bruker slettes, skal barneprofilen bestå. `delete-account` sletter den voksnes `members`-rad eksplisitt.
+- Barnets anonyme bruker slettes ved frakobling (`unlink_member_device`) og når husstanden slettes (`delete_my_account_data`). Begge bruker `private.delete_anonymous_users`, som bare sletter brukere med `is_anonymous`.
 
 ### `invites` (invitasjon av voksen, steg 6)
 | Kolonne | Type | Merknad |
@@ -85,16 +86,24 @@ View: today_tasks (tasks), member_balances (members + task_completions + payouts
 
 Ett feilet `accept_invite`-forsøk = én rad. 5 rader nyere enn 15 minutter gir `too_many_attempts`. Eldre rader slettes av `accept_invite`. Ingen rettigheter og ingen policyer: helt stengt for klienten.
 
-### `link_tokens` (QR for barneenhet, steg 16)
+### `link_tokens` (kode for barnets enhet, steg 10a)
 | Kolonne | Type | Merknad |
 |---------|------|---------|
 | id | uuid pk | |
 | household_id | uuid not null → households on delete cascade | |
 | member_id | uuid not null → members on delete cascade | barnet som skal kobles |
-| token_hash | bytea not null unique | SHA-256 av tokenet, råverdien lagres aldri |
+| code_hash | bytea not null unique | SHA-256 av den normaliserte koden. Klarteksten lagres aldri |
 | created_by | uuid not null → members on delete cascade | |
+| created_at | timestamptz not null default now() | |
 | expires_at | timestamptz not null | now() + 10 min |
 | used_at | timestamptz null | engangsbruk |
+
+- **Én kort kode** på 8 tegn, samme alfabet, generator og normalisering som `invites` (`private.generate_invite_code`, `private.hash_invite_code`). QR-koden inneholder den samme koden (`mittansvar://link?code=ABCDEFGH`), så skann og inntasting er samme vei. Planen var et token på 32 byte i QR-koden. Det ble endret i steg 10, fordi en kort kode som også kan tastes inn, er trygg nok når den bare gjelder i 10 minutter og har sperre mot gjetting.
+- Bare den nyeste koden per barn gjelder: `create_link_token` sletter barnets ubrukte koder.
+- Helt stengt for klienten (ingen rettigheter, ingen policyer).
+
+### `link_attempts` (sperre mot gjetting av koden)
+Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader nyere enn 15 minutter gir `too_many_attempts`. Helt stengt for klienten. Anonyme innlogginger er i tillegg begrenset per IP i Supabase Auth (standard 30 per time).
 
 ### `tasks`
 | Kolonne | Type | Merknad |
@@ -138,7 +147,7 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 
 Indeks `(household_id, member_id, paid_at desc)`. Skrives bare via RPC-en `record_payout` (se §5).
 
-**View `member_balances`** (`security_invoker = true`): én rad per barn med `member_id`, `household_id`, `earned_nok` (sum av `task_completions.reward_nok`), `paid_nok` (sum av `payouts.amount_nok`) og `balance_nok = earned_nok − paid_nok`. Saldoen lagres ikke, så den kan aldri komme ut av takt med historikken. RLS på de underliggende tabellene gjelder.
+**View `member_balances`** (`security_invoker = true`): én rad per barn (et barn ser bare sin egen rad, steg 10a) med `member_id`, `household_id`, `earned_nok` (sum av `task_completions.reward_nok`), `paid_nok` (sum av `payouts.amount_nok`) og `balance_nok = earned_nok − paid_nok`. Saldoen lagres ikke, så den kan aldri komme ut av takt med historikken. RLS på de underliggende tabellene gjelder.
 
 Kjent kanttilfelle: en utbetaling, og så en angring innen 10 minutter, kan gi negativ saldo. Det godtas.
 
@@ -198,7 +207,7 @@ En jobb er en oppgave **uten dato**. Den minste endringen var én ny enum-verdi 
 - **Engangsjobb** (`job_repeats = false`): `complete_task` setter `archived_at`, og `undo_completion` fjerner den igjen. **Gjentakende jobb**: blir stående og kan krysses av så ofte man vil.
 - **For hvem:** `job_member_ids` er barna som kan ta jobben. Tom liste = alle barna. Jobber bruker aldri `assigned_member_id`. Jobber for ett barn fra før steg 9 ble flyttet over til listen i migrasjonen `job_members`.
 - En liste i stedet for en koblingstabell: jobben lagres i ett kall og følger med i `today_tasks`. Prisen er at innholdet sjekkes av en trigger i stedet for en FK.
-- Databasen hindrer ikke at et barn utenfor listen krysser av jobben. Det er appen som bare viser de valgte barna, som for `assigned_member_id`.
+- Fra steg 10a hindrer databasen at et barn på egen enhet krysser av en jobb for andre barn, eller en oppgave tildelt et søsken (`complete_task`, `invalid_member`). En voksen kan fortsatt registrere for hvem som helst.
 
 **Beregning av neste frist** skjer i databasen, i `private.compute_next_due(p_task public.tasks, p_completed_on date) returns date`. Funksjonen er `language plpgsql immutable` og ligger i schemaet `private`, som ikke eksponeres i API-et:
 - `once`: gir `null` (oppgaven er ferdig). `job` gir også `null` (har aldri frist).
@@ -298,7 +307,7 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
 - `complete_task(p_task_id, p_member_id) returns table (completion_id uuid, feedback_text text, next_due_on date, reward_nok integer)`
   1. Kalleren er medlem av oppgavens husstand, og oppgaven er ikke arkivert. Ellers `task_not_found` (samme feil for andre husstander, så det ikke lekker om id-en finnes). Oppgaveraden låses med `for update`.
   2. `private.household_has_access(household_id)`, ellers feil `subscription_required`.
-  3. `p_member_id` hører til samme husstand. Er kalleren et barn, må `p_member_id` være kallerens eget medlem. Ellers `invalid_member`.
+  3. `p_member_id` hører til samme husstand. Er kalleren et barn, må `p_member_id` være kallerens eget medlem, oppgaven må være barnets egen eller felles (`assigned_member_id` null), og en jobb må være for alle barna eller for barnet (steg 10a). Ellers `invalid_member`.
   4. `completed_on = (now() at time zone households.timezone)::date`. Klienten sender verken dato eller frist.
   5. Velger en tilbakemeldingstekst (se §4), setter inn raden (`due_on` = oppgavens nåværende `next_due_on`) og setter `tasks.next_due_on = private.compute_next_due(oppgaven, completed_on)`. Alt skjer i én transaksjon.
   6. Steg 9: `reward_nok` = oppgavens beløp hvis den som gjorde oppgaven er et barn, ellers `null`. Er oppgaven en engangsjobb, settes `archived_at = now()`.
@@ -329,7 +338,7 @@ Begge er globale tabeller uten `household_id`. Innholdet legges inn via migrasjo
 | sort_order | smallint not null default 0 | rekkefølge innen måneden |
 | is_active | boolean not null default true | maler slettes ikke, de deaktiveres |
 
-Utsatt til steg 10 (forslag i oppstarten): `audience`, `min_age` og `suggested_by_default`. Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `recurrence_unit = 'year'`.
+Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_by_default`. Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `recurrence_unit = 'year'`.
 
 **Startsett:** 25 maler, 22 i `*_task_templates.sql` og 3 i `*_adjust_task_templates.sql`. Den siste justerer også tre forklaringer, og finner malene på slug. 24 er månedsoppgaver, og røykvarslerne har fast dato 1. desember. Justeringer endrer bare malene. Oppgaver som allerede er aktivert, er kopier og beholder den gamle teksten. Sikkerhetstekstene er generelle og henviser til fagfolk. De må gjennomgås manuelt før lansering, og malene skal utvides til 40–60.
 
@@ -339,7 +348,7 @@ Utsatt til steg 10 (forslag i oppstarten): `audience`, `min_age` og `suggested_b
 - Husstanden kan endre kopien fritt, og senere endringer i malen påvirker ikke eksisterende oppgaver.
 - **Deaktivering** = arkivere oppgaven (`archived_at`).
 
-Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype og boligtype, og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 10.
+Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype og boligtype, og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 16.
 
 ### `feedback_messages`
 | Kolonne | Type | Merknad |
@@ -383,15 +392,16 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 | Tabell | SELECT | INSERT | UPDATE | DELETE |
 |--------|--------|--------|--------|--------|
 | households | medlem | – (RPC `create_household`) | voksen; kolonner: `name`, `type`, `housing_type`, `feedback_tone` | – (Edge `delete-account`) |
-| members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year` | voksen, bare `role = 'child'` |
+| members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year`. Barn: bare egen avatar via RPC `set_my_avatar` | voksen, bare `role = 'child'` |
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
 | today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
-| task_completions | medlem | – (RPC `complete_task`) | – | – (RPC `undo_completion`) |
-| payouts | medlem | – (RPC `record_payout`) | – | – |
-| member_balances (view) | medlem (via RLS på members, task_completions og payouts) | – | – | – |
+| task_completions | voksen i husstanden, eller barnet som gjorde den (steg 10a) | – (RPC `complete_task`) | – | – (RPC `undo_completion`) |
+| payouts | voksen i husstanden, eller barnet som fikk den (steg 10a) | – (RPC `record_payout`) | – | – |
+| member_balances (view) | voksen: alle barna; barn: bare seg selv (filter i viewet + RLS på tabellene under) | – | – | – |
 | invites | voksen i husstanden; alle kolonner unntatt `code_hash` | – (RPC `create_invite`) | – (RPC `accept_invite`) | voksen, bare `used_at is null` (= trekke tilbake) |
 | invite_attempts | – | – (RPC) | – | – |
-| link_tokens | – | – (RPC) | – | – |
+| link_tokens | – | – (RPC `create_link_token`) | – (RPC `redeem_link_token`) | – |
+| link_attempts | – | – (RPC) | – | – |
 | household_subscriptions | medlem | – (service role) | – | – |
 | task_templates | alle innloggede, `is_active` | – | – | – |
 | feedback_messages | alle innloggede, `is_active` | – | – | – |
@@ -430,15 +440,17 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `create_household(p_name, p_type, p_housing_type, p_display_name, p_avatar) returns uuid` | innlogget, ikke-anonym, uten husstand | household + voksen-member i én transaksjon, `trial_ends_at = now() + 14 d`. Feil (errcode `P0001`, nøkkel som melding): `not_authenticated`, `anonymous_not_allowed`, `already_in_household` |
 | `create_invite(p_household_id) returns table (code, expires_at)` | voksen, `household_has_access` | lager kode (8 tegn, 48 t, engangs), lagrer hash, returnerer klartekst bare her. Feil: `not_authenticated`, `not_adult` (barn, anonym, annen husstand), `subscription_required` |
 | `accept_invite(p_code, p_display_name, p_avatar) returns uuid` | innlogget, ikke-anonym, uten husstand | normaliserer koden, legger til voksen-member og markerer invitasjonen brukt i én transaksjon. Returnerer husstandens id. Feil: `not_authenticated`, `anonymous_not_allowed`, `already_in_household`, `too_many_attempts`. **Feil, utløpt, brukt eller tilbaketrukket kode gir `null`**, som appen gjør om til `invite_invalid`. Grunnen: en kastet feil ruller tilbake hele transaksjonen, også raden i `invite_attempts`, og da ville sperren aldri slått inn. `pg_advisory_xact_lock` per bruker hindrer at parallelle kall sniker seg forbi sperren |
-| `create_link_token(member_id)` | voksen | returnerer råtoken, lagrer hash |
-| `redeem_link_token(token)` | anonym innlogget (barnets enhet) | kobler `auth_user_id` til barnet |
-| `unlink_member_device(member_id)` | voksen | `auth_user_id = null` på barnet |
+| `create_link_token(p_member_id) returns table (code, expires_at)` | voksen i barnets husstand | lager kode (8 tegn, 10 min, engangs), sletter barnets ubrukte koder, returnerer klartekst bare her. Krever ikke abonnement. Feil: `not_adult` (barn, annen husstand, ukjent id), `invalid_member` (ikke et barn), `already_linked` (barnet har enhet, koble fra først) |
+| `redeem_link_token(p_code) returns uuid` | anonym innlogget uten husstand (barnets enhet) | normaliserer koden, setter `members.auth_user_id = auth.uid()` og `used_at`. Returnerer husstandens id. Feil: `not_authenticated`, `anonymous_required` (e-postbruker), `already_in_household`, `too_many_attempts`. **Feil, utløpt eller brukt kode, eller et barn som ble koblet i mellomtiden, gir `null`** (appen: `link_invalid`), av samme grunn som `accept_invite`. Advisory lock per bruker |
+| `unlink_member_device(p_member_id)` | voksen | `auth_user_id = null` på barnet, og sletter den anonyme brukeren i `auth.users` (med sesjoner og refresh-token, så barnet logges ut). Trygt å kalle igjen. Feil: `not_adult`, `invalid_member` |
+| `unlink_my_device()` | barn på egen (anonym) enhet | barnet kobler fra seg selv («Logg ut av denne enheten»): egen `auth_user_id = null`, og egen anonym bruker slettes. En vanlig utlogging ville latt profilen stå koblet til en bruker ingen kan logge inn som. Feil: `invalid_member` (voksen, eller ikke koblet) |
+| `set_my_avatar(p_avatar)` | medlem (brukes av barn) | ny avatar på egen `members`-rad, ingenting annet. RPC i stedet for policy, fordi kolonnerettigheter gjelder hele rollen `authenticated`: en update-policy for barn ville også gitt dem navn og fødselsår. Sjekker formen (`^[a-z_]{1,30}$`), ikke listen, så nyere appversjoner kan legge til avatarer. Feil: `not_authenticated`, `invalid_avatar`, `member_not_found` |
 | `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
 | `activate_templates(p_household_id, p_template_ids) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid) |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
-| `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
+| `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade) og barnas anonyme brukere (steg 10a). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
 
 ### RLS-tester (pgTAP, `supabase/tests/`)
 Minimum før lansering:
@@ -473,5 +485,15 @@ Minimum før lansering:
     - Et barn fra en annen husstand, en voksen og samme barn to ganger avvises, også ved endring.
     - Listen er bare lov for jobber, og jobber kan ikke ha `assigned_member_id`.
     - Slettes et barn, fjernes det fra listen. En annen husstand ser ikke jobben.
+
+13. Barnas enhet (`child_devices.test.sql`, steg 10a):
+    - Koden har 8 tegn, utløper etter 10 minutter, og klarteksten lagres ikke. `link_tokens` kan ikke leses.
+    - Barn, en annen husstand, en voksen som mål og et barn som allerede er koblet, avvises.
+    - Koden virker én gang (også med små bokstaver og bindestrek). Utløpt og feil kode gir null. Feil lagres som forsøk, sperre etter 5 (også for riktig kode), som slipper etter 15 minutter. E-postbruker og bruker med husstand avvises.
+    - Et barn kan krysse av egen og felles oppgave, jobb for alle og jobb for seg selv, men ikke søskens oppgave, jobb for et annet barn, eller for søsken.
+    - Et barn ser bare egen saldo, egne avkrysninger og egne utbetalinger. Voksne ser alt.
+    - Frakobling: barn og annen husstand avvises. Koblingen fjernes, den anonyme brukeren slettes, historikken består, og den gamle sesjonen ser ingenting. Barnet kan kobles til igjen.
+    - `delete_account.test.sql`: siste voksne sletter også barnas anonyme brukere. Er det en voksen igjen, beholdes de.
+    - `child_settings.test.sql`: barnet kan endre egen avatar via `set_my_avatar` (ugyldig nøkkel avvises), men ikke eget navn, fødselsår, rolle eller kobling, og ikke andres avatar. `unlink_my_device` kobler fra bare barnet selv og sletter bare dets anonyme bruker. Voksne og anon avvises.
 
 Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.

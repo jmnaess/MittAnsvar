@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../src/components/Button';
 import { sendCode, verifyCode } from '../src/features/auth/api';
+import { signInAsChild } from '../src/features/devices/api';
 import { toNorwegianMessage } from '../src/lib/errors';
 
 const CODE_LENGTH = 6;
@@ -47,6 +48,9 @@ export default function SignInScreen() {
 
   const handleVerify = () => run(() => verifyCode(trimmedEmail, code));
 
+  // Barnets enhet: logger inn anonymt. Etterpå viser appen «Koble til» (app/(app)/link-device.tsx).
+  const handleChild = () => run(signInAsChild);
+
   function handleChangeEmail() {
     setStep('email');
     setCode('');
@@ -70,6 +74,7 @@ export default function SignInScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder="din@epost.no"
+              placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -84,6 +89,10 @@ export default function SignInScreen() {
               onPress={handleSendCode}
               disabled={busy || !trimmedEmail.includes('@')}
             />
+            <View style={styles.child}>
+              <Text style={styles.childText}>Har en voksen i familien laget en profil til deg?</Text>
+              <Button variant="outline" title="Jeg er et barn" onPress={handleChild} disabled={busy} />
+            </View>
           </>
         ) : (
           <>
@@ -93,6 +102,7 @@ export default function SignInScreen() {
               value={code}
               onChangeText={(text) => setCode(text.replace(/\D/g, ''))}
               placeholder="123456"
+              placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={CODE_LENGTH}
               autoComplete="one-time-code"
@@ -136,8 +146,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
+    // Fast farge: ellers blir teksten hvit på hvit bakgrunn når telefonen er i mørk modus.
+    color: '#111',
   },
   codeInput: { fontSize: 24, letterSpacing: 8, textAlign: 'center' },
+  child: { gap: 8, marginTop: 32 },
+  childText: { fontSize: 15, color: '#666', textAlign: 'center' },
   links: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   error: { color: '#b91c1c', fontSize: 15 },
   info: { color: '#15803d', fontSize: 15 },

@@ -1,13 +1,23 @@
 import { Stack } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../src/components/Button';
+import { signOutLocal } from '../../src/features/auth/api';
+import { useSession } from '../../src/features/auth/SessionProvider';
 import { useMyHousehold } from '../../src/features/household/hooks';
 import { toNorwegianMessage } from '../../src/lib/errors';
 
 // Innloggede skjermer. Innlogging styres av Stack.Protected i app/_layout.tsx.
-// Her avgjør husstanden hva man ser: uten husstand → oppstart, med husstand → fanene.
+// Her avgjør husstanden og typen bruker hva man ser:
+//   voksen uten husstand        → oppstart
+//   voksen med husstand         → fanene
+//   barnets enhet (anonym), ikke koblet → «Koble til» (skann eller tast kode)
+//   barnets enhet, koblet       → barnets faner (bare egne oppgaver, jobber og lønn)
 export default function AppLayout() {
+  const { session } = useSession();
   const { data: household, isPending, error, refetch, isRefetching } = useMyHousehold();
+  const isChildDevice = !!session?.user.is_anonymous;
+  useSignOutWhenUnlinked(isChildDevice, !!household, isPending);
 
   if (isPending) return null;
 
@@ -22,9 +32,11 @@ export default function AppLayout() {
     );
   }
 
+  const isAdultHome = !!household && !isChildDevice;
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!!household}>
+      <Stack.Protected guard={isAdultHome}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="child/new"
@@ -33,6 +45,10 @@ export default function AppLayout() {
         <Stack.Screen
           name="child/[id]"
           options={{ headerShown: true, title: 'Endre barn', presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="child/link/[id]"
+          options={{ headerShown: true, title: 'Koble til enhet', presentation: 'modal' }}
         />
         <Stack.Screen
           name="earnings/[id]"
@@ -55,11 +71,34 @@ export default function AppLayout() {
           options={{ headerShown: true, title: 'Endre oppgave', presentation: 'modal' }}
         />
       </Stack.Protected>
-      <Stack.Protected guard={!household}>
+      <Stack.Protected guard={!household && !isChildDevice}>
         <Stack.Screen name="onboarding" />
+      </Stack.Protected>
+      <Stack.Protected guard={!!household && isChildDevice}>
+        <Stack.Screen name="(child)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!household && isChildDevice}>
+        <Stack.Screen name="link-device" />
       </Stack.Protected>
     </Stack>
   );
+}
+
+/**
+ * En voksen har koblet fra barnets enhet: husstanden var der, men er borte. Da logges barnet ut,
+ * i stedet for å bli stående på «Koble til». Brukeren er allerede slettet på serveren, så vi
+ * logger bare ut lokalt.
+ */
+function useSignOutWhenUnlinked(isChildDevice: boolean, hasHousehold: boolean, isPending: boolean) {
+  const wasLinked = useRef(false);
+  useEffect(() => {
+    if (!isChildDevice || isPending) return;
+    if (hasHousehold) wasLinked.current = true;
+    else if (wasLinked.current) {
+      wasLinked.current = false;
+      signOutLocal();
+    }
+  }, [isChildDevice, hasHousehold, isPending]);
 }
 
 const styles = StyleSheet.create({

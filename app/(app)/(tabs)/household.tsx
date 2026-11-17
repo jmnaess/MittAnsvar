@@ -38,8 +38,12 @@ export default function HouseholdScreen() {
           <MemberRow
             key={member.id}
             member={member}
-            extra={member.role === 'child' ? `Opptjent: ${formatKroner(balanceOf(member.id))}` : undefined}
-            accessibilityHint="Se opptjening og registrer utbetaling"
+            extra={
+              member.role === 'child'
+                ? `Opptjent: ${formatKroner(balanceOf(member.id))}${member.auth_user_id ? ' · 📱 Egen enhet' : ''}`
+                : undefined
+            }
+            accessibilityHint="Se opptjening, registrer utbetaling og koble til enhet"
             onPress={
               isAdult && member.role === 'child'
                 ? () => router.push({ pathname: '/earnings/[id]', params: { id: member.id } })

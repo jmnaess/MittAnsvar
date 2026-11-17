@@ -11,7 +11,8 @@ type Props = {
   assigneeName?: string;
   busy?: boolean;
   onPress: () => void;
-  onLongPress: () => void;
+  /** Utelatt = langt trykk gjør ingenting (barnets enhet). */
+  onLongPress?: () => void;
   /** Hva langt trykk gjør, for skjermlesere. Standard: velg hvem som gjorde det. */
   longPressHint?: string;
 };
@@ -54,7 +55,7 @@ export function TodayTaskRow({
       disabled={busy}
       accessibilityRole="button"
       accessibilityLabel={`${task.title}. Marker som utført`}
-      accessibilityHint={longPressHint}
+      accessibilityHint={onLongPress ? longPressHint : undefined}
       style={({ pressed }) => [styles.row, (pressed || busy) && styles.pressed]}
     >
       <View style={[styles.circle, busy && styles.circleBusy]} />

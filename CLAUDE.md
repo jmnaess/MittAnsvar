@@ -38,7 +38,7 @@ Utvikling på Ubuntu. Testing på fysisk mobil med Expo Go – ikke emulator.
 - Ledige jobber: oppgaver uten dato (engangs eller gjentakende) som barna kan ta.
 
 ## Ikke i MVP
-Poeng, streaks, Vipps eller annen betaling i appen, felles mål, godkjenning av jobber,
+Poeng, streaks, Vipps eller annen betaling i appen, felles mål,
 AI, chat, bilder, kalenderintegrasjoner, widgets.
 
 ## Arbeidsmåte

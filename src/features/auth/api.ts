@@ -24,6 +24,15 @@ export async function signOut(): Promise<void> {
 }
 
 /**
+ * Logger ut bare på denne enheten, uten å spørre serveren. Brukes når brukeren allerede er
+ * slettet der (barnets enhet etter frakobling), og når barnet avbryter koblingen.
+ */
+export async function signOutLocal(): Promise<void> {
+  await supabase.auth.signOut({ scope: 'local' });
+  await clearReminders();
+}
+
+/**
  * Sletter kontoen via Edge Function delete-account (data i databasen + auth-brukeren).
  * supabase-js legger ved brukerens token automatisk.
  * Etterpå tømmes sesjonen lokalt; brukeren finnes ikke lenger på serveren.

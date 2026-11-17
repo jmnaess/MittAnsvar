@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(25);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i rls.test.sql; finnes bare i denne transaksjonen)
@@ -44,16 +44,17 @@ grant execute on all functions in schema tests to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Testdata (som superbruker)
---   Husstand C: voksen C1, voksen C2, barn C
+--   Husstand C: voksen C1, voksen C2, barn C med enhet (anonym bruker)
 --   Husstand D: voksen D1, barn D med enhet (anonym bruker), barn D uten enhet
 --   E:          innlogget bruker uten medlemskap
 -- ---------------------------------------------------------------------------
-insert into auth.users (id, email) values
-  ('00000000-0000-0000-0000-00000000c001', 'voksen-c1@example.com'),
-  ('00000000-0000-0000-0000-00000000c002', 'voksen-c2@example.com'),
-  ('00000000-0000-0000-0000-00000000d001', 'voksen-d1@example.com'),
-  ('00000000-0000-0000-0000-00000000d002', null),  -- barn D sin anonyme bruker
-  ('00000000-0000-0000-0000-00000000e001', 'fremmed@example.com');
+insert into auth.users (id, email, is_anonymous) values
+  ('00000000-0000-0000-0000-00000000c001', 'voksen-c1@example.com', false),
+  ('00000000-0000-0000-0000-00000000c002', 'voksen-c2@example.com', false),
+  ('00000000-0000-0000-0000-00000000c003', null, true),  -- barn C sin anonyme bruker
+  ('00000000-0000-0000-0000-00000000d001', 'voksen-d1@example.com', false),
+  ('00000000-0000-0000-0000-00000000d002', null, true),  -- barn D sin anonyme bruker
+  ('00000000-0000-0000-0000-00000000e001', 'fremmed@example.com', false);
 
 insert into public.households (id, name, type, housing_type, trial_ends_at) values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Familien C', 'family', 'house',     now() + interval '14 days'),
@@ -62,7 +63,7 @@ insert into public.households (id, name, type, housing_type, trial_ends_at) valu
 insert into public.members (id, household_id, role, display_name, avatar, birth_year, auth_user_id) values
   ('cccccccc-0000-0000-0000-000000000001', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'adult', 'Voksen C1', 'fox',  null, '00000000-0000-0000-0000-00000000c001'),
   ('cccccccc-0000-0000-0000-000000000002', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'adult', 'Voksen C2', 'cat',  null, '00000000-0000-0000-0000-00000000c002'),
-  ('cccccccc-0000-0000-0000-000000000003', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'child', 'Barn C',    'owl',  2016, null),
+  ('cccccccc-0000-0000-0000-000000000003', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'child', 'Barn C',    'owl',  2016, '00000000-0000-0000-0000-00000000c003'),
   ('dddddddd-0000-0000-0000-000000000001', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'adult', 'Voksen D1', 'bear', null, '00000000-0000-0000-0000-00000000d001'),
   ('dddddddd-0000-0000-0000-000000000002', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'child', 'Barn D',    'frog', 2015, '00000000-0000-0000-0000-00000000d002'),
   ('dddddddd-0000-0000-0000-000000000003', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'child', 'Søsken D',  'fox',  2019, null);
@@ -135,6 +136,9 @@ select is((select count(*)::int from public.households
 select is((select count(*)::int from public.members
            where household_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'), 2,
   'C2 og barn C finnes fortsatt');
+select is((select count(*)::int from auth.users
+           where id = '00000000-0000-0000-0000-00000000c003'), 1,
+  'barn C sin anonyme bruker består når en annen voksen er igjen');
 
 -- ===========================================================================
 -- 6. Siste voksne: D1 sletter seg, hele husstand D forsvinner
@@ -150,6 +154,15 @@ select is((select count(*)::int from public.households
 select is((select count(*)::int from public.members
            where household_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'), 0,
   'alle medlemmer i D er slettet, også barneprofilene');
+select is((select count(*)::int from auth.users
+           where id = '00000000-0000-0000-0000-00000000d002'), 0,
+  'barn D sin anonyme bruker er slettet med husstanden');
+select is((select count(*)::int from auth.users
+           where id = '00000000-0000-0000-0000-00000000d001'), 1,
+  'den voksnes e-postbruker slettes ikke her (det gjør Edge Function delete-account)');
+select is((select count(*)::int from auth.users
+           where id = '00000000-0000-0000-0000-00000000c003'), 1,
+  'D1 sitt kall rørte ikke barn C sin anonyme bruker');
 
 -- ===========================================================================
 -- 7. Andres data: D1 sitt kall rørte ikke husstand C
@@ -168,6 +181,9 @@ select tests.logout();
 
 select is((select count(*)::int from public.households), 0,
   'husstand C er slettet når siste voksne (C2) sletter seg');
+select is((select count(*)::int from auth.users
+           where id = '00000000-0000-0000-0000-00000000c003'), 0,
+  'barn C sin anonyme bruker er slettet med husstand C');
 
 select * from finish();
 rollback;

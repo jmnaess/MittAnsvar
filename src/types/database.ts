@@ -109,6 +109,64 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"link_attempts": {
+                  Row: {
+                    "attempted_at": string,"id": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempted_at"?: string,"id"?: never,"user_id": string
+                  }
+                  Update: {
+                    "attempted_at"?: string,"id"?: never,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"link_tokens": {
+                  Row: {
+                    "code_hash": string,"created_at": string,"created_by": string,"expires_at": string,"household_id": string,"id": string,"member_id": string,"used_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "code_hash": string,"created_at"?: string,"created_by": string,"expires_at": string,"household_id": string,"id"?: string,"member_id": string,"used_at"?: string | null
+                  }
+                  Update: {
+                    "code_hash"?: string,"created_at"?: string,"created_by"?: string,"expires_at"?: string,"household_id"?: string,"id"?: string,"member_id"?: string,"used_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "link_tokens_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "member_balances"
+      referencedColumns: ["member_id"]
+    },{
+      foreignKeyName: "link_tokens_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "link_tokens_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "link_tokens_member_id_fkey"
+      columns: ["member_id"]
+isOneToOne: false
+      referencedRelation: "member_balances"
+      referencedColumns: ["member_id"]
+    },{
+      foreignKeyName: "link_tokens_member_id_fkey"
+      columns: ["member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"members": {
                   Row: {
                     "auth_user_id": string | null,"avatar": string,"birth_year": number | null,"created_at": string,"display_name": string,"household_id": string,"id": string,"role": Database["public"]['Enums']["member_role"]
@@ -376,6 +434,11 @@ isOneToOne: false
               "code": string,"expires_at": string
             }[]
                            },
+"create_link_token":
+{ Args: { "p_member_id": string }; Returns: {
+              "code": string,"expires_at": string
+            }[]
+                           },
 "delete_my_account_data":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
@@ -387,8 +450,20 @@ isOneToOne: false
 "record_payout":
 { Args: { "p_amount_nok": number,"p_member_id": string }; Returns: string
                            },
+"redeem_link_token":
+{ Args: { "p_code": string }; Returns: string
+                           },
+"set_my_avatar":
+{ Args: { "p_avatar": string }; Returns: undefined
+                           },
 "undo_completion":
 { Args: { "p_completion_id": string }; Returns: undefined
+                           },
+"unlink_member_device":
+{ Args: { "p_member_id": string }; Returns: undefined
+                           },
+"unlink_my_device":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            }
           }
           Enums: {

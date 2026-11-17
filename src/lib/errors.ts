@@ -54,11 +54,17 @@ const KNOWN: Record<string, string> = {
   invite_invalid: 'Koden er feil, utløpt eller allerede brukt. Be om en ny kode.',
   too_many_attempts: 'For mange feil forsøk. Vent 15 minutter og prøv igjen.',
   not_adult: 'Bare voksne kan gjøre dette.',
+  // Barnets enhet
+  link_invalid: 'Koden er feil, utløpt eller allerede brukt. Be en voksen lage en ny kode.',
+  already_linked: 'Barnet har allerede en enhet. Koble fra den først.',
+  invalid_avatar: 'Velg en av avatarene.',
+  member_not_found: 'Fant ikke profilen din. Logg inn på nytt.',
+  anonymous_required: 'Denne enheten er logget inn som voksen. Logg ut først.',
   // Oppgaver
   subscription_required: 'Prøveperioden er over. Husstanden trenger abonnement for å gjøre endringer.',
   recurrence_not_found: 'Fant ingen dato som passer gjentakelsen. Prøv et annet valg.',
   task_not_found: 'Fant ikke oppgaven. Den kan være slettet.',
-  invalid_member: 'Du kan ikke krysse av for denne personen.',
+  invalid_member: 'Du kan ikke krysse av for denne oppgaven.',
   // Angring
   completion_not_found: 'Avkrysningen finnes ikke lenger.',
   undo_not_allowed: 'Bare den siste avkrysningen kan angres.',

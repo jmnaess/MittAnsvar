@@ -66,30 +66,35 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/(tabs)/index.tsx          # «I dag», nederst «Ledige jobber»
   (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre)
   (app)/(tabs)/year.tsx           # Årshjul: 12 måneder med maler og brytere, «Velg anbefalte»
-  (app)/(tabs)/household.tsx      # medlemmer med saldo, legg til barn, inviter voksen; koble enhet (steg 16)
+  (app)/(tabs)/household.tsx      # medlemmer med saldo og «Egen enhet», legg til barn, inviter voksen
   (app)/(tabs)/settings.tsx       # husstandsnavn, tone, konto
   (app)/child/new.tsx             # legg til barn
   (app)/child/[id].tsx            # endre / slette barn
-  (app)/earnings/[id].tsx         # barnets opptjening: saldo, historikk, «Registrer utbetaling»
+  (app)/earnings/[id].tsx         # barnets side: saldo, historikk, «Registrer utbetaling», koble til / fra enhet
+  (app)/child/link/[id].tsx       # QR-kode og kode for barnets enhet (steg 10a)
+  (app)/link-device.tsx           # barnets enhet, ikke koblet: skann QR eller tast kode
+  (app)/(child)/index.tsx         # barnets enhet: «Mine oppgaver i dag» og «Ledige jobber»
+  (app)/(child)/my-earnings.tsx   # barnets enhet: «Min lønn»
+  (app)/(child)/my-settings.tsx   # barnets enhet: navn, avatar, «Logg ut av denne enheten»
   (app)/task/[id].tsx
   (app)/task/new.tsx
   (app)/job/new.tsx               # «Ny ledig jobb» (kort skjema) fra «+» i «I dag»
   (app)/job/[id].tsx              # endre jobb (langt trykk i «I dag»)
   kiosk/index.tsx                 # felles husstandsvisning
-  link-device.tsx                 # barnets enhet: skann QR
   paywall.tsx
 src/
   lib/            supabase.ts, queryClient.ts, errors.ts (unwrap + norske feilmeldinger), dates.ts
   features/
     auth/         api.ts, hooks.ts
     household/    api.ts, hooks.ts, inviteCode.ts, components/
-    tasks/        api.ts, hooks.ts, recurrence.ts, reward.ts, job.ts (jobbskjema, hvilke barn), components/
+    tasks/        api.ts, hooks.ts, recurrence.ts, reward.ts, job.ts (jobbskjema, hvilke barn),
+                  groupToday.ts, childToday.ts (barnets «I dag»), components/
     completions/  api.ts, hooks.ts, chooseDoer.ts (hvem gjorde det, testes), components/MemberPickerModal.tsx
     rewards/      api.ts, hooks.ts, components/ (PayoutModal, RewardEventRow)
     templates/    api.ts, hooks.ts, suggest.ts (filter og månedsgruppering), components/TemplateRow.tsx
     feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
     kiosk/        pin.ts, components/
-    devices/      api.ts (QR-token)
+    devices/      api.ts, hooks.ts, linkCode.ts (QR-innhold, normalisering), components/ (QrScanner, LinkCodeCard)
     subscription/ revenuecat.ts, useAccess.ts
     notifications/ plan.ts + text.ts (rene, testes), schedule.ts (expo-notifications), settings.ts,
                   permissions.ts, hooks.ts, components/ (ReminderPrompt, ReminderSettingsSection)
@@ -110,6 +115,8 @@ supabase/
   tests/upcoming_occurrences.test.sql # pgTAP: fremtidige forekomster (påminnelser, senere årshjul)
   tests/rewards.test.sql          # pgTAP: lønn, utbetalinger, saldo, ledige jobber
   tests/job_members.test.sql      # pgTAP: jobber for utvalgte barn
+  tests/child_devices.test.sql    # pgTAP: barnets enhet, kode, frakobling, hva barn ser og kan krysse av
+  tests/child_settings.test.sql   # pgTAP: barnets avatar og utlogging (kobler fra seg selv)
 docs/
 ```
 
@@ -124,22 +131,25 @@ Hver `feature` eier sine egne API-kall og hooks. Skjermene i `app/` setter bare 
 - **Ingen e-post og ingen konto.** `auth_user_id` er `null` til en enhet blir koblet til.
 - Det er bare voksne i husstanden som kan opprette, endre og slette barneprofiler.
 
-### Barn med egen enhet (QR)
-1. **Voksen:** trykker «Koble til enhet» på barnets profil. Appen kaller `create_link_token(member_id)`.
-   - Serveren lager et tilfeldig token på 32 byte og lagrer bare **SHA-256-hashen**.
-   - Tokenet gjelder i **10 minutter** og kan brukes **én gang**.
-   - Appen viser tokenet som QR-kode (`mittansvar://link?t=<token>`).
-2. **Barnets enhet:** Barnet velger «Jeg har fått en QR-kode». Appen kaller `supabase.auth.signInAnonymously()`, skanner koden og kaller `redeem_link_token(token)`.
-3. **`redeem_link_token`** er en `security definer`-funksjon. Den sjekker hash, utløpstid og om tokenet er brukt. Så setter den `members.auth_user_id = auth.uid()` og markerer tokenet som brukt.
-4. Etter dette gir RLS barnets anonyme bruker tilgang som `child` i husstanden. Tilgangen er avgrenset til å lese og krysse av for seg selv.
-5. **Frakobling** (tapt mobil): en voksen kaller `unlink_member_device(member_id)`, som setter `auth_user_id = null`. Den gamle sesjonen ser da ingenting, fordi RLS ikke finner noe medlem.
+### Barn med egen enhet (QR eller kode, steg 10a)
+1. **Voksen:** «Husstand» → trykk på barnet → «Koble til enhet» (`app/(app)/child/link/[id].tsx`). Appen kaller `create_link_token(member_id)`.
+   - Serveren lager en kode på **8 tegn** (samme alfabet som invitasjoner) og lagrer bare **SHA-256-hashen**.
+   - Koden gjelder i **10 minutter** og kan brukes **én gang**. Bare den nyeste koden per barn gjelder.
+   - Appen viser koden som QR-kode (`mittansvar://link?code=ABCDEFGH`) og som tekst (`ABCD-EFGH`), med nedtelling og «Lag ny kode». Skjermen henter medlemmene hvert 3. sekund og viser «Koblet til!» når barnet er koblet.
+   - Ett barn har én enhet. Er barnet koblet, vises «Koble fra» i stedet (`already_linked` fra databasen).
+2. **Barnets enhet:** Barnet trykker «Jeg er et barn» på innloggingsskjermen. Appen kaller `supabase.auth.signInAnonymously()`. Anonym bruker uten husstand får skjermen «Koble til» (`app/(app)/link-device.tsx`): skann med `expo-camera` eller tast inn koden. «Avbryt» logger ut.
+3. **`redeem_link_token(code)`** er en `security definer`-funksjon. Den sjekker hash, utløpstid og om koden er brukt, og godtar bare anonyme brukere. Så setter den `members.auth_user_id = auth.uid()` og markerer koden som brukt. Feil kode gir samme svar som utløpt og brukt (`link_invalid`). Maks 5 feil per 15 minutter.
+4. Etter dette gir RLS barnets anonyme bruker tilgang som `child` i husstanden. Appen viser barnets egne faner (`app/(app)/(child)/`): «I dag» med «Mine oppgaver i dag» (egne og felles) og «Ledige jobber» (for alle barna eller for barnet), «Min lønn», og «Innstillinger» med navnet (bare visning), ny avatar (`set_my_avatar`) og «Logg ut av denne enheten». Ingen redigering av oppgaver eller husstanden, ingen påminnelser.
+5. **Hva databasen håndhever for barn:** krysse av bare egne og felles oppgaver og jobber som gjelder barnet (`complete_task`), se bare egne avkrysninger, utbetalinger og egen saldo (RLS og `member_balances`). Barnet kan fortsatt lese hele husstandens oppgaveliste (beslutning 7), men appen viser bare det barnet kan krysse av.
+6. **Frakobling** (tapt mobil, nytt nettbrett): «Koble fra» på barnets side kaller `unlink_member_device(member_id)`. Den setter `auth_user_id = null` og sletter den anonyme brukeren i `auth.users`, med sesjoner og refresh-token. Barnets app ser at husstanden er borte og logger ut lokalt. Senest når tokenet skal fornyes, er sesjonen uansett ugyldig. Historikk og saldo beholdes på barneprofilen.
+7. **Utlogging fra barnets enhet:** «Logg ut av denne enheten» (med bekreftelse: «Du blir logget ut, og en voksen må koble til enheten på nytt.») kaller `unlink_my_device()`, som gjør det samme som frakobling for barnet selv, og logger så ut lokalt.
 
 Hvorfor anonym auth i Supabase? Barnet får en ekte JWT, slik at *samme* RLS-regler gjelder overalt. Vi trenger verken e-post eller egne passord, og ikke noe hjemmelaget token-system for API-kall.
 
 Nødvendige tiltak:
-- Slå på «Anonymous sign-ins».
-- Slå på CAPTCHA eller rate limiting mot misbruk.
-- Anonyme brukere uten medlemskap ser ingenting. De kan ryddes bort med en jevnlig jobb senere.
+- Slå på «Anonymous sign-ins» (Dashboard → Authentication → Sign In / Providers). Lokalt: `enable_anonymous_sign_ins = true` i `supabase/config.toml`.
+- Anonyme innlogginger er begrenset per IP (standard 30 per time). CAPTCHA (f.eks. Turnstile) bør slås på før lansering.
+- Anonyme brukere uten medlemskap ser ingenting, og kan ikke opprette husstand eller bli med som voksen. Brukere som avbrøt koblingen, kan ryddes bort med en jevnlig jobb senere.
 
 ### Invitere voksen nummer to (steg 6)
 Samme mønster som QR-tokenet (bare hash, engangsbruk, utløp, RPC), men i egen tabell `invites` med en kort kode som kan skrives for hånd. Detaljer: [DATABASE.md §1](DATABASE.md#invites-invitasjon-av-voksen-steg-6).
@@ -188,12 +198,13 @@ Ikke ennå: fjerne en annen voksen, lenker inn i appen.
 - Vi lagrer bare fornavn (eller kallenavn), innebygd avatar og fødselsår. Ingen e-post, bilder, fullt navn, fødselsdato eller posisjon.
 - Barnet samtykker aldri selv. Det er den voksne som oppretter profilen, og GDPR art. 8 om barns samtykke kommer derfor ikke i spill.
 - Ingen analyse- eller reklame-SDK-er i MVP. Hvis vi trenger analyse senere, velger vi en EU-basert løsning og holder barn utenfor.
+- Barnets enhet har en anonym Supabase-bruker uten e-post eller andre opplysninger.
 
 **GDPR**
 - **Behandlingsgrunnlag:** avtale med den voksne kontoeieren (art. 6(1)(b)).
 - **Databehandleravtaler:** Supabase (EU-region). RevenueCat er amerikansk og krever SCC/DPF, men de får bare UUID. Apple og Google er selvstendige behandlingsansvarlige for betaling.
 - **Personvernerklæring** på norsk før lansering. Den må også nevne barnedata.
-- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk). Sletting av en barneprofil sletter også barnets fullføringer og utbetalinger.
+- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk), og barnas anonyme brukere slettes, så enhetene deres logges ut. Sletting av en barneprofil sletter også barnets fullføringer og utbetalinger.
 - **Innsyn og dataportabilitet:** i MVP manuelt på e-post. Eksport i appen kommer senere.
 - **Logger:** ikke logg navn eller oppgavetekster i Edge Functions.
 
@@ -223,13 +234,14 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 7 | *Gjort:* årshjul med maler. `task_templates` med 25 maler, `activate_templates`, månedsoppgaver (frist = måned, se [DATABASE.md §2](DATABASE.md#månedsoppgaver-steg-7)), fanen «Årshjul» med brytere og «Velg anbefalte», «Denne måneden» i «I dag» | Mal aktiveres, vises i «Denne måneden» uten å være forfalt, og neste frist blir samme måned neste år |
 | 8 | *Gjort:* lokale påminnelser (se steg 13 og §9). Gjenstår: egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
 | 9 | Lønn per oppgave og jobbtavle (se §10). `tasks.reward_nok`, beløpet kopieres til `task_completions.reward_nok`, `payouts`, `record_payout`, `member_balances`, `recurrence_type = 'job'` med `job_repeats`. Skjema: «Lønn (kr)» og «Ledig jobb», «Ledige jobber» i «I dag», saldo og utbetaling under «Husstand» | `npm run db:test` er grønn. På mobilen: 10 kr på en oppgave gir «+10 kr» og saldo, en engangsjobb forsvinner, en gjentakende jobb blir stående, angring trekker fra, og utbetaling gir saldo 0 |
-| 10 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
+| 10a | Barnas egen enhet (tidligere steg 16, se §3): anonym innlogging, `link_tokens` med kort kode og QR, `redeem_link_token`, frakobling som sletter den anonyme brukeren, barnets faner («I dag», «Min lønn»), innstramming av hva barn ser og kan krysse av | Et barn kobler til med QR på sin enhet, ser sine oppgaver og jobber, krysser av og ser sin egen saldo |
+| 10b | Godkjenning av lønn (se §10): `task_completions.status`, «Til godkjenning» i «I dag», godkjent saldo for utbetaling | Barnets avkrysning med lønn «venter», en voksen godkjenner én og avviser én, den avviste er tilbake hos barnet og pengene er trukket, og utbetaling tillater bare godkjent beløp |
 | 11 | Årshjulet viser også egne årlige oppgaver: RPC `get_upcoming_occurrences` | Egne og malbaserte oppgaver vises i samme 12 måneder |
 | 12 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
 | 13 | *Gjort i steg 8:* lokale påminnelser (`get_upcoming_occurrences`, daglig oppsummering, månedsoppgaver) | Varsel kommer på forfallsdagen |
 | 14 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |
 | 15 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
-| 16 | QR-kobling av barnets enhet (anonym auth, `link_tokens`, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
+| 16 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle (tidligere steg 10). QR-kobling er gjort i steg 10a | Nye husstander får relevante forslag |
 | 17 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
 | 18 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
 | 19 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |

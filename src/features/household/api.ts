@@ -67,6 +67,11 @@ export async function updateChild(memberId: string, child: ChildInput): Promise<
   unwrap(await supabase.from('members').update(child).eq('id', memberId));
 }
 
+/** Ny avatar på min egen profil. Barn kan bare endre avataren, via RPC-en set_my_avatar. */
+export async function setMyAvatar(avatar: string): Promise<void> {
+  unwrap(await supabase.rpc('set_my_avatar', { p_avatar: avatar }));
+}
+
 export async function deleteChild(memberId: string): Promise<void> {
   unwrap(await supabase.from('members').delete().eq('id', memberId));
 }

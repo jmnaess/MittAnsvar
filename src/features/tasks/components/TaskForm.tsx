@@ -4,9 +4,10 @@ import { ChoiceChips } from '../../../components/ChoiceChips';
 import { TextField } from '../../../components/TextField';
 import { colors } from '../../../components/theme';
 import type { Member } from '../../household/types';
-import { defaultRecurrenceForm, fromRecurrence, toRecurrence, type RecurrenceForm } from '../recurrence';
+import { defaultRecurrenceForm, fromRecurrence, toRecurrence } from '../recurrence';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
 import type { TaskInput } from '../types';
+import { JobMembersPicker } from './JobMembersPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 
 // ChoiceChips trenger en verdi for «felles». null kan ikke brukes som nøkkel.
@@ -19,6 +20,8 @@ const SHARED = 'shared';
 export function useTaskForm(initial?: TaskInput) {
   const [title, setTitle] = useState(initial?.title ?? '');
   const [assignee, setAssignee] = useState(initial?.assigned_member_id ?? SHARED);
+  // Bare for jobber: barna som kan ta den. Tom = alle barna.
+  const [jobMemberIds, setJobMemberIds] = useState<string[]>(initial?.job_member_ids ?? []);
   const [recurrenceForm, setRecurrenceForm] = useState(
     initial ? fromRecurrence(initial) : defaultRecurrenceForm(),
   );
@@ -32,7 +35,10 @@ export function useTaskForm(initial?: TaskInput) {
     trimmedTitle.length > 0 && recurrence && rewardNok !== undefined
       ? {
           title: trimmedTitle,
-          assigned_member_id: assignee === SHARED ? null : assignee,
+          // Jobber bruker listen over barn, alle andre oppgaver én ansvarlig (eller felles).
+          ...(recurrence.recurrence_type === 'job'
+            ? { assigned_member_id: null, job_member_ids: jobMemberIds }
+            : { assigned_member_id: assignee === SHARED ? null : assignee, job_member_ids: [] }),
           reward_nok: rewardNok,
           ...recurrence,
         }
@@ -43,6 +49,8 @@ export function useTaskForm(initial?: TaskInput) {
     setTitle,
     assignee,
     setAssignee,
+    jobMemberIds,
+    setJobMemberIds,
     recurrenceForm,
     setRecurrenceForm,
     reward,
@@ -65,14 +73,13 @@ type Props = {
 /** Tittel, hvem som har ansvaret, gjentakelse og lønn. */
 export function TaskFields({ form, members, canSetReward, disabled }: Props) {
   const isJob = form.recurrenceForm.mode === 'job';
-  const children = members.filter((m) => m.role === 'child');
-  // Ledige jobber er for barna: enten alle, eller ett bestemt barn.
-  const assigneeOptions = isJob
-    ? [{ value: SHARED, label: 'Alle barna' }, ...children.map((m) => ({ value: m.id, label: m.display_name }))]
-    : [{ value: SHARED, label: 'Felles' }, ...members.map((m) => ({ value: m.id, label: m.display_name }))];
+  const assigneeOptions = [
+    { value: SHARED, label: 'Felles' },
+    ...members.map((m) => ({ value: m.id, label: m.display_name })),
+  ];
 
-  // Voksne får aldri lønn, så feltet skjules når en voksen har ansvaret.
-  const assigneeIsAdult = members.some((m) => m.id === form.assignee && m.role === 'adult');
+  // Voksne får aldri lønn, så feltet skjules når en voksen har ansvaret. Jobber er alltid for barn.
+  const assigneeIsAdult = !isJob && members.some((m) => m.id === form.assignee && m.role === 'adult');
   const showReward = canSetReward && !assigneeIsAdult;
 
   // Tøm beløpet når en voksen blir ansvarlig, så det ikke lagres i det skjulte.
@@ -81,14 +88,6 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
   useEffect(() => {
     if (assigneeIsAdult && reward !== '') setReward('');
   }, [assigneeIsAdult, reward, setReward]);
-
-  // Byttes det til jobb mens en voksen er ansvarlig, blir jobben åpen for alle barna.
-  function changeRecurrence(next: RecurrenceForm) {
-    if (next.mode === 'job' && form.assignee !== SHARED && !children.some((c) => c.id === form.assignee)) {
-      form.setAssignee(SHARED);
-    }
-    form.setRecurrenceForm(next);
-  }
 
   return (
     <View style={styles.form}>
@@ -100,19 +99,30 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
         maxLength={80}
         editable={!disabled}
       />
-      <ChoiceChips
-        label={isJob ? 'Hvem kan ta jobben?' : 'Hvem har ansvaret?'}
-        options={assigneeOptions}
-        value={form.assignee}
-        onChange={form.setAssignee}
-        disabled={disabled}
-      />
-      <Text style={styles.hint}>
-        {isJob
-          ? 'Alle barna betyr at hvem som helst av dem kan ta jobben.'
-          : 'Felles betyr at hvem som helst kan gjøre den.'}
-      </Text>
-      <RecurrencePicker value={form.recurrenceForm} onChange={changeRecurrence} disabled={disabled} />
+      {isJob ? (
+        <>
+          <JobMembersPicker
+            label="Hvem kan ta jobben?"
+            members={members}
+            value={form.jobMemberIds}
+            onChange={form.setJobMemberIds}
+            disabled={disabled}
+          />
+          <Text style={styles.hint}>Velg ett eller flere barn, eller alle barna.</Text>
+        </>
+      ) : (
+        <>
+          <ChoiceChips
+            label="Hvem har ansvaret?"
+            options={assigneeOptions}
+            value={form.assignee}
+            onChange={form.setAssignee}
+            disabled={disabled}
+          />
+          <Text style={styles.hint}>Felles betyr at hvem som helst kan gjøre den.</Text>
+        </>
+      )}
+      <RecurrencePicker value={form.recurrenceForm} onChange={form.setRecurrenceForm} disabled={disabled} />
       {showReward && (
         <>
           <TextField

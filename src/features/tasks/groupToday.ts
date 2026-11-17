@@ -16,10 +16,15 @@ export const JOBS_KEY = 'jobs';
  * Grupperer «I dag» per medlem (i samme rekkefølge som medlemslisten), så «Felles», så
  * «Denne måneden» for månedsoppgaver som ikke er forfalt, og til slutt «Ledige jobber».
  * Jobber ligger bare i sin egen seksjon, også når de er for ett bestemt barn. Forfalte månedsoppgaver ligger hos
- * personen, som vanlige forfalte oppgaver. Tomme seksjoner vises ikke. En oppgave med et ukjent
- * medlem havner i «Felles».
+ * personen, som vanlige forfalte oppgaver. Tomme seksjoner vises ikke, unntatt «Ledige jobber»
+ * når showEmptyJobs er satt (for voksne, så de ser hvor de legger ut jobber). En oppgave med et
+ * ukjent medlem havner i «Felles».
  */
-export function groupTodayByMember(allTasks: TodayTask[], members: Member[]): TodaySection[] {
+export function groupTodayByMember(
+  allTasks: TodayTask[],
+  members: Member[],
+  { showEmptyJobs = false }: { showEmptyJobs?: boolean } = {},
+): TodaySection[] {
   const known = new Set(members.map((m) => m.id));
   const isThisMonth = (t: TodayTask) => !!t.is_month_task && !t.is_overdue;
   const isJob = (t: TodayTask) => t.recurrence_type === 'job';
@@ -50,5 +55,5 @@ export function groupTodayByMember(allTasks: TodayTask[], members: Member[]): To
     data: allTasks.filter(isJob),
   });
 
-  return sections.filter((s) => s.data.length > 0);
+  return sections.filter((s) => s.data.length > 0 || (showEmptyJobs && s.key === JOBS_KEY));
 }

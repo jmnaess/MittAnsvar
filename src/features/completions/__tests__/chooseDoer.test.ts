@@ -19,12 +19,22 @@ const leah = member('leah', 'child');
 const ola = member('ola', 'child');
 const members = [adult, leah, ola];
 
-const task = (overrides: Partial<{ recurrence_type: 'calendar' | 'job'; assigned_member_id: string | null; reward_nok: number | null }>) => ({
+const task = (
+  overrides: Partial<{
+    recurrence_type: 'calendar' | 'job';
+    assigned_member_id: string | null;
+    job_member_ids: string[];
+    reward_nok: number | null;
+  }>,
+) => ({
   recurrence_type: 'calendar' as const,
   assigned_member_id: null,
+  job_member_ids: [],
   reward_nok: null,
   ...overrides,
 });
+
+const emma = member('emma', 'child');
 
 describe('chooseCompletionAction', () => {
   it('uten innlogget medlem skjer ingenting', () => {
@@ -62,11 +72,33 @@ describe('chooseCompletionAction', () => {
   it('voksen, jobb for ett barn med lønn: barnet forhåndsvalgt, eller meg', () => {
     expect(
       chooseCompletionAction(
-        task({ recurrence_type: 'job', assigned_member_id: 'ola', reward_nok: 5 }),
+        task({ recurrence_type: 'job', job_member_ids: ['ola'], reward_nok: 5 }),
         adult,
         members,
       ),
     ).toEqual({ kind: 'pick', members: [ola, adult], preselectedId: 'ola' });
+  });
+
+  it('voksen, jobb for ett barn uten lønn: ett trykk for barnet', () => {
+    expect(
+      chooseCompletionAction(task({ recurrence_type: 'job', job_member_ids: ['ola'] }), adult, members),
+    ).toEqual({ kind: 'direct', memberId: 'ola' });
+  });
+
+  it('voksen, jobb for to av tre barn: velg blant de to', () => {
+    expect(
+      chooseCompletionAction(
+        task({ recurrence_type: 'job', job_member_ids: ['emma', 'leah'], reward_nok: 5 }),
+        adult,
+        [...members, emma],
+      ),
+    ).toEqual({ kind: 'pick', members: [leah, emma], preselectedId: null });
+  });
+
+  it('voksen, jobb med bare ukjente barn: som for alle barna', () => {
+    expect(
+      chooseCompletionAction(task({ recurrence_type: 'job', job_member_ids: ['borte'] }), adult, members),
+    ).toEqual({ kind: 'pick', members: [leah, ola], preselectedId: null });
   });
 
   it('voksen, åpen jobb uten barn i husstanden: meg', () => {

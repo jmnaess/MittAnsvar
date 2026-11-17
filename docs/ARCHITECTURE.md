@@ -73,6 +73,8 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/earnings/[id].tsx         # barnets opptjening: saldo, historikk, «Registrer utbetaling»
   (app)/task/[id].tsx
   (app)/task/new.tsx
+  (app)/job/new.tsx               # «Ny ledig jobb» (kort skjema) fra «+» i «I dag»
+  (app)/job/[id].tsx              # endre jobb (langt trykk i «I dag»)
   kiosk/index.tsx                 # felles husstandsvisning
   link-device.tsx                 # barnets enhet: skann QR
   paywall.tsx
@@ -81,7 +83,7 @@ src/
   features/
     auth/         api.ts, hooks.ts
     household/    api.ts, hooks.ts, inviteCode.ts, components/
-    tasks/        api.ts, hooks.ts, recurrence.ts, reward.ts, components/
+    tasks/        api.ts, hooks.ts, recurrence.ts, reward.ts, job.ts (jobbskjema, hvilke barn), components/
     completions/  api.ts, hooks.ts, chooseDoer.ts (hvem gjorde det, testes), components/MemberPickerModal.tsx
     rewards/      api.ts, hooks.ts, components/ (PayoutModal, RewardEventRow)
     templates/    api.ts, hooks.ts, suggest.ts (filter og månedsgruppering), components/TemplateRow.tsx
@@ -107,6 +109,7 @@ supabase/
   tests/invites.test.sql          # pgTAP: invitasjon av voksen, sperre, RLS
   tests/upcoming_occurrences.test.sql # pgTAP: fremtidige forekomster (påminnelser, senere årshjul)
   tests/rewards.test.sql          # pgTAP: lønn, utbetalinger, saldo, ledige jobber
+  tests/job_members.test.sql      # pgTAP: jobber for utvalgte barn
 docs/
 ```
 
@@ -343,12 +346,13 @@ Barn kan tjene penger på oppgaver. Appen holder bare regnskapet. Selve betaling
 **Hvem gjorde det?** (`completions/chooseDoer.ts`)
 - Vanlige oppgaver uten lønn: ett trykk, som før.
 - En voksen trykker på en oppgave med lønn som er tildelt et barn: velgeren viser barnet (forhåndsvalgt) og «meg», og «Kryss av» bekrefter. Ellers kunne barnet fått betalt for noe en voksen gjorde.
-- Åpen jobb: velg hvilket av barna som gjorde den. Et barn på egen enhet krysser av for seg selv.
+- Jobb for flere barn (eller alle): velg hvilket av dem som gjorde den. Jobb for ett barn: som en oppgave tildelt barnet. Et barn på egen enhet krysser av for seg selv.
 
 **Ledige jobber**
 - `recurrence_type = 'job'`: ingen dato, `next_due_on` er alltid `null`. Jobben blir aldri forfalt og er ikke med i påminnelsene.
 - Engangsjobb: arkiveres når den er gjort, og angring legger den tilbake. Gjentakende jobb («Kan gjøres flere ganger»): blir stående.
-- For alle barna (ingen ansvarlig) eller ett bestemt barn. Vises nederst i «I dag» under «Ledige jobber», med beløp.
+- For alle barna, ett barn eller flere utvalgte barn (`tasks.job_member_ids`, tom = alle). Vises nederst i «I dag» under «Ledige jobber», med beløp og «Leah og Ola» / «Alle barna».
+- Voksne legger ut jobber med «+» øverst i «I dag» (kort skjema: hva, lønn, for hvem, «Kan gjøres flere ganger») og endrer dem med langt trykk. Seksjonen vises alltid for voksne, også tom. Barn ser den bare når det finnes jobber. Det fulle oppgaveskjemaet kan også lage jobber.
 
 **Utbetaling.** Trykk på et barn under «Husstand» åpner `earnings/[id]`: saldo, de siste 20 avkrysningene med lønn og utbetalinger, og «Registrer utbetaling». Beløpet er forhåndsutfylt med hele saldoen, kan endres, og må bekreftes. `record_payout` avviser beløp over saldoen.
 

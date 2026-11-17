@@ -28,9 +28,12 @@ export type Recurrence = Pick<
 /**
  * Det brukeren fyller ut i skjemaet. null som ansvarlig = felles (for jobber: alle barna).
  * reward_nok: lønn i hele kroner, null = ingen lønn.
+ * job_member_ids: bare for jobber, barna som kan ta den. Tom = alle barna. Jobber har aldri
+ * assigned_member_id.
  */
 export type TaskInput = Recurrence & {
   title: string;
   assigned_member_id: string | null;
+  job_member_ids: string[];
   reward_nok: number | null;
 };

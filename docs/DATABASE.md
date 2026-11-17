@@ -104,12 +104,13 @@ Ett feilet `accept_invite`-forsøk = én rad. 5 rader nyere enn 15 minutter gir 
 | title | text not null | 1–80 tegn |
 | description | text null | |
 | category | text not null default `other` | check: `daily`, `cleaning`, `kitchen`, `laundry`, `outdoor`, `maintenance`, `safety`, `other`. Skjemaet spør ikke om kategori ennå |
-| assigned_member_id | uuid null | null = «hvem som helst». Sammensatt FK `(household_id, assigned_member_id) → members (household_id, id) on delete set null (assigned_member_id)`, så den ansvarlige alltid er i samme husstand |
+| assigned_member_id | uuid null | null = «hvem som helst». Sammensatt FK `(household_id, assigned_member_id) → members (household_id, id) on delete set null (assigned_member_id)`, så den ansvarlige alltid er i samme husstand. Alltid null for jobber (check `tasks_job_no_assignee`) |
 | template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra (steg 7). Kan settes ved insert, ikke endres |
 | *gjentakelse* | se §2 | `recurrence_type`, `recurrence_unit`, `recurrence_every`, `weekdays`, `month_day`, `month`, `anchor_on` |
 | next_due_on | date null | neste frist. null = engangsoppgave som er utført, eller en jobb (har aldri frist). Skrives bare av databasen (trigger og RPC) |
 | reward_nok | integer null | lønn i hele kroner, 1–10 000 (steg 9). null = ingen lønn. Bare voksne kan sette den (RLS) |
 | job_repeats | boolean not null default false | bare for jobber: false = engangsjobb, true = kan gjøres igjen. Check: `job_repeats ⇒ recurrence_type = 'job'` |
+| job_member_ids | uuid[] not null default `'{}'` | bare for jobber: barna som kan ta jobben. Tom = alle barna. Check: `'{}'` eller `recurrence_type = 'job'`. En liste kan ikke ha FK, så triggeren `tasks_check_job_members` avviser alt som ikke er barn i samme husstand, og duplikater (`invalid_member`). Triggeren `members_remove_from_jobs` fjerner et barn som slettes |
 | created_by | uuid null → members on delete set null | settes av triggeren |
 | created_at | timestamptz not null default now() | |
 | archived_at | timestamptz null | «slettede» oppgaver arkiveres, slik at historikken beholdes |
@@ -188,13 +189,16 @@ Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke 
 | Bytte batteri i røykvarsler | calendar, year, every 1, month 12, month_day 1 |
 | Henge opp vask (ledig jobb, én gang) | job, job_repeats false |
 | Tømme oppvaskmaskinen (ledig jobb, igjen og igjen) | job, job_repeats true |
+| Rydde boden (ledig jobb for Leah og Ola) | job, job_member_ids `{leah, ola}` |
 
 ### Ledige jobber (steg 9)
 En jobb er en oppgave **uten dato**. Den minste endringen var én ny enum-verdi og én boolsk kolonne:
 - Ingen gjentakelseskolonner (som `once`). `first_due` og `compute_next_due` gir `null`, så `next_due_on` er alltid `null`.
 - Derfor er jobber automatisk utenfor `get_upcoming_occurrences` (som hopper over `next_due_on null`), påminnelsene og årshjulet. De blir heller aldri forfalt.
 - **Engangsjobb** (`job_repeats = false`): `complete_task` setter `archived_at`, og `undo_completion` fjerner den igjen. **Gjentakende jobb**: blir stående og kan krysses av så ofte man vil.
-- `assigned_member_id null` = åpen for alle barna, ellers ett bestemt barn. At bare barn kan være ansvarlige, håndheves i skjemaet, ikke i databasen.
+- **For hvem:** `job_member_ids` er barna som kan ta jobben. Tom liste = alle barna. Jobber bruker aldri `assigned_member_id`. Jobber for ett barn fra før steg 9 ble flyttet over til listen i migrasjonen `job_members`.
+- En liste i stedet for en koblingstabell: jobben lagres i ett kall og følger med i `today_tasks`. Prisen er at innholdet sjekkes av en trigger i stedet for en FK.
+- Databasen hindrer ikke at et barn utenfor listen krysser av jobben. Det er appen som bare viser de valgte barna, som for `assigned_member_id`.
 
 **Beregning av neste frist** skjer i databasen, i `private.compute_next_due(p_task public.tasks, p_completed_on date) returns date`. Funksjonen er `language plpgsql immutable` og ligger i schemaet `private`, som ikke eksponeres i API-et:
 - `once`: gir `null` (oppgaven er ferdig). `job` gir også `null` (har aldri frist).
@@ -463,5 +467,11 @@ Minimum før lansering:
     - En engangsjobb arkiveres etter utføring (og kan ikke gjøres igjen), og angring henter den tilbake. En gjentakende jobb kan gjøres flere ganger.
     - Jobber har aldri frist, er ikke forfalt i `today_tasks` og er ikke med i `get_upcoming_occurrences`.
     - Ingen ser saldo, utbetalinger eller jobber i en annen husstand. Check-constraints for `job` og `job_repeats`.
+
+12. Jobber for utvalgte barn (`job_members.test.sql`):
+    - En jobb kan være for to av tre barn, og listen følger med i `today_tasks`. Tom liste er standard.
+    - Et barn fra en annen husstand, en voksen og samme barn to ganger avvises, også ved endring.
+    - Listen er bare lov for jobber, og jobber kan ikke ha `assigned_member_id`.
+    - Slettes et barn, fjernes det fra listen. En annen husstand ser ikke jobben.
 
 Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.

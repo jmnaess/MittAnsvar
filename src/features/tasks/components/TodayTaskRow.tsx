@@ -12,6 +12,8 @@ type Props = {
   busy?: boolean;
   onPress: () => void;
   onLongPress: () => void;
+  /** Hva langt trykk gjør, for skjermlesere. Standard: velg hvem som gjorde det. */
+  longPressHint?: string;
 };
 
 /** Linjen under tittelen: forfalt, «i løpet av november», hvem jobben er for, eller gjentakelsen. */
@@ -31,8 +33,18 @@ function detailText(task: TodayTask, assigneeName?: string): { text: string; ove
   return { text: describeRecurrence(task), overdue: false };
 }
 
-/** Én oppgave i «I dag». Trykk = utført, langt trykk = velg hvem som gjorde det. Lønn til høyre. */
-export function TodayTaskRow({ task, assigneeName, busy, onPress, onLongPress }: Props) {
+/**
+ * Én oppgave i «I dag». Trykk = utført, langt trykk = velg hvem som gjorde det
+ * (for voksne på ledige jobber: endre jobben). Lønn til høyre.
+ */
+export function TodayTaskRow({
+  task,
+  assigneeName,
+  busy,
+  onPress,
+  onLongPress,
+  longPressHint = 'Hold inne for å velge hvem som gjorde det',
+}: Props) {
   const detail = detailText(task, assigneeName);
 
   return (
@@ -42,7 +54,7 @@ export function TodayTaskRow({ task, assigneeName, busy, onPress, onLongPress }:
       disabled={busy}
       accessibilityRole="button"
       accessibilityLabel={`${task.title}. Marker som utført`}
-      accessibilityHint="Hold inne for å velge hvem som gjorde det"
+      accessibilityHint={longPressHint}
       style={({ pressed }) => [styles.row, (pressed || busy) && styles.pressed]}
     >
       <View style={[styles.circle, busy && styles.circleBusy]} />

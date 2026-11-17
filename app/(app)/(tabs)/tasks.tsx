@@ -5,6 +5,7 @@ import { colors } from '../../../src/components/theme';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { TaskRow } from '../../../src/features/tasks/components/TaskRow';
 import { useTasks } from '../../../src/features/tasks/hooks';
+import { describeJobMembers } from '../../../src/features/tasks/job';
 import { isJob } from '../../../src/features/tasks/recurrence';
 import type { Task } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
@@ -19,8 +20,9 @@ export default function TasksScreen() {
   const { data: members } = useMembers(household!.id);
 
   const nameOf = (task: Task) =>
-    members?.find((m) => m.id === task.assigned_member_id)?.display_name ??
-    (isJob(task) ? 'Alle barna' : 'Felles');
+    isJob(task)
+      ? describeJobMembers(task.job_member_ids, members ?? [])
+      : (members?.find((m) => m.id === task.assigned_member_id)?.display_name ?? 'Felles');
 
   return (
     <FlatList

@@ -1,6 +1,6 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { SectionList, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { useCallback, useLayoutEffect, useState } from 'react';
+import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../../src/components/Avatar';
 import { colors } from '../../../src/components/theme';
 import { useSession } from '../../../src/features/auth/SessionProvider';
@@ -11,6 +11,7 @@ import { FeedbackToast } from '../../../src/features/feedback/components/Feedbac
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../../../src/features/tasks/groupToday';
+import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
 import { useTodayTasks } from '../../../src/features/tasks/hooks';
 import type { Member } from '../../../src/features/household/types';
@@ -26,7 +27,8 @@ type Picking = { task: TodayTask; members: Member[]; preselectedId: string | nul
 /**
  * «I dag»: forfalte oppgaver og dagens oppgaver, gruppert per medlem og felles.
  * Månedsoppgaver (f.eks. fra årshjulet) som ikke er forfalt, ligger under «Denne måneden», og
- * ledige jobber nederst under «Ledige jobber».
+ * ledige jobber nederst under «Ledige jobber». Voksne legger ut jobber med «+» i headeren og
+ * endrer dem med langt trykk.
  */
 export default function TodayScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
@@ -47,7 +49,30 @@ export default function TodayScreen() {
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   const me = members.find((m) => m.auth_user_id === session?.user.id);
-  const sections = groupTodayByMember(tasks ?? [], members);
+  const isAdult = me?.role === 'adult';
+  // Voksne ser alltid «Ledige jobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
+  const sections = groupTodayByMember(tasks ?? [], members, { showEmptyJobs: isAdult && !isPending });
+  const nothingToDo = !isPending && sections.every((s) => s.data.length === 0);
+
+  // «+» øverst til høyre åpner «Ny ledig jobb». Bare for voksne.
+  const navigation = useNavigation();
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: isAdult
+        ? () => (
+            <Pressable
+              onPress={() => router.push('/job/new')}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Ny ledig jobb"
+              style={styles.addButton}
+            >
+              <Text style={styles.addText}>+</Text>
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [navigation, isAdult]);
   const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
 
   function markDone(task: TodayTask, memberId: string) {
@@ -98,17 +123,18 @@ export default function TodayScreen() {
         {...pullToRefresh}
         stickySectionHeadersEnabled={false}
         ListHeaderComponent={
-          error || actionError ? (
-            <Text style={styles.error}>{actionError ?? toNorwegianMessage(error)}</Text>
-          ) : undefined
-        }
-        ListEmptyComponent={
-          isPending ? undefined : (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Ingenting å gjøre i dag 🎉</Text>
-              <Text style={styles.emptyText}>Nye oppgaver lager du under «Oppgaver».</Text>
-            </View>
-          )
+          <>
+            {(error || actionError) && (
+              <Text style={styles.error}>{actionError ?? toNorwegianMessage(error)}</Text>
+            )}
+            {/* I headeren, ikke ListEmptyComponent: for voksne er «Ledige jobber» alltid med. */}
+            {nothingToDo && (
+              <View style={styles.empty}>
+                <Text style={styles.emptyTitle}>Ingenting å gjøre i dag 🎉</Text>
+                <Text style={styles.emptyText}>Nye oppgaver lager du under «Oppgaver».</Text>
+              </View>
+            )}
+          </>
         }
         renderSectionHeader={({ section }) => (
           <View style={styles.sectionHeader}>
@@ -116,6 +142,11 @@ export default function TodayScreen() {
             <Text style={styles.sectionTitle}>{section.title}</Text>
           </View>
         )}
+        renderSectionFooter={({ section }) =>
+          section.key === JOBS_KEY && section.data.length === 0 ? (
+            <Text style={styles.emptyJobs}>Ingen ledige jobber. Trykk + for å legge ut en.</Text>
+          ) : null
+        }
         renderItem={({ item, section }) => (
           <TodayTaskRow
             task={item}
@@ -123,12 +154,18 @@ export default function TodayScreen() {
               section.key === THIS_MONTH_KEY
                 ? (nameOf(item.assigned_member_id) ?? 'Felles')
                 : section.key === JOBS_KEY
-                  ? nameOf(item.assigned_member_id)
+                  ? describeJobMembers(item.job_member_ids ?? [], members)
                   : undefined
             }
             busy={complete.isPending && complete.variables?.taskId === item.id}
             onPress={() => handlePress(item)}
-            onLongPress={() => setPicking({ task: item, members, preselectedId: null })}
+            {...(isAdult && section.key === JOBS_KEY
+              ? {
+                  onLongPress: () =>
+                    router.push({ pathname: '/job/[id]', params: { id: item.id } }),
+                  longPressHint: 'Hold inne for å endre jobben',
+                }
+              : { onLongPress: () => setPicking({ task: item, members, preselectedId: null }) })}
           />
         )}
       />
@@ -170,4 +207,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', marginTop: 48, gap: 8 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
   emptyText: { fontSize: 15, color: colors.muted },
+  emptyJobs: { fontSize: 15, color: colors.muted, paddingVertical: 8 },
+  addButton: { paddingHorizontal: 16 },
+  addText: { fontSize: 28, lineHeight: 32, color: colors.primary },
 });

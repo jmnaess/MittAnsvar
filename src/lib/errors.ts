@@ -50,6 +50,10 @@ const KNOWN: Record<string, string> = {
   already_in_household: 'Du er allerede med i en husstand.',
   anonymous_not_allowed: 'Denne enheten kan ikke opprette en husstand.',
   not_authenticated: 'Du er ikke innlogget. Logg inn på nytt.',
+  // Invitasjon av voksen
+  invite_invalid: 'Koden er feil, utløpt eller allerede brukt. Be om en ny kode.',
+  too_many_attempts: 'For mange feil forsøk. Vent 15 minutter og prøv igjen.',
+  not_adult: 'Bare voksne kan invitere.',
   // Oppgaver
   subscription_required: 'Prøveperioden er over. Husstanden trenger abonnement for å gjøre endringer.',
   recurrence_not_found: 'Fant ingen dato som passer gjentakelsen. Prøv et annet valg.',

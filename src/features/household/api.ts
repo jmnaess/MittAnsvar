@@ -1,11 +1,13 @@
-import { unwrap } from '../../lib/errors';
+import { ApiError, unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
+import { normalizeInviteCode } from './inviteCode';
 import type {
   ChildInput,
   FeedbackTone,
   Household,
   HouseholdType,
   HousingType,
+  Invite,
   Member,
 } from './types';
 
@@ -67,4 +69,50 @@ export async function updateChild(memberId: string, child: ChildInput): Promise<
 
 export async function deleteChild(memberId: string): Promise<void> {
   unwrap(await supabase.from('members').delete().eq('id', memberId));
+}
+
+// ---------------------------------------------------------------------------
+// Invitasjon av voksen
+// ---------------------------------------------------------------------------
+
+/** Lager en engangskode. Klarteksten finnes bare i dette svaret, databasen lagrer hashen. */
+export async function createInvite(householdId: string): Promise<{ code: string; expiresAt: string }> {
+  const rows = unwrap(await supabase.rpc('create_invite', { p_household_id: householdId }));
+  return { code: rows[0].code, expiresAt: rows[0].expires_at };
+}
+
+/** Ubrukte invitasjoner som ikke har utløpt. RLS: bare voksne i husstanden ser dem. */
+export async function listActiveInvites(householdId: string): Promise<Invite[]> {
+  return unwrap(
+    await supabase
+      .from('invites')
+      .select('id, created_by, expires_at')
+      .eq('household_id', householdId)
+      .is('used_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('expires_at'),
+  );
+}
+
+/** Trekker tilbake = sletter. RLS tillater det bare for ubrukte invitasjoner. */
+export async function revokeInvite(inviteId: string): Promise<void> {
+  unwrap(await supabase.from('invites').delete().eq('id', inviteId));
+}
+
+export type AcceptInviteInput = { code: string; displayName: string; avatar: string };
+
+/**
+ * Blir med i husstanden. Returnerer husstandens id.
+ * Feil kode gir null fra databasen (ikke en feil, ellers ville forsøket ikke blitt telt,
+ * se migrasjonen). Her gjør vi null om til feilnøkkelen invite_invalid.
+ */
+export async function acceptInvite(input: AcceptInviteInput): Promise<string> {
+  const result = await supabase.rpc('accept_invite', {
+    p_code: normalizeInviteCode(input.code),
+    p_display_name: input.displayName,
+    p_avatar: input.avatar,
+  });
+  const householdId = unwrap(result) as string | null;
+  if (householdId === null) throw new ApiError('invite_invalid', result.status, 'P0001');
+  return householdId;
 }

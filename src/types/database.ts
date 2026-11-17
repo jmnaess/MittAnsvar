@@ -51,6 +51,52 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"invite_attempts": {
+                  Row: {
+                    "attempted_at": string,"id": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempted_at"?: string,"id"?: never,"user_id": string
+                  }
+                  Update: {
+                    "attempted_at"?: string,"id"?: never,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"invites": {
+                  Row: {
+                    "code_hash": string,"created_at": string,"created_by": string,"expires_at": string,"household_id": string,"id": string,"used_at": string | null,"used_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "code_hash": string,"created_at"?: string,"created_by": string,"expires_at": string,"household_id": string,"id"?: string,"used_at"?: string | null,"used_by"?: string | null
+                  }
+                  Update: {
+                    "code_hash"?: string,"created_at"?: string,"created_by"?: string,"expires_at"?: string,"household_id"?: string,"id"?: string,"used_at"?: string | null,"used_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invites_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invites_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invites_used_by_fkey"
+      columns: ["used_by"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"members": {
                   Row: {
                     "auth_user_id": string | null,"avatar": string,"birth_year": number | null,"created_at": string,"display_name": string,"household_id": string,"id": string,"role": Database["public"]['Enums']["member_role"]
@@ -185,13 +231,21 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "complete_task":
+            "accept_invite":
+{ Args: { "p_avatar": string,"p_code": string,"p_display_name": string }; Returns: string
+                           },
+"complete_task":
 { Args: { "p_member_id": string,"p_task_id": string }; Returns: {
               "completion_id": string,"feedback_text": string,"next_due_on": string
             }[]
                            },
 "create_household":
 { Args: { "p_avatar": string,"p_display_name": string,"p_housing_type": Database["public"]['Enums']["housing_type"],"p_name": string,"p_type": Database["public"]['Enums']["household_type"] }; Returns: string
+                           },
+"create_invite":
+{ Args: { "p_household_id": string }; Returns: {
+              "code": string,"expires_at": string
+            }[]
                            },
 "delete_my_account_data":
 { Args: Record<PropertyKey, never>; Returns: undefined

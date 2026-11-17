@@ -49,7 +49,7 @@ Status: planlagt, beslutningene er tatt (se §7). Datamodell og RLS i detalj: se
 
 **Prinsipper**
 - **Klienten snakker direkte med databasen, og RLS er sikkerheten.** Anon-nøkkelen er offentlig. Alt som ikke er beskyttet av RLS, er åpent.
-- **Operasjoner som endrer flere tabeller, går gjennom én RPC-funksjon** (`create_household`, `complete_task`, `redeem_link_token`). Da blir de atomiske, og reglene ligger på ett sted.
+- **Operasjoner som endrer flere tabeller, går gjennom én RPC-funksjon** (`create_household`, `complete_task`, `accept_invite`, `redeem_link_token`). Da blir de atomiske, og reglene ligger på ett sted.
 - **Edge Functions bare når vi trenger hemmeligheter eller admin-rettigheter:** RevenueCat-webhook og sletting av brukere i `auth.users`.
 - **Ingen global state-manager.** TanStack Query holder serverdata. Lokal UI-tilstand holdes med `useState`.
 - **Gjentakelseslogikken ligger i databasen** (`private.compute_next_due`, SQL med pgTAP-tester). `complete_task` beregner neste frist selv, og årshjulet henter fremtidige forekomster via RPC. Regelen finnes ett sted, og klienten kan ikke sende en feil frist.
@@ -62,12 +62,12 @@ app/                          # expo-router: kun skjermer, tynne
   _layout.tsx
   sign-in.tsx
   (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
-  (app)/onboarding.tsx            # trinn: husstand (type, bolig, navn) → barn (kan hoppes over); forslag senere
+  (app)/onboarding.tsx            # velg: opprett (husstand → barn) eller bli med (kode, navn, avatar); forslag senere
   (app)/(tabs)/index.tsx          # «I dag»
   (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre)
   (app)/(tabs)/year.tsx           # Årshjul
-  (app)/(tabs)/household.tsx      # koble enhet (steg 15)
-  (app)/(tabs)/settings.tsx       # husstandsnavn, tone, medlemmer, konto
+  (app)/(tabs)/household.tsx      # medlemmer, legg til barn, inviter voksen; koble enhet (steg 15)
+  (app)/(tabs)/settings.tsx       # husstandsnavn, tone, konto
   (app)/child/new.tsx             # legg til barn
   (app)/child/[id].tsx            # endre / slette barn
   (app)/task/[id].tsx
@@ -79,7 +79,7 @@ src/
   lib/            supabase.ts, queryClient.ts, errors.ts (unwrap + norske feilmeldinger), dates.ts
   features/
     auth/         api.ts, hooks.ts
-    household/    api.ts, hooks.ts, components/
+    household/    api.ts, hooks.ts, inviteCode.ts, components/
     tasks/        api.ts, hooks.ts, components/
     completions/  api.ts, hooks.ts, components/MemberPickerModal.tsx
     templates/    api.ts, suggest.ts, suggest.test.ts
@@ -99,6 +99,7 @@ supabase/
   tests/compute_next_due.test.sql # pgTAP: gjentakelse
   tests/tasks.test.sql            # pgTAP: tasks, trigger, today_tasks
   tests/complete_task.test.sql    # pgTAP: avkrysning, angring, tone, tidssone
+  tests/invites.test.sql          # pgTAP: invitasjon av voksen, sperre, RLS
 docs/
 ```
 
@@ -130,7 +131,14 @@ Nødvendige tiltak:
 - Slå på CAPTCHA eller rate limiting mot misbruk.
 - Anonyme brukere uten medlemskap ser ingenting. De kan ryddes bort med en jevnlig jobb senere.
 
-Samme token-mekanisme brukes til å **invitere voksen nummer to** (`kind = 'adult'`). Den inviterte logger inn med e-post først og løser så inn tokenet. Da opprettes en ny `members`-rad med `role = 'adult'`.
+### Invitere voksen nummer to (steg 6)
+Samme mønster som QR-tokenet (bare hash, engangsbruk, utløp, RPC), men i egen tabell `invites` med en kort kode som kan skrives for hånd. Detaljer: [DATABASE.md §1](DATABASE.md#invites-invitasjon-av-voksen-steg-6).
+1. **Voksen:** fanen «Husstand» → «Inviter voksen». `create_invite` gir en kode på 8 tegn (f.eks. `ABCD-EFGH`) som gjelder i **48 timer** og kan brukes **én gang**. Appen åpner delingsmenyen med en kort tekst: last ned appen, logg inn, skriv inn koden.
+2. **Den inviterte:** logger inn med e-postkode. Uten husstand vises «Opprett husstand» og «Bli med i en husstand». Det siste ber om kode, navn og avatar og kaller `accept_invite`, som legger brukeren til som `adult`.
+3. Koden vises bare én gang. Aktive invitasjoner listes med utløpstid og kan trekkes tilbake (raden slettes).
+4. **Sperre:** maks 5 feilede forsøk per bruker per 15 minutter. Feil, utløpt, brukt og tilbaketrukket kode gir samme melding (`invite_invalid`), så vi ikke røper hvilken.
+
+Ikke ennå: fjerne en annen voksen, lenker inn i appen.
 
 ### Felles husstandsvisning (kiosk)
 - **MVP:** en *modus* på en voksens enhet. Sesjonen er fortsatt den voksnes, men skjermen `kiosk/` har:
@@ -207,9 +215,9 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 10 | Årshjul-visning: RPC `get_upcoming_occurrences`, gruppert per måned | 12 måneder vises med oppgaver |
 | 11 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
 | 12 | Lokale påminnelser for egne oppgaver | Varsel kommer på forfallsdagen |
-| 13 | Invitere voksen nr. 2 (link-token, `kind = 'adult'`) | To voksne deler husstand |
+| 13 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |
 | 14 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
-| 15 | QR-kobling av barnets enhet (anonym auth, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
+| 15 | QR-kobling av barnets enhet (anonym auth, `link_tokens`, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
 | 16 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
 | 17 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
 | 18 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |

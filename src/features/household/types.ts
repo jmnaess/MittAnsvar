@@ -6,6 +6,9 @@ type Enums = Database['public']['Enums'];
 export type Household = Tables['households']['Row'];
 export type Member = Tables['members']['Row'];
 
+/** Det appen trenger om en aktiv invitasjon. Koden kan ikke hentes igjen. */
+export type Invite = Pick<Tables['invites']['Row'], 'id' | 'created_by' | 'expires_at'>;
+
 export type HouseholdType = Enums['household_type'];
 export type HousingType = Enums['housing_type'];
 export type FeedbackTone = Enums['feedback_tone'];

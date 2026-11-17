@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../src/components/Button';
@@ -7,12 +6,7 @@ import { TextField } from '../../../src/components/TextField';
 import { colors } from '../../../src/components/theme';
 import { deleteAccount, signOut } from '../../../src/features/auth/api';
 import { useSession } from '../../../src/features/auth/SessionProvider';
-import { MemberRow } from '../../../src/features/household/components/MemberRow';
-import {
-  useMembers,
-  useMyHousehold,
-  useUpdateHousehold,
-} from '../../../src/features/household/hooks';
+import { useMyHousehold, useUpdateHousehold } from '../../../src/features/household/hooks';
 import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
 import type { Household } from '../../../src/features/household/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
@@ -24,7 +18,6 @@ export default function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <HouseholdSection household={household!} />
-      <MembersSection householdId={household!.id} />
       <AccountSection />
     </ScrollView>
   );
@@ -91,28 +84,6 @@ function HouseholdSection({ household }: { household: Household }) {
 
       {update.error && <Text style={styles.error}>{toNorwegianMessage(update.error)}</Text>}
     </>
-  );
-}
-
-function MembersSection({ householdId }: { householdId: string }) {
-  const { data: members, error } = useMembers(householdId);
-
-  return (
-    <Section title="Medlemmer">
-      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
-      {members?.map((member) => (
-        <MemberRow
-          key={member.id}
-          member={member}
-          onPress={
-            member.role === 'child'
-              ? () => router.push({ pathname: '/child/[id]', params: { id: member.id } })
-              : undefined
-          }
-        />
-      ))}
-      <Button variant="outline" title="Legg til barn" onPress={() => router.push('/child/new')} />
-    </Section>
   );
 }
 

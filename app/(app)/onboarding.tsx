@@ -7,9 +7,11 @@ import { colors } from '../../src/components/theme';
 import type { CreateHouseholdInput } from '../../src/features/household/api';
 import { ChildForm } from '../../src/features/household/components/ChildForm';
 import { HouseholdForm } from '../../src/features/household/components/HouseholdForm';
+import { JoinHouseholdForm } from '../../src/features/household/components/JoinHouseholdForm';
 import { MemberRow } from '../../src/features/household/components/MemberRow';
 import {
   householdKeys,
+  useAcceptInvite,
   useAddChild,
   useCreateHousehold,
   useMembers,
@@ -17,11 +19,47 @@ import {
 import type { ChildInput } from '../../src/features/household/types';
 import { toNorwegianMessage } from '../../src/lib/errors';
 
-// Oppstart i to trinn på samme skjerm:
-//   1. Opprett husstand (alle)
-//   2. Legg til barn (bare «Familie med barn», kan hoppes over)
+// Oppstart for en innlogget bruker uten husstand. Tre visninger på samme skjerm:
+//   choose: velg «Opprett husstand» eller «Bli med i en husstand»
+//   create: opprett husstand, deretter barn (bare «Familie med barn», kan hoppes over)
+//   join:   skriv inn kode fra en annen voksen, navn og avatar
 // Når vi er ferdige, henter vi husstanden på nytt. Da bytter app/(app)/_layout.tsx til fanene.
+type Mode = 'choose' | 'create' | 'join';
+
 export default function OnboardingScreen() {
+  const [mode, setMode] = useState<Mode>('choose');
+  const back = () => setMode('choose');
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          {mode === 'choose' && <ChooseStep onChoose={setMode} />}
+          {mode === 'create' && <CreateFlow onBack={back} />}
+          {mode === 'join' && <JoinStep onBack={back} />}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function ChooseStep({ onChoose }: { onChoose: (mode: Mode) => void }) {
+  return (
+    <>
+      <Text style={styles.title}>Velkommen!</Text>
+      <Text style={styles.lead}>
+        Lag en ny husstand, eller bli med i en som en annen voksen allerede har laget.
+      </Text>
+      <Button title="Opprett husstand" onPress={() => onChoose('create')} />
+      <Button variant="outline" title="Bli med i en husstand" onPress={() => onChoose('join')} />
+    </>
+  );
+}
+
+function CreateFlow({ onBack }: { onBack: () => void }) {
   const queryClient = useQueryClient();
   const createHousehold = useCreateHousehold();
   const [householdId, setHouseholdId] = useState<string | null>(null);
@@ -39,33 +77,44 @@ export default function OnboardingScreen() {
     });
   }
 
+  if (householdId !== null) {
+    return <ChildrenStep householdId={householdId} finishing={finishing} onDone={finish} />;
+  }
+
+  const busy = createHousehold.isPending || finishing;
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          {householdId === null ? (
-            <>
-              <Text style={styles.title}>Velkommen!</Text>
-              <Text style={styles.lead}>
-                Fortell litt om husstanden, så tilpasser vi forslagene til dere.
-              </Text>
-              <HouseholdForm
-                busy={createHousehold.isPending || finishing}
-                onSubmit={handleCreate}
-              />
-              {createHousehold.error && (
-                <Text style={styles.error}>{toNorwegianMessage(createHousehold.error)}</Text>
-              )}
-            </>
-          ) : (
-            <ChildrenStep householdId={householdId} finishing={finishing} onDone={finish} />
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <>
+      <Text style={styles.title}>Opprett husstand</Text>
+      <Text style={styles.lead}>
+        Fortell litt om husstanden, så tilpasser vi forslagene til dere.
+      </Text>
+      <HouseholdForm busy={busy} onSubmit={handleCreate} />
+      {createHousehold.error && (
+        <Text style={styles.error}>{toNorwegianMessage(createHousehold.error)}</Text>
+      )}
+      <Button variant="link" title="Tilbake" onPress={onBack} disabled={busy} />
+    </>
+  );
+}
+
+function JoinStep({ onBack }: { onBack: () => void }) {
+  const acceptInvite = useAcceptInvite();
+
+  return (
+    <>
+      <Text style={styles.title}>Bli med i en husstand</Text>
+      <Text style={styles.lead}>
+        Be en voksen i husstanden om en kode. De finner den under fanen Husstand, «Inviter voksen».
+      </Text>
+      <JoinHouseholdForm
+        busy={acceptInvite.isPending}
+        onSubmit={(input) => acceptInvite.mutate(input)}
+      />
+      {acceptInvite.error && (
+        <Text style={styles.error}>{toNorwegianMessage(acceptInvite.error)}</Text>
+      )}
+      <Button variant="link" title="Tilbake" onPress={onBack} disabled={acceptInvite.isPending} />
+    </>
   );
 }
 

@@ -13,7 +13,8 @@ auth.users ─┐ (0..1)
 households 1──* members 1──* task_completions *──1 tasks *──1 households
     │  1                 (assigned_member_id)──────────┘ │
     │  └──1 household_subscriptions                      └──0..1 task_templates
-    └──* link_tokens                  feedback_messages (global, les-bare)
+    ├──* invites                      feedback_messages (global, les-bare)
+    └──* link_tokens                  invite_attempts (per auth-bruker, stengt)
 ```
 
 ### Enum-typer
@@ -26,7 +27,6 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
 | `audience` | `adult`, `child`, `any` |
 | `recurrence_type` | `once`, `calendar`, `interval` |
 | `recurrence_unit` | `day`, `week`, `month`, `year` |
-| `link_kind` | `adult`, `child` |
 
 ### `households`
 | Kolonne | Type | Merknad |
@@ -56,13 +56,38 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
 - `unique(auth_user_id)` betyr én husstand per bruker i MVP. Fjernes constrainten senere, tillates flere husstander.
 - `on delete set null` (ikke cascade): hvis barnets anonyme bruker slettes, skal barneprofilen bestå. `delete-account` sletter den voksnes `members`-rad eksplisitt.
 
-### `link_tokens` (QR for barneenhet og invitasjon av voksen)
+### `invites` (invitasjon av voksen, steg 6)
 | Kolonne | Type | Merknad |
 |---------|------|---------|
 | id | uuid pk | |
 | household_id | uuid not null → households on delete cascade | |
-| kind | link_kind not null | |
-| member_id | uuid null → members on delete cascade | påkrevd når `kind = 'child'` |
+| code_hash | bytea not null unique | SHA-256 av den normaliserte koden. Klarteksten lagres aldri og kan ikke leses av klienten (ingen kolonnerettighet) |
+| created_by | uuid not null → members on delete cascade | forlater den som inviterte, forsvinner invitasjonen |
+| created_at | timestamptz not null default now() | |
+| expires_at | timestamptz not null | now() + 48 timer |
+| used_at | timestamptz null | engangsbruk |
+| used_by | uuid null → members on delete set null | den nye voksne |
+
+- **Koden:** 8 tegn fra `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (31 tegn, uten 0/O/1/I/L), trukket med `gen_random_bytes` uten skjevhet (byte ≥ 248 forkastes). Omtrent 40 bit. Vises som `ABCD-EFGH`.
+- **Normalisering:** store bokstaver, og alt utenfor alfabetet fjernes (`private.normalize_invite_code`). Samme regel i `src/features/household/inviteCode.ts`. `abcd efgh` virker derfor.
+- **Trekke tilbake = slette raden.** Brukte invitasjoner kan ikke slettes, de er historikk.
+- Hvorfor ikke `link_tokens`? Samme mønster (hash, engangsbruk, utløp, RPC), men andre regler: kort kode som skrives for hånd, 48 timer, voksne lister og trekker tilbake, og sperre mot gjetting.
+
+### `invite_attempts` (sperre mot gjetting)
+| Kolonne | Type | Merknad |
+|---------|------|---------|
+| id | bigint identity pk | |
+| user_id | uuid not null → auth.users on delete cascade | |
+| attempted_at | timestamptz not null default now() | |
+
+Ett feilet `accept_invite`-forsøk = én rad. 5 rader nyere enn 15 minutter gir `too_many_attempts`. Eldre rader slettes av `accept_invite`. Ingen rettigheter og ingen policyer: helt stengt for klienten.
+
+### `link_tokens` (QR for barneenhet, steg 15)
+| Kolonne | Type | Merknad |
+|---------|------|---------|
+| id | uuid pk | |
+| household_id | uuid not null → households on delete cascade | |
+| member_id | uuid not null → members on delete cascade | barnet som skal kobles |
 | token_hash | bytea not null unique | SHA-256 av tokenet, råverdien lagres aldri |
 | created_by | uuid not null → members on delete cascade | |
 | expires_at | timestamptz not null | now() + 10 min |
@@ -284,6 +309,8 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
 | today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
 | task_completions | medlem | – (RPC `complete_task`) | – | – (RPC `undo_completion`) |
+| invites | voksen i husstanden; alle kolonner unntatt `code_hash` | – (RPC `create_invite`) | – (RPC `accept_invite`) | voksen, bare `used_at is null` (= trekke tilbake) |
+| invite_attempts | – | – (RPC) | – | – |
 | link_tokens | – | – (RPC) | – | – |
 | household_subscriptions | medlem | – (service role) | – | – |
 | task_templates | alle innloggede, `is_active` | – | – | – |
@@ -321,8 +348,10 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | Funksjon | Hvem | Gjør |
 |----------|------|------|
 | `create_household(p_name, p_type, p_housing_type, p_display_name, p_avatar) returns uuid` | innlogget, ikke-anonym, uten husstand | household + voksen-member i én transaksjon, `trial_ends_at = now() + 14 d`. Feil (errcode `P0001`, nøkkel som melding): `not_authenticated`, `anonymous_not_allowed`, `already_in_household` |
-| `create_link_token(kind, member_id)` | voksen | returnerer råtoken, lagrer hash |
-| `redeem_link_token(token, display_name?, avatar?)` | innlogget (anonym for `child`, e-post for `adult`) | kobler `auth_user_id` eller oppretter voksen-member |
+| `create_invite(p_household_id) returns table (code, expires_at)` | voksen, `household_has_access` | lager kode (8 tegn, 48 t, engangs), lagrer hash, returnerer klartekst bare her. Feil: `not_authenticated`, `not_adult` (barn, anonym, annen husstand), `subscription_required` |
+| `accept_invite(p_code, p_display_name, p_avatar) returns uuid` | innlogget, ikke-anonym, uten husstand | normaliserer koden, legger til voksen-member og markerer invitasjonen brukt i én transaksjon. Returnerer husstandens id. Feil: `not_authenticated`, `anonymous_not_allowed`, `already_in_household`, `too_many_attempts`. **Feil, utløpt, brukt eller tilbaketrukket kode gir `null`**, som appen gjør om til `invite_invalid`. Grunnen: en kastet feil ruller tilbake hele transaksjonen, også raden i `invite_attempts`, og da ville sperren aldri slått inn. `pg_advisory_xact_lock` per bruker hindrer at parallelle kall sniker seg forbi sperren |
+| `create_link_token(member_id)` | voksen | returnerer råtoken, lagrer hash |
+| `redeem_link_token(token)` | anonym innlogget (barnets enhet) | kobler `auth_user_id` til barnet |
 | `unlink_member_device(member_id)` | voksen | `auth_user_id = null` på barnet |
 | `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
@@ -339,5 +368,7 @@ Minimum før lansering:
 6. `link_tokens` kan ikke leses direkte. Et utløpt eller brukt token avvises.
 7. `get_upcoming_occurrences` med en annen husstands ID gir tomt resultat.
 8. `delete_my_account_data` (`delete_account.test.sql`): siste voksne sletter hele husstanden, med flere voksne slettes bare egen rad, barnets enhet og brukere uten medlemskap sletter ingenting, og andre husstander røres ikke.
+
+9. Invitasjoner (`invites.test.sql`): riktig kode virker (også med små bokstaver, mellomrom og bindestrek), koden virker én gang, utløpt og tilbaketrukket kode avvises, feil kode gir `invite_invalid` og lagres som forsøk, sperre etter 5 forsøk (også for riktig kode) som slipper etter 15 minutter, bruker med husstand og anonym avvises, barn, anonyme og andre husstander kan ikke lage invitasjoner, ingen ser invitasjoner i en annen husstand, hashen kan ikke leses, og den nye voksne ser oppgavene og kan krysse av.
 
 Tester for `compute_next_due`: se §2.

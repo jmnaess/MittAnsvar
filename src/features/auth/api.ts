@@ -21,6 +21,17 @@ export async function signOut(): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Sletter kontoen via Edge Function delete-account (data i databasen + auth-brukeren).
+ * supabase-js legger ved brukerens token automatisk.
+ * Etterpå tømmes sesjonen lokalt; brukeren finnes ikke lenger på serveren.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
+  if (error) throw error;
+  await supabase.auth.signOut({ scope: 'local' });
+}
+
 /** Gjør Supabase-feil om til korte norske meldinger. */
 export function toNorwegianMessage(error: unknown): string {
   const authError = error as Partial<AuthError> | undefined;

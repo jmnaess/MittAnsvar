@@ -314,6 +314,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
+| `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
 
 ### RLS-tester (pgTAP, `supabase/tests/`)
 Minimum før lansering:
@@ -324,5 +325,6 @@ Minimum før lansering:
 5. Ingen klient kan endre `auth_user_id` eller `trial_ends_at`.
 6. `link_tokens` kan ikke leses direkte. Et utløpt eller brukt token avvises.
 7. `get_upcoming_occurrences` med en annen husstands ID gir tomt resultat.
+8. `delete_my_account_data` (`delete_account.test.sql`): siste voksne sletter hele husstanden, med flere voksne slettes bare egen rad, barnets enhet og brukere uten medlemskap sletter ingenting, og andre husstander røres ikke.
 
 Tester for `compute_next_due`: se §2.

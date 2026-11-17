@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   archiveTask,
   createTask,
+  createTasks,
   listTasks,
   listTodayTasks,
   listUpcomingOccurrences,
+  restoreTask,
   updateTask,
 } from './api';
 import type { TaskInput } from './types';
@@ -49,6 +51,14 @@ export function useCreateTask(householdId: string) {
   return useMutation({ mutationFn: (input: TaskInput) => createTask(householdId, input), onSuccess });
 }
 
+export function useCreateTasks(householdId: string) {
+  const onSuccess = useInvalidateTasks(householdId);
+  return useMutation({
+    mutationFn: (inputs: TaskInput[]) => createTasks(householdId, inputs),
+    onSuccess,
+  });
+}
+
 export function useUpdateTask(householdId: string) {
   const onSuccess = useInvalidateTasks(householdId);
   return useMutation({
@@ -60,4 +70,9 @@ export function useUpdateTask(householdId: string) {
 export function useArchiveTask(householdId: string) {
   const onSuccess = useInvalidateTasks(householdId);
   return useMutation({ mutationFn: archiveTask, onSuccess });
+}
+
+export function useRestoreTask(householdId: string) {
+  const onSuccess = useInvalidateTasks(householdId);
+  return useMutation({ mutationFn: restoreTask, onSuccess });
 }

@@ -55,9 +55,23 @@ export async function createTask(householdId: string, input: TaskInput): Promise
   unwrap(await supabase.from('tasks').insert(row));
 }
 
+/**
+ * Flere oppgaver i ett kall («Ny årlig oppgave» med flere måneder). Én insert-spørring er én
+ * transaksjon: enten lagres alle, eller ingen.
+ */
+export async function createTasks(householdId: string, inputs: TaskInput[]): Promise<void> {
+  const rows = inputs.map((input) => ({ household_id: householdId, ...input }) as TaskInsert);
+  unwrap(await supabase.from('tasks').insert(rows));
+}
+
 /** Endres gjentakelsen, beregner databasen en ny frist fra i dag. */
 export async function updateTask(taskId: string, input: TaskInput): Promise<void> {
   unwrap(await supabase.from('tasks').update(input).eq('id', taskId));
+}
+
+/** «Angre» etter sletting: oppgaven blir aktiv igjen, med samme frist som før. */
+export async function restoreTask(taskId: string): Promise<void> {
+  unwrap(await supabase.from('tasks').update({ archived_at: null }).eq('id', taskId));
 }
 
 /** «Slett» arkiverer, slik at historikken beholdes. */

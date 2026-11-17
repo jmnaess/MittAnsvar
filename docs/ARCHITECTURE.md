@@ -64,8 +64,9 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
   (app)/onboarding.tsx            # velg: opprett (husstand → barn) eller bli med (kode, navn, avatar); forslag senere
   (app)/(tabs)/index.tsx          # «I dag»: øverst «Til godkjenning», nederst «Ledige jobber»
-  (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre)
-  (app)/(tabs)/year.tsx           # Årshjul: 12 måneder med maler og brytere, «Velg anbefalte»
+  (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre); voksne sveiper for «Slett» med «Angre»
+  (app)/(tabs)/year.tsx           # Årshjul: 12 måneder med maler og brytere, egne årlige oppgaver, «+»
+  (app)/year-task/new.tsx         # «Ny årlig oppgave»: én eller flere måneder
   (app)/(tabs)/household.tsx      # medlemmer med saldo og «Egen enhet», legg til barn, inviter voksen
   (app)/(tabs)/settings.tsx       # husstandsnavn, tone, konto
   (app)/child/new.tsx             # legg til barn
@@ -92,7 +93,8 @@ src/
     completions/  api.ts, hooks.ts, chooseDoer.ts (hvem gjorde det, testes), components/MemberPickerModal.tsx
     rewards/      api.ts, hooks.ts, format.ts (saldo med «venter»), components/ (PayoutModal, RewardEventRow,
                   PendingApprovalSection)
-    templates/    api.ts, hooks.ts, suggest.ts (filter og månedsgruppering), components/TemplateRow.tsx
+    templates/    api.ts, hooks.ts, suggest.ts (filter, egne årlige oppgaver, månedsgruppering),
+                  components/ (TemplateRow, OwnYearTaskRow)
     feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
     kiosk/        pin.ts, components/
     devices/      api.ts, hooks.ts, linkCode.ts (QR-innhold, normalisering), components/ (QrScanner, LinkCodeCard)
@@ -100,7 +102,7 @@ src/
     notifications/ plan.ts + text.ts (rene, testes), schedule.ts (expo-notifications), settings.ts,
                   permissions.ts, hooks.ts, components/ (ReminderPrompt, ReminderSettingsSection)
                   __tests__/ (Jest: npm test)
-  components/     generiske UI-komponenter (Button, Avatar, Screen …)
+  components/     generiske UI-komponenter (Button, Avatar, SwipeToDelete, UndoToast …)
   types/database.ts               # generert, ikke rediger
 supabase/
   migrations/                     # SQL, én fil per endring
@@ -238,7 +240,7 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 9 | Lønn per oppgave og jobbtavle (se §10). `tasks.reward_nok`, beløpet kopieres til `task_completions.reward_nok`, `payouts`, `record_payout`, `member_balances`, `recurrence_type = 'job'` med `job_repeats`. Skjema: «Lønn (kr)» og «Ledig jobb», «Ledige jobber» i «I dag», saldo og utbetaling under «Husstand» | `npm run db:test` er grønn. På mobilen: 10 kr på en oppgave gir «+10 kr» og saldo, en engangsjobb forsvinner, en gjentakende jobb blir stående, angring trekker fra, og utbetaling gir saldo 0 |
 | 10a | Barnas egen enhet (tidligere steg 16, se §3): anonym innlogging, `link_tokens` med kort kode og QR, `redeem_link_token`, frakobling som sletter den anonyme brukeren, barnets faner («I dag», «Min lønn»), innstramming av hva barn ser og kan krysse av | Et barn kobler til med QR på sin enhet, ser sine oppgaver og jobber, krysser av og ser sin egen saldo |
 | 10b | Godkjenning av lønn (se §10): `task_completions.status`, «Til godkjenning» i «I dag», godkjent saldo for utbetaling | Barnets avkrysning med lønn «venter», en voksen godkjenner én og avviser én, den avviste er tilbake hos barnet og pengene er trukket, og utbetaling tillater bare godkjent beløp |
-| 11 | Årshjulet viser også egne årlige oppgaver: RPC `get_upcoming_occurrences` | Egne og malbaserte oppgaver vises i samme 12 måneder |
+| 11 | *Gjort:* årshjulet viser også egne årlige oppgaver (én gang i året i en bestemt måned, ikke fra mal), merket «Egen». Gruppert på `tasks.month`, så `get_upcoming_occurrences` trengs ikke her. «+» øverst til høyre (voksne) åpner «Ny årlig oppgave»: tittel, ansvarlig, lønn og flere måneder, som blir én månedsoppgave per måned i ett insert-kall | Egne og malbaserte oppgaver vises i samme 12 måneder |
 | 12 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
 | 13 | *Gjort i steg 8:* lokale påminnelser (`get_upcoming_occurrences`, daglig oppsummering, månedsoppgaver) | Varsel kommer på forfallsdagen |
 | 14 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |

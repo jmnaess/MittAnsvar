@@ -1,11 +1,13 @@
-import { useCallback, useState } from 'react';
-import { Alert, SectionList, StyleSheet, Text, View } from 'react-native';
+import { router, useNavigation } from 'expo-router';
+import { useCallback, useLayoutEffect, useState } from 'react';
+import { Alert, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../src/components/Button';
 import { colors } from '../../../src/components/theme';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { useArchiveTask, useTasks } from '../../../src/features/tasks/hooks';
 import type { Task } from '../../../src/features/tasks/types';
+import { OwnYearTaskRow } from '../../../src/features/templates/components/OwnYearTaskRow';
 import { TemplateRow } from '../../../src/features/templates/components/TemplateRow';
 import { useActivateTemplates, useTemplates } from '../../../src/features/templates/hooks';
 import { groupByMonth, suggestForHousehold } from '../../../src/features/templates/suggest';
@@ -15,7 +17,9 @@ import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 
 /**
  * Årshjul: tolv måneder med denne måneden øverst. Hver måned viser malene som passer
- * husstanden, med en bryter for å aktivere (lage oppgave) eller deaktivere (arkivere den).
+ * husstanden, med en bryter for å aktivere (lage oppgave) eller deaktivere (arkivere den),
+ * og husstandens egne årlige oppgaver, merket «Egen». Trykk på en egen oppgave åpner den.
+ * Voksne lager nye med «+» øverst til høyre (én eller flere måneder).
  */
 export default function YearScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
@@ -35,7 +39,29 @@ export default function YearScreen() {
   const isAdult = members.find((m) => m.auth_user_id === session?.user.id)?.role === 'adult';
   const suggested = suggestForHousehold(templates.data ?? [], household!);
   // Bare rekkefølgen avhenger av mobilens dato. Frister regnes alltid ut i databasen.
-  const sections = groupByMonth(suggested, new Date().getMonth() + 1);
+  const sections = groupByMonth(suggested, tasks.data ?? [], new Date().getMonth() + 1);
+  const nameOf = (memberId: string | null) =>
+    members.find((m) => m.id === memberId)?.display_name ?? 'Felles';
+
+  // «+» øverst til høyre åpner «Ny årlig oppgave». Bare for voksne, som i «I dag».
+  const navigation = useNavigation();
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: isAdult
+        ? () => (
+            <Pressable
+              onPress={() => router.push('/year-task/new')}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Ny årlig oppgave"
+              style={styles.addButton}
+            >
+              <Text style={styles.addText}>+</Text>
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [navigation, isAdult]);
 
   const taskByTemplate = new Map<string, Task>();
   for (const t of tasks.data ?? []) if (t.template_id) taskByTemplate.set(t.template_id, t);
@@ -98,14 +124,14 @@ export default function YearScreen() {
       style={styles.flex}
       contentContainerStyle={styles.container}
       sections={sections}
-      keyExtractor={(t) => t.id}
+      keyExtractor={(item) => item.key}
       stickySectionHeadersEnabled={false}
       {...pullToRefresh}
       ListHeaderComponent={
         <View style={styles.header}>
           <Text style={styles.intro}>
-            Faste oppgaver gjennom året. Slå på det som passer, så dukker det opp under «Denne
-            måneden» i «I dag» når måneden kommer.
+            Faste oppgaver gjennom året. Slå på det som passer, eller lag egne med +. Når
+            måneden kommer, dukker de opp under «Denne måneden» i «I dag».
           </Text>
           {isAdult && notActive.length > 0 && (
             <Button
@@ -126,19 +152,33 @@ export default function YearScreen() {
       renderSectionHeader={({ section }) => <Text style={styles.month}>{section.title}</Text>}
       renderSectionFooter={({ section }) =>
         section.data.length === 0 && !templates.isPending ? (
-          <Text style={styles.muted}>Ingen forslag denne måneden.</Text>
+          <Text style={styles.muted}>Ingenting denne måneden.</Text>
         ) : null
       }
       renderItem={({ item }) => {
-        const task = taskByTemplate.get(item.id) ?? null;
-        const isPending = item.id in pending;
+        if (item.kind === 'own') {
+          return (
+            <OwnYearTaskRow
+              task={item.task}
+              assigneeName={nameOf(item.task.assigned_member_id)}
+              onPress={
+                isAdult
+                  ? () => router.push({ pathname: '/task/[id]', params: { id: item.task.id } })
+                  : undefined
+              }
+            />
+          );
+        }
+        const template = item.template;
+        const task = taskByTemplate.get(template.id) ?? null;
+        const isPending = template.id in pending;
         return (
           <TemplateRow
-            template={item}
+            template={template}
             task={task}
-            value={isPending ? pending[item.id] : task !== null}
+            value={isPending ? pending[template.id] : task !== null}
             disabled={!isAdult || isPending}
-            onToggle={(on) => toggle(item, on)}
+            onToggle={(on) => toggle(template, on)}
           />
         );
       }}
@@ -154,4 +194,6 @@ const styles = StyleSheet.create({
   month: { fontSize: 20, fontWeight: '700', color: colors.text, marginTop: 24, marginBottom: 4 },
   muted: { fontSize: 15, color: colors.muted },
   error: { color: colors.danger, fontSize: 15 },
+  addButton: { paddingHorizontal: 16 },
+  addText: { fontSize: 28, lineHeight: 32, color: colors.primary },
 });

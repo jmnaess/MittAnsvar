@@ -34,6 +34,14 @@ export default function AppLayout() {
           name="child/[id]"
           options={{ headerShown: true, title: 'Endre barn', presentation: 'modal' }}
         />
+        <Stack.Screen
+          name="task/new"
+          options={{ headerShown: true, title: 'Ny oppgave', presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="task/[id]"
+          options={{ headerShown: true, title: 'Endre oppgave', presentation: 'modal' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!household}>
         <Stack.Screen name="onboarding" />

@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "households": {
+            "feedback_messages": {
+                  Row: {
+                    "audience": Database["public"]['Enums']["audience"],"category": string | null,"id": string,"is_active": boolean,"text": string,"tone": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "audience"?: Database["public"]['Enums']["audience"],"category"?: string | null,"id"?: string,"is_active"?: boolean,"text": string,"tone": string
+                  }
+                  Update: {
+                    "audience"?: Database["public"]['Enums']["audience"],"category"?: string | null,"id"?: string,"is_active"?: boolean,"text"?: string,"tone"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"households": {
                   Row: {
                     "created_at": string,"feedback_tone": Database["public"]['Enums']["feedback_tone"],"housing_type": Database["public"]['Enums']["housing_type"],"id": string,"name": string,"timezone": string,"trial_ends_at": string,"type": Database["public"]['Enums']["household_type"]
                   }
@@ -57,21 +71,137 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"task_completions": {
+                  Row: {
+                    "completed_at": string,"completed_by_member_id": string,"completed_on": string,"due_on": string | null,"feedback_message_id": string | null,"household_id": string,"id": string,"recorded_by": string | null,"task_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "completed_at"?: string,"completed_by_member_id": string,"completed_on": string,"due_on"?: string | null,"feedback_message_id"?: string | null,"household_id": string,"id"?: string,"recorded_by"?: string | null,"task_id": string
+                  }
+                  Update: {
+                    "completed_at"?: string,"completed_by_member_id"?: string,"completed_on"?: string,"due_on"?: string | null,"feedback_message_id"?: string | null,"household_id"?: string,"id"?: string,"recorded_by"?: string | null,"task_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "task_completions_feedback_message_id_fkey"
+      columns: ["feedback_message_id"]
+isOneToOne: false
+      referencedRelation: "feedback_messages"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "task_completions_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "task_completions_member_fk"
+      columns: ["household_id","completed_by_member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["household_id","id"]
+    },{
+      foreignKeyName: "task_completions_task_fk"
+      columns: ["household_id","task_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["household_id","id"]
+    },{
+      foreignKeyName: "task_completions_task_fk"
+      columns: ["household_id","task_id"]
+isOneToOne: false
+      referencedRelation: "today_tasks"
+      referencedColumns: ["household_id","id"]
+    }
+                  ]
+                },"tasks": {
+                  Row: {
+                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"household_id": string,"id": string,"month": number | null,"month_day": number | null,"next_due_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"title": string,"weekdays": (number)[] | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anchor_on": string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id": string,"id"?: string,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title": string,"weekdays"?: (number)[] | null
+                  }
+                  Update: {
+                    "anchor_on"?: string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id"?: string,"id"?: string,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title"?: string,"weekdays"?: (number)[] | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tasks_assigned_member_fk"
+      columns: ["household_id","assigned_member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["household_id","id"]
+    },{
+      foreignKeyName: "tasks_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tasks_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
-            [_ in never]: never
+            "today_tasks": {
+                  Row: {
+                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"household_id": string,"id": string,"is_overdue": boolean | null,"month": number | null,"month_day": number | null,"next_due_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"title": string,"weekdays": (number)[] | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"household_id"?: string | null,"id"?: string | null,"is_overdue"?: never,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title"?: string | null,"weekdays"?: (number)[] | null
+                         }
+                        Update: {
+                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"household_id"?: string | null,"id"?: string | null,"is_overdue"?: never,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title"?: string | null,"weekdays"?: (number)[] | null
+                         }
+                        Relationships: [
+                    {
+      foreignKeyName: "tasks_assigned_member_fk"
+      columns: ["household_id","assigned_member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["household_id","id"]
+    },{
+      foreignKeyName: "tasks_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tasks_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    }
+                  ]
+                }
           }
           Functions: {
-            "create_household":
+            "complete_task":
+{ Args: { "p_member_id": string,"p_task_id": string }; Returns: {
+              "completion_id": string,"feedback_text": string,"next_due_on": string
+            }[]
+                           },
+"create_household":
 { Args: { "p_avatar": string,"p_display_name": string,"p_housing_type": Database["public"]['Enums']["housing_type"],"p_name": string,"p_type": Database["public"]['Enums']["household_type"] }; Returns: string
                            },
 "delete_my_account_data":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"undo_completion":
+{ Args: { "p_completion_id": string }; Returns: undefined
                            }
           }
           Enums: {
-            "feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child"
+            "audience": "adult"|"child"|"any","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval","recurrence_unit": "day"|"week"|"month"|"year"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -191,7 +321,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"]
+            "audience": ["adult", "child", "any"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval"],"recurrence_unit": ["day", "week", "month", "year"]
           }
         }
 } as const

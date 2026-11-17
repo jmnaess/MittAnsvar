@@ -6,13 +6,6 @@ import { colors } from '../../../components/theme';
 import type { ChildInput } from '../types';
 import { AvatarPicker } from './AvatarPicker';
 
-type Props = {
-  initial?: ChildInput;
-  submitLabel: string;
-  busy?: boolean;
-  onSubmit: (child: ChildInput) => void;
-};
-
 const MAX_AGE = 20;
 
 /**
@@ -28,48 +21,80 @@ export function parseBirthYear(text: string): number | null | undefined {
   return year >= thisYear - MAX_AGE && year <= thisYear ? year : undefined;
 }
 
-/** Fornavn, avatar og valgfritt fødselsår. Brukes både i oppstarten og i Innstillinger. */
-export function ChildForm({ initial, submitLabel, busy, onSubmit }: Props) {
+/**
+ * Tilstanden i barneskjemaet. Skilt fra feltene, så en modal kan ha Lagre i headeren.
+ * value er null så lenge skjemaet ikke er gyldig.
+ */
+export function useChildForm(initial?: ChildInput) {
   const [name, setName] = useState(initial?.display_name ?? '');
   const [avatar, setAvatar] = useState(initial?.avatar ?? 'cat');
   const [birthYearText, setBirthYearText] = useState(initial?.birth_year?.toString() ?? '');
 
   const trimmedName = name.trim();
   const birthYear = parseBirthYear(birthYearText);
-  const birthYearInvalid = birthYear === undefined;
-  const canSubmit = !busy && trimmedName.length > 0 && !birthYearInvalid;
+  const value: ChildInput | null =
+    trimmedName.length > 0 && birthYear !== undefined
+      ? { display_name: trimmedName, avatar, birth_year: birthYear }
+      : null;
 
-  function handleSubmit() {
-    if (!canSubmit) return;
-    onSubmit({ display_name: trimmedName, avatar, birth_year: birthYear });
-  }
+  return {
+    name, setName, avatar, setAvatar, birthYearText, setBirthYearText,
+    birthYearInvalid: birthYear === undefined,
+    value,
+  };
+}
 
+export type ChildFormState = ReturnType<typeof useChildForm>;
+
+/** Fornavn, avatar og valgfritt fødselsår. */
+export function ChildFields({ form, disabled }: { form: ChildFormState; disabled?: boolean }) {
+  const thisYear = new Date().getFullYear();
   return (
     <View style={styles.form}>
       <TextField
         label="Fornavn eller kallenavn"
-        value={name}
-        onChangeText={setName}
+        value={form.name}
+        onChangeText={form.setName}
         maxLength={30}
         autoCapitalize="words"
-        editable={!busy}
+        editable={!disabled}
       />
-      <AvatarPicker value={avatar} onChange={setAvatar} disabled={busy} />
+      <AvatarPicker value={form.avatar} onChange={form.setAvatar} disabled={disabled} />
       <TextField
         label="Fødselsår (valgfritt)"
-        value={birthYearText}
-        onChangeText={(text) => setBirthYearText(text.replace(/\D/g, ''))}
-        placeholder={`f.eks. ${new Date().getFullYear() - 8}`}
+        value={form.birthYearText}
+        onChangeText={(text) => form.setBirthYearText(text.replace(/\D/g, ''))}
+        placeholder={`f.eks. ${thisYear - 8}`}
         keyboardType="number-pad"
         maxLength={4}
-        editable={!busy}
+        editable={!disabled}
       />
-      <Text style={birthYearInvalid ? styles.error : styles.hint}>
-        {birthYearInvalid
-          ? `Skriv et årstall mellom ${new Date().getFullYear() - MAX_AGE} og ${new Date().getFullYear()}, eller la feltet stå tomt.`
+      <Text style={form.birthYearInvalid ? styles.error : styles.hint}>
+        {form.birthYearInvalid
+          ? `Skriv et årstall mellom ${thisYear - MAX_AGE} og ${thisYear}, eller la feltet stå tomt.`
           : 'Brukes senere til å foreslå oppgaver som passer alderen.'}
       </Text>
-      <Button title={submitLabel} onPress={handleSubmit} disabled={!canSubmit} />
+    </View>
+  );
+}
+
+type Props = {
+  submitLabel: string;
+  busy?: boolean;
+  onSubmit: (child: ChildInput) => void;
+};
+
+/** Barneskjema med egen knapp. Brukes i oppstarten, som ikke er en modal. */
+export function ChildForm({ submitLabel, busy, onSubmit }: Props) {
+  const form = useChildForm();
+  return (
+    <View style={styles.form}>
+      <ChildFields form={form} disabled={busy} />
+      <Button
+        title={submitLabel}
+        onPress={() => form.value && onSubmit(form.value)}
+        disabled={busy || !form.value}
+      />
     </View>
   );
 }

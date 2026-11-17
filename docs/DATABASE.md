@@ -75,16 +75,20 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
 | household_id | uuid not null → households on delete cascade | |
 | title | text not null | 1–80 tegn |
 | description | text null | |
-| category | text not null | check: `daily`, `cleaning`, `kitchen`, `laundry`, `outdoor`, `maintenance`, `safety`, `other` |
-| assigned_member_id | uuid null → members on delete set null | null = «hvem som helst» |
-| template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra |
+| category | text not null default `other` | check: `daily`, `cleaning`, `kitchen`, `laundry`, `outdoor`, `maintenance`, `safety`, `other`. Skjemaet spør ikke om kategori ennå |
+| assigned_member_id | uuid null | null = «hvem som helst». Sammensatt FK `(household_id, assigned_member_id) → members (household_id, id) on delete set null (assigned_member_id)`, så den ansvarlige alltid er i samme husstand |
+| template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra. **Legges til i steg 9** sammen med `task_templates` |
 | *gjentakelse* | se §2 | `recurrence_type`, `recurrence_unit`, `recurrence_every`, `weekdays`, `month_day`, `month`, `anchor_on` |
-| next_due_on | date null | neste frist. null = engangsoppgave som er utført |
-| created_by | uuid null → members on delete set null | |
+| next_due_on | date null | neste frist. null = engangsoppgave som er utført. Skrives bare av databasen (trigger og RPC) |
+| created_by | uuid null → members on delete set null | settes av triggeren |
 | created_at | timestamptz not null default now() | |
 | archived_at | timestamptz null | «slettede» oppgaver arkiveres, slik at historikken beholdes |
 
 Indeks: `(household_id, next_due_on) where archived_at is null`.
+
+**Trigger `tasks_set_defaults`** (before insert/update): ved insert settes `anchor_on` = i dag i husstandens tidssone, `created_by` = innlogget medlem og `next_due_on` = `private.first_due(oppgaven)`. Endres gjentakelseskolonnene, settes `anchor_on` til i dag og fristen beregnes på nytt. Klienten har ikke kolonnerettighet til `next_due_on`, `anchor_on` eller `created_by` (kolonnerettigheter sjekker bare kolonnene i selve spørringen, så triggeren kan sette dem).
+
+**View `today_tasks`** (`security_invoker = true`, så RLS på `tasks` gjelder): aktive oppgaver med `next_due_on <= private.household_today(household_id)`, pluss `is_overdue`. «I dag» regnes dermed aldri ut på mobilen.
 
 ### `task_completions` → §3
 ### `task_templates`, `feedback_messages` → §4
@@ -111,7 +115,7 @@ Tabellen skrives bare av Edge Function `revenuecat-webhook` med service role.
 |---------|------|--------|------------|------------|
 | recurrence_type | recurrence_type not null | ✓ | ✓ | ✓ |
 | recurrence_unit | recurrence_unit null | – | ✓ | ✓ |
-| recurrence_every | smallint null (≥ 1) | – | ✓ «hver N.» | ✓ «N enheter etter» |
+| recurrence_every | smallint null (1–100) | – | ✓ «hver N.» | ✓ «N enheter etter» |
 | weekdays | smallint[] null (ISO 1=man … 7=søn) | – | påkrevd når unit = `week` | – |
 | month_day | smallint null (1–31) | – | påkrevd når unit = `month`, valgfri når unit = `year` | – |
 | month | smallint null (1–12) | – | påkrevd når unit = `year` | – |
@@ -139,6 +143,11 @@ Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke 
   - Gjort sent (mandag): neste frist blir førstkommende søndag. Tapte forekomster hoper seg ikke opp.
 
 Hvorfor i databasen? Regelen finnes ett sted, klienten kan ikke sende en feil frist, og `completed_on` settes uansett av serveren. Funksjonen leser ingen tabeller, så den er lett å teste. Den implementeres som en enkel løkke som går dag for dag til mønsteret treffer. Det er lesbart og raskt nok for MVP.
+
+Hjelpefunksjoner (alle i `private`): `matches_pattern(t, d)` (er `d` en forekomst?), `next_occurrence(t, after)` (første treff etter `after`), `first_due(t)` (første frist for en ny oppgave: `anchor_on` for once/interval, første treff fra og med `anchor_on` for calendar), `local_today(tz, at)` og `household_today(hid)`.
+
+- Uker regnes fra mandagen i uken, ikke ISO-ukenummer, så uke 53 og årsskifte trenger ingen spesialhåndtering.
+- Sperren mot evig løkke i `next_occurrence` er `(every + 1) × maks dager per enhet` (uke 7, måned 31, år 366). Med `every ≤ 100` er verste tilfelle omtrent 37 000 dager. Slår sperren til, kastes `recurrence_not_found`. Mangler mønsteret felter, returneres null, slik at check-constrainten avviser raden med 23514.
 
 **pgTAP-tester** (`supabase/tests/compute_next_due.test.sql`), minimum:
 
@@ -181,21 +190,21 @@ Hver avkrysning blir en ny rad. Tabellen er append-only: raden oppdateres aldri,
 | completed_by_member_id | uuid not null → members **on delete cascade** | hvem som gjorde det. Slettes med barneprofilen (GDPR) |
 | recorded_by | uuid null → auth.users on delete set null | hvilken innlogget bruker som registrerte (i kiosk: den voksne) |
 | completed_on | date not null | lokal dato i husstandens tidssone, **settes av serveren** |
-| completed_at | timestamptz not null default now() | |
+| completed_at | timestamptz not null default now() | `complete_task` setter `clock_timestamp()`, så to avkrysninger i samme transaksjon får ulik tid |
 | due_on | date null | fristen denne avkrysningen dekket. Brukes til «i tide?» og til angring |
 | feedback_message_id | uuid null → feedback_messages on delete set null | hvilken tekst som ble vist, for å unngå gjentakelser |
 
-Indekser: `(task_id, completed_at desc)` og `(household_id, completed_on)`.
+Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(household_id, completed_by_member_id)`. `task_id` og `completed_by_member_id` har sammensatte FK-er med `household_id`, slik at oppgave og medlem alltid hører til samme husstand som raden.
 
 **Skriving skjer bare via RPC** (`security definer`, `set search_path = ''`):
 
-- `complete_task(p_task_id, p_member_id) returns uuid`
-  1. Kalleren er medlem av oppgavens husstand, og oppgaven er ikke arkivert.
+- `complete_task(p_task_id, p_member_id) returns table (completion_id uuid, feedback_text text, next_due_on date)`
+  1. Kalleren er medlem av oppgavens husstand, og oppgaven er ikke arkivert. Ellers `task_not_found` (samme feil for andre husstander, så det ikke lekker om id-en finnes). Oppgaveraden låses med `for update`.
   2. `private.household_has_access(household_id)`, ellers feil `subscription_required`.
-  3. `p_member_id` hører til samme husstand. Er kalleren et barn, må `p_member_id` være kallerens eget medlem.
+  3. `p_member_id` hører til samme husstand. Er kalleren et barn, må `p_member_id` være kallerens eget medlem. Ellers `invalid_member`.
   4. `completed_on = (now() at time zone households.timezone)::date`. Klienten sender verken dato eller frist.
-  5. Setter inn raden (`due_on` = oppgavens nåværende `next_due_on`) og setter `tasks.next_due_on = private.compute_next_due(oppgaven, completed_on)`. Alt skjer i én transaksjon.
-- `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som krysset av, innen 10 minutter. Raden slettes, og `tasks.next_due_on` settes tilbake til `due_on`.
+  5. Velger en tilbakemeldingstekst (se §4), setter inn raden (`due_on` = oppgavens nåværende `next_due_on`) og setter `tasks.next_due_on = private.compute_next_due(oppgaven, completed_on)`. Alt skjer i én transaksjon.
+- `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som registrerte den (`recorded_by`), innen 10 minutter. Raden slettes, og `tasks.next_due_on` settes tilbake til `due_on`. Feil: `completion_not_found`, `undo_not_allowed`, `undo_expired`. Appen viser «Angre» i 6 sekunder.
 
 **Historikkspørringer** (vanlig select, ingen egne tabeller):
 - Sist utført: `select completed_at from task_completions where task_id = $1 order by completed_at desc limit 1`
@@ -236,14 +245,17 @@ Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, bolig
 | tone | text not null | `fact` / `humor` (ikke `both`, det er et filter) |
 | text | text not null | «Visste du at …» / «Hvor mange hybelkaniner fant du?» |
 | audience | audience not null | |
-| template_id | uuid null → task_templates | mest spesifikk |
+| template_id | uuid null → task_templates | mest spesifikk. **Legges til i steg 9** |
 | category | text null | nest mest spesifikk. Er begge null, er teksten generell |
 | is_active | boolean not null default true | |
 
-**Utvalg** (`feedback/pickFeedback.ts`, på klienten):
-1. Alle aktive tekster hentes én gang og caches (noen hundre rader).
-2. Filtrer på husstandens tone og målgruppen til den som krysset av.
-3. Velg tilfeldig fra den mest spesifikke gruppen som ikke er tom (mal → kategori → generell). Hopp over de siste 20 viste tekstene i husstanden.
+**Utvalg** skjer på serveren, i `complete_task`, som returnerer teksten (endret i steg 5 fra et utvalg på klienten):
+1. Filtrer på husstandens tone (`both` = begge) og målgruppen til den som gjorde oppgaven (`any` eller rollen).
+2. Bare tekster for oppgavens kategori eller generelle tekster.
+3. Sorter: ikke blant de 20 sist viste i husstanden først, deretter kategori foran generell, deretter tilfeldig. Er alle vist nylig, gjentas en tekst.
+4. `feedback_message_id` lagres på avkrysningen.
+
+Startsettet (33 tekster) ligger i migrasjonen `*_task_completions.sql`. Det flyttes til `supabase/seed/feedback.sql` og utvides til 80–100 i steg 11.
 
 ---
 
@@ -256,7 +268,7 @@ Alle er `language sql stable security definer set search_path = ''`. Da unngås 
 private.my_household_ids()        returns setof uuid  -- household_id for auth.uid()
 private.is_adult(hid uuid)        returns boolean     -- auth.uid() er voksen i hid
 private.my_member_id(hid uuid)    returns uuid
-private.household_has_access(hid) returns boolean     -- prøvetid eller aktivt abonnement
+private.household_has_access(hid) returns boolean     -- prøvetid eller aktivt abonnement (foreløpig bare prøvetid; abonnement i steg 17)
 ```
 
 Policyer bruker `household_id in (select private.my_household_ids())`. Innpakningen i `select` gjør at funksjonen evalueres én gang per spørring, ikke én gang per rad.
@@ -270,6 +282,7 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 | households | medlem | – (RPC `create_household`) | voksen; kolonner: `name`, `type`, `housing_type`, `feedback_tone` | – (Edge `delete-account`) |
 | members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year` | voksen, bare `role = 'child'` |
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
+| today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
 | task_completions | medlem | – (RPC `complete_task`) | – | – (RPC `undo_completion`) |
 | link_tokens | – | – (RPC) | – | – |
 | household_subscriptions | medlem | – (service role) | – | – |
@@ -311,7 +324,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `create_link_token(kind, member_id)` | voksen | returnerer råtoken, lagrer hash |
 | `redeem_link_token(token, display_name?, avatar?)` | innlogget (anonym for `child`, e-post for `adult`) | kobler `auth_user_id` eller oppretter voksen-member |
 | `unlink_member_device(member_id)` | voksen | `auth_user_id = null` på barnet |
-| `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | |
+| `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
 | `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |

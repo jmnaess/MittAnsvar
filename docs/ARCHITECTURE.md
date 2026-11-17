@@ -64,6 +64,7 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
   (app)/onboarding.tsx            # trinn: husstand (type, bolig, navn) → barn (kan hoppes over); forslag senere
   (app)/(tabs)/index.tsx          # «I dag»
+  (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre)
   (app)/(tabs)/year.tsx           # Årshjul
   (app)/(tabs)/household.tsx      # koble enhet (steg 15)
   (app)/(tabs)/settings.tsx       # husstandsnavn, tone, medlemmer, konto
@@ -80,9 +81,9 @@ src/
     auth/         api.ts, hooks.ts
     household/    api.ts, hooks.ts, components/
     tasks/        api.ts, hooks.ts, components/
-    completions/  api.ts, hooks.ts
+    completions/  api.ts, hooks.ts, components/MemberPickerModal.tsx
     templates/    api.ts, suggest.ts, suggest.test.ts
-    feedback/     pickFeedback.ts, components/FeedbackToast.tsx
+    feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
     kiosk/        pin.ts, components/
     devices/      api.ts (QR-token)
     subscription/ revenuecat.ts, useAccess.ts
@@ -96,6 +97,8 @@ supabase/
   seed/templates.sql, seed/feedback.sql
   tests/rls.test.sql              # pgTAP: RLS-tester
   tests/compute_next_due.test.sql # pgTAP: gjentakelse
+  tests/tasks.test.sql            # pgTAP: tasks, trigger, today_tasks
+  tests/complete_task.test.sql    # pgTAP: avkrysning, angring, tone, tidssone
 docs/
 ```
 
@@ -196,13 +199,13 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 2 | Supabase-prosjekt (EU), CLI, migrasjon: `households`, `members`, hjelpefunksjoner, RLS, pgTAP-oppsett | `supabase db reset` + tester er grønne |
 | 3 | Innlogging med e-postkode, sesjon i SecureStore | Kan logge inn og ut |
 | 4 | Oppstart: `create_household` (type, bolig, navn), legg til barneprofiler | Husstand og barn synes i appen |
-| 5 | `tasks`: opprett, rediger, arkiver (uten gjentakelse), «I dag»-liste | Oppgaver kan lages og listes |
-| 6 | `task_completions` + `complete_task` (serveren setter `completed_on`) + historikk per oppgave | Avkrysning lagres som historikk |
-| 7 | `private.compute_next_due` i SQL med pgTAP-tester, brukt av `complete_task`. Begge gjentakelsesmodusene i UI | Testene grønne, fristen flyttes riktig |
+| 5a | `tasks` med begge gjentakelsesmodusene, `compute_next_due` (pgTAP), oppgaveskjema og fanen «Oppgaver» | Oppgaver kan lages, endres og slettes, fristen stemmer |
+| 5b | `task_completions`, `complete_task`/`undo_completion`, et startsett tilbakemeldingstekster, «I dag» med avkrysning, tilbakemelding og angring | Avkrysning lagres som historikk, fristen flyttes og kan angres |
+| 6–7 | *Slått sammen med 5a/5b.* Gjenstår: historikk per oppgave | |
 | 8 | Egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
 | 9 | Maler: tabell og seed, forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
 | 10 | Årshjul-visning: RPC `get_upcoming_occurrences`, gruppert per måned | 12 måneder vises med oppgaver |
-| 11 | Tilbakemeldingstekster: tabell, seed, valg av tone, visning etter avkrysning | Tekst vises etter avkrysning |
+| 11 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
 | 12 | Lokale påminnelser for egne oppgaver | Varsel kommer på forfallsdagen |
 | 13 | Invitere voksen nr. 2 (link-token, `kind = 'adult'`) | To voksne deler husstand |
 | 14 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |

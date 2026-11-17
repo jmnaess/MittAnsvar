@@ -1,0 +1,45 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { archiveTask, createTask, listTasks, listTodayTasks, updateTask } from './api';
+import type { TaskInput } from './types';
+
+// Begge listene ligger under ['tasks', householdId]. Da holder det å invalidere den
+// nøkkelen for å hente både oversikten og «I dag» på nytt.
+export const taskKeys = {
+  all: (householdId: string) => ['tasks', householdId] as const,
+  list: (householdId: string) => ['tasks', householdId, 'list'] as const,
+  today: (householdId: string) => ['tasks', householdId, 'today'] as const,
+};
+
+export function useTasks(householdId: string) {
+  return useQuery({ queryKey: taskKeys.list(householdId), queryFn: () => listTasks(householdId) });
+}
+
+export function useTodayTasks(householdId: string) {
+  return useQuery({
+    queryKey: taskKeys.today(householdId),
+    queryFn: () => listTodayTasks(householdId),
+  });
+}
+
+export function useInvalidateTasks(householdId: string) {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: taskKeys.all(householdId) });
+}
+
+export function useCreateTask(householdId: string) {
+  const onSuccess = useInvalidateTasks(householdId);
+  return useMutation({ mutationFn: (input: TaskInput) => createTask(householdId, input), onSuccess });
+}
+
+export function useUpdateTask(householdId: string) {
+  const onSuccess = useInvalidateTasks(householdId);
+  return useMutation({
+    mutationFn: ({ taskId, input }: { taskId: string; input: TaskInput }) => updateTask(taskId, input),
+    onSuccess,
+  });
+}
+
+export function useArchiveTask(householdId: string) {
+  const onSuccess = useInvalidateTasks(householdId);
+  return useMutation({ mutationFn: archiveTask, onSuccess });
+}

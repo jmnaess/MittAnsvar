@@ -50,7 +50,17 @@ const KNOWN: Record<string, string> = {
   already_in_household: 'Du er allerede med i en husstand.',
   anonymous_not_allowed: 'Denne enheten kan ikke opprette en husstand.',
   not_authenticated: 'Du er ikke innlogget. Logg inn på nytt.',
+  // Oppgaver
+  subscription_required: 'Prøveperioden er over. Husstanden trenger abonnement for å gjøre endringer.',
+  recurrence_not_found: 'Fant ingen dato som passer gjentakelsen. Prøv et annet valg.',
+  task_not_found: 'Fant ikke oppgaven. Den kan være slettet.',
+  invalid_member: 'Du kan ikke krysse av for denne personen.',
+  // Angring
+  completion_not_found: 'Avkrysningen finnes ikke lenger.',
+  undo_not_allowed: 'Bare den siste avkrysningen kan angres.',
+  undo_expired: 'Det er for lenge siden til å angre.',
   // Postgres
+  '23503': 'Personen du valgte, finnes ikke lenger i husstanden.',
   '42501': 'Du har ikke tilgang til å gjøre dette.',
   '23514': 'Noe av det du skrev, er ikke gyldig.',
 };

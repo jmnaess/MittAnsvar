@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../components/theme';
-import { formatDate } from '../../../lib/dates';
-import { describeRecurrence } from '../recurrence';
+import { formatDate, formatMonthYear } from '../../../lib/dates';
+import { describeRecurrence, isMonthTask } from '../recurrence';
 import type { Task } from '../types';
 
 type Props = {
@@ -13,7 +13,12 @@ type Props = {
 
 /** Én oppgave i oversikten: tittel, ansvarlig, gjentakelse og neste frist. */
 export function TaskRow({ task, assigneeName, onPress }: Props) {
-  const due = task.next_due_on ? formatDate(task.next_due_on) : 'Ferdig';
+  // Månedsoppgaver har hele måneden som frist, så en dato (den 1.) ville vært misvisende.
+  const due = !task.next_due_on
+    ? 'Ferdig'
+    : isMonthTask(task)
+      ? formatMonthYear(task.next_due_on)
+      : formatDate(task.next_due_on);
 
   return (
     <Pressable

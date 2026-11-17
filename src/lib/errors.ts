@@ -65,6 +65,7 @@ const KNOWN: Record<string, string> = {
   undo_expired: 'Det er for lenge siden til å angre.',
   // Postgres
   '23503': 'Personen du valgte, finnes ikke lenger i husstanden.',
+  '23505': 'Dette finnes allerede.',
   '42501': 'Du har ikke tilgang til å gjøre dette.',
   '23514': 'Noe av det du skrev, er ikke gyldig.',
 };

@@ -1,5 +1,19 @@
-import { MONTH_NAMES, WEEKDAY_NAMES } from '../../lib/dates';
+import { formatLongDate, formatMonthYear, MONTH_NAMES, WEEKDAY_NAMES } from '../../lib/dates';
 import type { Recurrence } from './types';
+
+/**
+ * Månedsoppgave: årlig uten dag («i løpet av oktober»). Fristen er hele måneden.
+ * Samme regel som private.is_month_task i databasen, men her bare for visning.
+ */
+export function isMonthTask(r: Recurrence): boolean {
+  return r.recurrence_type === 'calendar' && r.recurrence_unit === 'year' && r.month_day === null;
+}
+
+/** Neste frist med år: «november 2027» for månedsoppgaver, ellers «1. desember 2026». */
+export function formatNextDue(task: Recurrence & { next_due_on: string | null }): string {
+  if (!task.next_due_on) return 'Ferdig';
+  return isMonthTask(task) ? formatMonthYear(task.next_due_on) : formatLongDate(task.next_due_on);
+}
 
 // Skjematilstand ↔ gjentakelseskolonnene i databasen, og en norsk beskrivelse.
 // Neste frist beregnes IKKE her. Det gjør databasen (private.compute_next_due).

@@ -32,6 +32,22 @@ export function formatDateTime(isoTimestamp: string): string {
   return `${weekday} ${d.getDate()}. ${MONTH_SHORT[d.getMonth()]} kl. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** '2026-11-01' → 'november' */
+export function monthName(isoDate: string): string {
+  return MONTH_NAMES[Number(isoDate.split('-')[1]) - 1];
+}
+
+/** '2026-11-01' → 'november 2026' */
+export function formatMonthYear(isoDate: string): string {
+  return `${monthName(isoDate)} ${isoDate.split('-')[0]}`;
+}
+
+/** '2026-12-01' → '1. desember 2026' */
+export function formatLongDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return `${day}. ${MONTH_NAMES[month - 1]} ${year}`;
+}
+
 /** '2026-11-17' → 'tir. 17. nov.' */
 export function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);

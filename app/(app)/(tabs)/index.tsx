@@ -9,14 +9,17 @@ import { useCompleteTask, useUndoCompletion } from '../../../src/features/comple
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
-import { groupTodayByMember } from '../../../src/features/tasks/groupToday';
+import { groupTodayByMember, THIS_MONTH_KEY } from '../../../src/features/tasks/groupToday';
 import { useTodayTasks } from '../../../src/features/tasks/hooks';
 import type { TodayTask } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 type Toast = { completionId: string; title: string; message: string | null };
 
-/** «I dag»: forfalte oppgaver og dagens oppgaver, gruppert per medlem og felles. */
+/**
+ * «I dag»: forfalte oppgaver og dagens oppgaver, gruppert per medlem og felles.
+ * Månedsoppgaver (f.eks. fra årshjulet) som ikke er forfalt, ligger nederst under «Denne måneden».
+ */
 export default function TodayScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
@@ -36,6 +39,8 @@ export default function TodayScreen() {
 
   const me = members.find((m) => m.auth_user_id === session?.user.id);
   const sections = groupTodayByMember(tasks ?? [], members);
+  const nameOf = (memberId: string | null) =>
+    members.find((m) => m.id === memberId)?.display_name ?? 'Felles';
 
   function markDone(task: TodayTask, memberId: string) {
     setActionError(null);
@@ -94,9 +99,10 @@ export default function TodayScreen() {
             <Text style={styles.sectionTitle}>{section.title}</Text>
           </View>
         )}
-        renderItem={({ item }) => (
+        renderItem={({ item, section }) => (
           <TodayTaskRow
             task={item}
+            assigneeName={section.key === THIS_MONTH_KEY ? nameOf(item.assigned_member_id) : undefined}
             busy={complete.isPending && complete.variables?.taskId === item.id}
             onPress={() => handlePress(item)}
             onLongPress={() => setPicking(item)}

@@ -161,16 +161,30 @@ isOneToOne: false
       referencedColumns: ["household_id","id"]
     }
                   ]
-                },"tasks": {
+                },"task_templates": {
                   Row: {
-                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"household_id": string,"id": string,"month": number | null,"month_day": number | null,"next_due_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"title": string,"weekdays": (number)[] | null
+                    "category": string,"description": string,"household_types": (Database["public"]['Enums']["household_type"])[] | null,"housing_types": (Database["public"]['Enums']["housing_type"])[] | null,"id": string,"is_active": boolean,"month": number | null,"month_day": number | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"slug": string,"sort_order": number,"source_url": string | null,"title": string,"weekdays": (number)[] | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "anchor_on": string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id": string,"id"?: string,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title": string,"weekdays"?: (number)[] | null
+                    "category": string,"description": string,"household_types"?: (Database["public"]['Enums']["household_type"])[] | null,"housing_types"?: (Database["public"]['Enums']["housing_type"])[] | null,"id"?: string,"is_active"?: boolean,"month"?: number | null,"month_day"?: number | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"slug": string,"sort_order"?: number,"source_url"?: string | null,"title": string,"weekdays"?: (number)[] | null
                   }
                   Update: {
-                    "anchor_on"?: string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id"?: string,"id"?: string,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title"?: string,"weekdays"?: (number)[] | null
+                    "category"?: string,"description"?: string,"household_types"?: (Database["public"]['Enums']["household_type"])[] | null,"housing_types"?: (Database["public"]['Enums']["housing_type"])[] | null,"id"?: string,"is_active"?: boolean,"month"?: number | null,"month_day"?: number | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"slug"?: string,"sort_order"?: number,"source_url"?: string | null,"title"?: string,"weekdays"?: (number)[] | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"tasks": {
+                  Row: {
+                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"household_id": string,"id": string,"month": number | null,"month_day": number | null,"next_due_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"template_id": string | null,"title": string,"weekdays": (number)[] | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anchor_on": string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id": string,"id"?: string,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"template_id"?: string | null,"title": string,"weekdays"?: (number)[] | null
+                  }
+                  Update: {
+                    "anchor_on"?: string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id"?: string,"id"?: string,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"template_id"?: string | null,"title"?: string,"weekdays"?: (number)[] | null
                   }
                   Relationships: [
                     {
@@ -191,6 +205,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "households"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tasks_template_id_fkey"
+      columns: ["template_id"]
+isOneToOne: false
+      referencedRelation: "task_templates"
+      referencedColumns: ["id"]
     }
                   ]
                 }
@@ -198,14 +218,14 @@ isOneToOne: false
           Views: {
             "today_tasks": {
                   Row: {
-                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"household_id": string,"id": string,"is_overdue": boolean | null,"month": number | null,"month_day": number | null,"next_due_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"title": string,"weekdays": (number)[] | null
+                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"due_by": string | null,"household_id": string,"id": string,"is_month_task": boolean | null,"is_overdue": boolean | null,"month": number | null,"month_day": number | null,"next_due_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"template_id": string | null,"title": string,"weekdays": (number)[] | null
                   }
                   ComputedFields: never
                   Insert: {
-                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"household_id"?: string | null,"id"?: string | null,"is_overdue"?: never,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title"?: string | null,"weekdays"?: (number)[] | null
+                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"due_by"?: never,"household_id"?: string | null,"id"?: string | null,"is_month_task"?: never,"is_overdue"?: never,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"template_id"?: string | null,"title"?: string | null,"weekdays"?: (number)[] | null
                          }
                         Update: {
-                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"household_id"?: string | null,"id"?: string | null,"is_overdue"?: never,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"title"?: string | null,"weekdays"?: (number)[] | null
+                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"due_by"?: never,"household_id"?: string | null,"id"?: string | null,"is_month_task"?: never,"is_overdue"?: never,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"template_id"?: string | null,"title"?: string | null,"weekdays"?: (number)[] | null
                          }
                         Relationships: [
                     {
@@ -226,6 +246,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "households"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tasks_template_id_fkey"
+      columns: ["template_id"]
+isOneToOne: false
+      referencedRelation: "task_templates"
+      referencedColumns: ["id"]
     }
                   ]
                 }
@@ -233,6 +259,9 @@ isOneToOne: false
           Functions: {
             "accept_invite":
 { Args: { "p_avatar": string,"p_code": string,"p_display_name": string }; Returns: string
+                           },
+"activate_templates":
+{ Args: { "p_household_id": string,"p_template_ids": (string)[] }; Returns: number
                            },
 "complete_task":
 { Args: { "p_member_id": string,"p_task_id": string }; Returns: {

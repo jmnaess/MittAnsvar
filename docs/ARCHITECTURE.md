@@ -65,7 +65,7 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/onboarding.tsx            # velg: opprett (husstand → barn) eller bli med (kode, navn, avatar); forslag senere
   (app)/(tabs)/index.tsx          # «I dag»
   (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre)
-  (app)/(tabs)/year.tsx           # Årshjul
+  (app)/(tabs)/year.tsx           # Årshjul: 12 måneder med maler og brytere, «Velg anbefalte»
   (app)/(tabs)/household.tsx      # medlemmer, legg til barn, inviter voksen; koble enhet (steg 15)
   (app)/(tabs)/settings.tsx       # husstandsnavn, tone, konto
   (app)/child/new.tsx             # legg til barn
@@ -82,7 +82,7 @@ src/
     household/    api.ts, hooks.ts, inviteCode.ts, components/
     tasks/        api.ts, hooks.ts, components/
     completions/  api.ts, hooks.ts, components/MemberPickerModal.tsx
-    templates/    api.ts, suggest.ts, suggest.test.ts
+    templates/    api.ts, hooks.ts, suggest.ts (filter og månedsgruppering), components/TemplateRow.tsx
     feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
     kiosk/        pin.ts, components/
     devices/      api.ts (QR-token)
@@ -94,9 +94,10 @@ supabase/
   migrations/                     # SQL, én fil per endring
   functions/revenuecat-webhook/
   functions/delete-account/
-  seed/templates.sql, seed/feedback.sql
+  seed/feedback.sql               # steg 11. Maler og tekster som skal til prod, legges inn via migrasjon
   tests/rls.test.sql              # pgTAP: RLS-tester
-  tests/compute_next_due.test.sql # pgTAP: gjentakelse
+  tests/compute_next_due.test.sql # pgTAP: gjentakelse, månedsoppgaver (månedsskifte, årsskifte)
+  tests/templates.test.sql        # pgTAP: maler, aktivering, «Denne måneden», angring
   tests/tasks.test.sql            # pgTAP: tasks, trigger, today_tasks
   tests/complete_task.test.sql    # pgTAP: avkrysning, angring, tone, tidssone
   tests/invites.test.sql          # pgTAP: invitasjon av voksen, sperre, RLS
@@ -209,10 +210,11 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 4 | Oppstart: `create_household` (type, bolig, navn), legg til barneprofiler | Husstand og barn synes i appen |
 | 5a | `tasks` med begge gjentakelsesmodusene, `compute_next_due` (pgTAP), oppgaveskjema og fanen «Oppgaver» | Oppgaver kan lages, endres og slettes, fristen stemmer |
 | 5b | `task_completions`, `complete_task`/`undo_completion`, et startsett tilbakemeldingstekster, «I dag» med avkrysning, tilbakemelding og angring | Avkrysning lagres som historikk, fristen flyttes og kan angres |
-| 6–7 | *Slått sammen med 5a/5b.* Gjenstår: historikk per oppgave | |
+| 6 | *Gjort:* invitere voksen nr. 2 (se steg 13). Gjenstår: historikk per oppgave | |
+| 7 | *Gjort:* årshjul med maler. `task_templates` med 25 maler, `activate_templates`, månedsoppgaver (frist = måned, se [DATABASE.md §2](DATABASE.md#månedsoppgaver-steg-7)), fanen «Årshjul» med brytere og «Velg anbefalte», «Denne måneden» i «I dag» | Mal aktiveres, vises i «Denne måneden» uten å være forfalt, og neste frist blir samme måned neste år |
 | 8 | Egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
-| 9 | Maler: tabell og seed, forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
-| 10 | Årshjul-visning: RPC `get_upcoming_occurrences`, gruppert per måned | 12 måneder vises med oppgaver |
+| 9 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
+| 10 | Årshjulet viser også egne årlige oppgaver: RPC `get_upcoming_occurrences` | Egne og malbaserte oppgaver vises i samme 12 måneder |
 | 11 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
 | 12 | Lokale påminnelser for egne oppgaver | Varsel kommer på forfallsdagen |
 | 13 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |

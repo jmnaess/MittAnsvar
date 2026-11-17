@@ -1,18 +1,35 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../components/theme';
-import { formatDate } from '../../../lib/dates';
+import { formatDate, monthName } from '../../../lib/dates';
 import { describeRecurrence } from '../recurrence';
 import type { TodayTask } from '../types';
 
 type Props = {
   task: TodayTask;
+  /** Vises i «Denne måneden», der oppgavene ikke er gruppert per person. */
+  assigneeName?: string;
   busy?: boolean;
   onPress: () => void;
   onLongPress: () => void;
 };
 
+/** Linjen under tittelen: forfalt, «i løpet av november» eller gjentakelsen. */
+function detailText(task: TodayTask, assigneeName?: string): { text: string; overdue: boolean } {
+  const due = task.next_due_on;
+  if (task.is_month_task && due) {
+    const month = monthName(due);
+    if (task.is_overdue) return { text: `Forfalt – skulle vært gjort i ${month}`, overdue: true };
+    const text = `I løpet av ${month}`;
+    return { text: assigneeName ? `${text} · ${assigneeName}` : text, overdue: false };
+  }
+  if (task.is_overdue && due) return { text: `Forfalt fra ${formatDate(due)}`, overdue: true };
+  return { text: describeRecurrence(task), overdue: false };
+}
+
 /** Én oppgave i «I dag». Trykk = utført, langt trykk = velg hvem som gjorde det. */
-export function TodayTaskRow({ task, busy, onPress, onLongPress }: Props) {
+export function TodayTaskRow({ task, assigneeName, busy, onPress, onLongPress }: Props) {
+  const detail = detailText(task, assigneeName);
+
   return (
     <Pressable
       onPress={onPress}
@@ -26,11 +43,7 @@ export function TodayTaskRow({ task, busy, onPress, onLongPress }: Props) {
       <View style={[styles.circle, busy && styles.circleBusy]} />
       <View style={styles.text}>
         <Text style={styles.title}>{task.title}</Text>
-        {task.is_overdue && task.next_due_on ? (
-          <Text style={styles.overdue}>Forfalt fra {formatDate(task.next_due_on)}</Text>
-        ) : (
-          <Text style={styles.detail}>{describeRecurrence(task)}</Text>
-        )}
+        <Text style={detail.overdue ? styles.overdue : styles.detail}>{detail.text}</Text>
       </View>
     </Pressable>
   );

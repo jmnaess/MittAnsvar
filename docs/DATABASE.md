@@ -102,18 +102,23 @@ Ett feilet `accept_invite`-forsøk = én rad. 5 rader nyere enn 15 minutter gir 
 | description | text null | |
 | category | text not null default `other` | check: `daily`, `cleaning`, `kitchen`, `laundry`, `outdoor`, `maintenance`, `safety`, `other`. Skjemaet spør ikke om kategori ennå |
 | assigned_member_id | uuid null | null = «hvem som helst». Sammensatt FK `(household_id, assigned_member_id) → members (household_id, id) on delete set null (assigned_member_id)`, så den ansvarlige alltid er i samme husstand |
-| template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra. **Legges til i steg 9** sammen med `task_templates` |
+| template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra (steg 7). Kan settes ved insert, ikke endres |
 | *gjentakelse* | se §2 | `recurrence_type`, `recurrence_unit`, `recurrence_every`, `weekdays`, `month_day`, `month`, `anchor_on` |
 | next_due_on | date null | neste frist. null = engangsoppgave som er utført. Skrives bare av databasen (trigger og RPC) |
 | created_by | uuid null → members on delete set null | settes av triggeren |
 | created_at | timestamptz not null default now() | |
 | archived_at | timestamptz null | «slettede» oppgaver arkiveres, slik at historikken beholdes |
 
-Indeks: `(household_id, next_due_on) where archived_at is null`.
+Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik** `(household_id, template_id) where archived_at is null and template_id is not null`. Den sørger for at samme mal bare kan være aktiv én gang per husstand. Arkiverte oppgaver teller ikke, så en deaktivert mal kan aktiveres igjen som en ny oppgave.
 
 **Trigger `tasks_set_defaults`** (before insert/update): ved insert settes `anchor_on` = i dag i husstandens tidssone, `created_by` = innlogget medlem og `next_due_on` = `private.first_due(oppgaven)`. Endres gjentakelseskolonnene, settes `anchor_on` til i dag og fristen beregnes på nytt. Klienten har ikke kolonnerettighet til `next_due_on`, `anchor_on` eller `created_by` (kolonnerettigheter sjekker bare kolonnene i selve spørringen, så triggeren kan sette dem).
 
-**View `today_tasks`** (`security_invoker = true`, så RLS på `tasks` gjelder): aktive oppgaver med `next_due_on <= private.household_today(household_id)`, pluss `is_overdue`. «I dag» regnes dermed aldri ut på mobilen.
+**View `today_tasks`** (`security_invoker = true`, så RLS på `tasks` gjelder): aktive oppgaver med `next_due_on <= private.household_today(household_id)`. Viewet har tre ekstra kolonner:
+- `is_month_task`: oppgaven er en månedsoppgave (se §2).
+- `due_by`: siste frist. Det er siste dag i måneden for månedsoppgaver, ellers `next_due_on`.
+- `is_overdue`: `due_by < i dag`.
+
+«I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden».
 
 ### `task_completions` → §3
 ### `task_templates`, `feedback_messages` → §4
@@ -156,7 +161,7 @@ Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke 
 | Støvsuge man og tors | calendar, week, every 1, weekdays `{1,4}` |
 | Skifte sengetøy annenhver lørdag | calendar, week, every 2, weekdays `{6}`, anchor_on = første lørdag |
 | Betale regninger den 20. | calendar, month, every 1, month_day 20 (31 → siste dag i måneden) |
-| Rense takrenner i oktober | calendar, year, every 1, month 10, month_day null (= «i løpet av oktober», frist den 1.) |
+| Rense takrenner i oktober | calendar, year, every 1, month 10, month_day null (= **månedsoppgave**, se under) |
 | Rense sluk 3 mnd etter sist | interval, month, every 3 |
 | Bytte batteri i røykvarsler | calendar, year, every 1, month 12, month_day 1 |
 
@@ -169,7 +174,27 @@ Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke 
 
 Hvorfor i databasen? Regelen finnes ett sted, klienten kan ikke sende en feil frist, og `completed_on` settes uansett av serveren. Funksjonen leser ingen tabeller, så den er lett å teste. Den implementeres som en enkel løkke som går dag for dag til mønsteret treffer. Det er lesbart og raskt nok for MVP.
 
-Hjelpefunksjoner (alle i `private`): `matches_pattern(t, d)` (er `d` en forekomst?), `next_occurrence(t, after)` (første treff etter `after`), `first_due(t)` (første frist for en ny oppgave: `anchor_on` for once/interval, første treff fra og med `anchor_on` for calendar), `local_today(tz, at)` og `household_today(hid)`.
+Hjelpefunksjoner (alle i `private`):
+- `matches_pattern(t, d)`: er `d` en forekomst?
+- `next_occurrence(t, after)`: første treff etter `after`.
+- `first_due(t)`: første frist for en ny oppgave. Det er `anchor_on` for once/interval, og første treff fra og med `anchor_on` for calendar. Månedsoppgaver regnes fra den 1. i måneden til `anchor_on`.
+- `is_month_task(t)`, `due_by(t)` og `is_overdue(t, today)`: se under.
+- `local_today(tz, at)` og `household_today(hid)`.
+
+### Månedsoppgaver (steg 7)
+En årlig kalenderoppgave **uten dag** (`calendar, year, month_day null`) har hele måneden som frist. Formen fantes fra før («i løpet av oktober»), så det trengs ingen ny kolonne.
+
+| | Fast dato: 1. desember | Månedsoppgave: november |
+|---|---|---|
+| Lagres som | `year, month 12, month_day 1` | `year, month 11, month_day null` |
+| `next_due_on` | 2026-12-01 | 2026-11-01 (vinduet åpner) |
+| I «I dag» fra | 1. des. | 1. nov., under «Denne måneden» |
+| Forfalt fra | 2. des. | 1. des. (`due_by` = 30. nov.) |
+
+- **Aktivert i måneden:** `first_due` gir den 1. i *denne* måneden, så oppgaven vises med en gang. Aktiveres den 17. november, blir fristen november 2026, ikke 2027. Aktivert før måneden gir samme år, aktivert etter gir neste år.
+- **Utført:** `compute_next_due` er uendret, og gir første treff etter `max(frist, utført)`. Det er den 1. i samme måned neste år. Det gjelder også ved sen utføring: en desember-oppgave utført 2. januar får frist desember samme år.
+- **Angring:** `undo_completion` setter `next_due_on` tilbake til `due_on`, altså den 1. i måneden.
+- Skjemaet bruker samme form når «dag» står tom for årlig gjentakelse. Egne oppgaver kan derfor også være månedsoppgaver.
 
 - Uker regnes fra mandagen i uken, ikke ISO-ukenummer, så uke 53 og årsskifte trenger ingen spesialhåndtering.
 - Sperren mot evig løkke i `next_occurrence` er `(every + 1) × maks dager per enhet` (uke 7, måned 31, år 366). Med `every ≤ 100` er verste tilfelle omtrent 37 000 dager. Slår sperren til, kastes `recurrence_not_found`. Mangler mønsteret felter, returneres null, slik at check-constrainten avviser raden med 23514.
@@ -190,6 +215,15 @@ Hjelpefunksjoner (alle i `private`): `matches_pattern(t, d)` (er `d` en forekoms
 | 10 | I oktober hvert år (`month_day` null) | 2026-10-01 | 2026-10-15 | 2027-10-01 |
 | 11 | 3 mnd etter sist utført | 2026-10-01 | 2026-10-10 | 2027-01-10 |
 | 12 | 1 mnd etter sist utført | 2027-01-31 | 2027-01-31 | 2027-02-28 |
+
+Månedsoppgaver (samme fil, avsnitt 7):
+- **Månedsskifte:** november er ikke forfalt 30.11, men forfalt 01.12. Februar i skuddår er ikke forfalt 29.02.
+- **Årsskifte:** desember er ikke forfalt 31.12, men forfalt 01.01. Utført 2027-01-02 gir neste frist 2027-12-01.
+- **Utføring:** i måneden eller for sent gir samme måned neste år.
+- **Første frist:** aktivert i måneden, måneden før, nyttårsaften (desember og januar).
+- **Fast dato:** 1. desember er forfalt 2. desember.
+
+Angring, aktivering og `today_tasks` testes i `templates.test.sql` (se §5).
 
 `next_due_on` lagres på oppgaven. Da blir «I dag» enkel (`next_due_on <= today`).
 
@@ -239,29 +273,34 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
 
 ## 4. Maler for årshjulet og tilbakemeldingstekster
 
-Begge er globale tabeller uten `household_id`. Innholdet ligger i `supabase/seed/*.sql` i git og legges inn via migrasjon. Brukere kan bare lese.
+Begge er globale tabeller uten `household_id`. Innholdet legges inn via migrasjoner, så det følger med ved `db push`. `supabase/seed.sql` kjøres bare lokalt. Brukere kan bare lese.
 
-### `task_templates`
+### `task_templates` (steg 7)
 | Kolonne | Type | Merknad |
 |---------|------|---------|
 | id | uuid pk | |
-| slug | text unique not null | stabil nøkkel, f.eks. `clean-gutters` |
-| title, description | text | norsk |
-| category | text | samme verdier som `tasks.category` |
-| is_annual_wheel | boolean not null | vises i årshjul-forslag |
-| audience | audience not null | voksen, barn eller alle |
-| min_age | smallint null | for barn, f.eks. 6 |
-| household_types | household_type[] null | null = alle |
-| housing_types | housing_type[] null | null = alle (takrenner: `{house, townhouse}`) |
-| *gjentakelse* | samme kolonner som `tasks`, unntatt `anchor_on` | |
-| suggested_by_default | boolean not null | forhåndsavkrysset i oppstarten |
-| source_url | text null | f.eks. DSB for røykvarsler |
-| sort_order | smallint | |
-| is_active | boolean not null default true | |
+| slug | text unique not null | stabil nøkkel, f.eks. `gutters-autumn`. Senere migrasjoner finner malen på slug |
+| title | text not null | norsk, 1–80 tegn |
+| description | text not null | kort forklaring på norsk, 1–300 tegn. Kopieres til `tasks.description` |
+| category | text not null | samme verdier som `tasks.category`. Styrer tilbakemeldingstekstene |
+| household_types | household_type[] null | null = alle. Barnemaler: `{family}` |
+| housing_types | housing_type[] null | null = alle. «Hus» (eget tak og uteområde) = `{townhouse, house}` |
+| *gjentakelse* | samme kolonner og check-constraint som `tasks`, unntatt `anchor_on` | årshjulet: `calendar, year, every 1`, `month`, og `month_day` null (månedsoppgave) eller satt (fast dato) |
+| source_url | text null | f.eks. DSB for røykvarsler. Tom til lenkene er sjekket |
+| sort_order | smallint not null default 0 | rekkefølge innen måneden |
+| is_active | boolean not null default true | maler slettes ikke, de deaktiveres |
 
-**Bruk:** Når en mal velges, **kopieres** feltene til en ny `tasks`-rad med `template_id` satt. Husstanden kan endre sin kopi fritt, og senere endringer i malen påvirker ikke eksisterende oppgaver. `anchor_on` settes til i dag eller til neste forekomst av `month`.
+Utsatt til steg 9 (forslag i oppstarten): `audience`, `min_age` og `suggested_by_default`. Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `recurrence_unit = 'year'`.
 
-Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, boligtype og barnas alder (fra `birth_year`).
+**Startsett:** 25 maler, 22 i `*_task_templates.sql` og 3 i `*_adjust_task_templates.sql`. Den siste justerer også tre forklaringer, og finner malene på slug. 24 er månedsoppgaver, og røykvarslerne har fast dato 1. desember. Justeringer endrer bare malene. Oppgaver som allerede er aktivert, er kopier og beholder den gamle teksten. Sikkerhetstekstene er generelle og henviser til fagfolk. De må gjennomgås manuelt før lansering, og malene skal utvides til 40–60.
+
+**Aktivering:** RPC `activate_templates(p_household_id, p_template_ids uuid[]) returns int` **kopierer** malene til nye `tasks`-rader med `template_id` satt og returnerer antall nye oppgaver.
+- Maler som allerede er aktive, hoppes over (`on conflict do nothing` på den unike indeksen). Samme RPC brukes for én bryter og for «Velg anbefalte».
+- Den kjører som `security invoker`. RLS på `tasks` (voksen og `household_has_access`) og triggeren (`anchor_on` = i dag, `first_due`) gjelder dermed som for andre oppgaver.
+- Husstanden kan endre kopien fritt, og senere endringer i malen påvirker ikke eksisterende oppgaver.
+- **Deaktivering** = arkivere oppgaven (`archived_at`).
+
+Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype og boligtype, og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 9.
 
 ### `feedback_messages`
 | Kolonne | Type | Merknad |
@@ -270,7 +309,7 @@ Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, bolig
 | tone | text not null | `fact` / `humor` (ikke `both`, det er et filter) |
 | text | text not null | «Visste du at …» / «Hvor mange hybelkaniner fant du?» |
 | audience | audience not null | |
-| template_id | uuid null → task_templates | mest spesifikk. **Legges til i steg 9** |
+| template_id | uuid null → task_templates | mest spesifikk. **Ikke laget ennå**, kommer med tekster per mal i steg 11 |
 | category | text null | nest mest spesifikk. Er begge null, er teksten generell |
 | is_active | boolean not null default true | |
 
@@ -343,7 +382,7 @@ grant update (name, type, housing_type, feedback_tone) on public.households to a
 ```
 
 ### RPC-oversikt
-Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences`, som bare leser og kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`.
+Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences` og `activate_templates`, som kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`.
 
 | Funksjon | Hvem | Gjør |
 |----------|------|------|
@@ -354,6 +393,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `redeem_link_token(token)` | anonym innlogget (barnets enhet) | kobler `auth_user_id` til barnet |
 | `unlink_member_device(member_id)` | voksen | `auth_user_id = null` på barnet |
 | `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
+| `activate_templates(p_household_id, p_template_ids) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid) |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
 | `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
@@ -371,4 +411,11 @@ Minimum før lansering:
 
 9. Invitasjoner (`invites.test.sql`): riktig kode virker (også med små bokstaver, mellomrom og bindestrek), koden virker én gang, utløpt og tilbaketrukket kode avvises, feil kode gir `invite_invalid` og lagres som forsøk, sperre etter 5 forsøk (også for riktig kode) som slipper etter 15 minutter, bruker med husstand og anonym avvises, barn, anonyme og andre husstander kan ikke lage invitasjoner, ingen ser invitasjoner i en annen husstand, hashen kan ikke leses, og den nye voksne ser oppgavene og kan krysse av.
 
-Tester for `compute_next_due`: se §2.
+10. Maler og månedsoppgaver (`templates.test.sql`):
+    - Maler kan leses, men ikke skrives, og anon ser ingenting. Startsettet har 25 maler, justerte forklaringer er lagt inn, og inaktive maler vises ikke.
+    - Aktivering kopierer feltene. Samme mal blir bare én oppgave, og direkte duplikat gir 23505. En arkivert mal kan aktiveres igjen.
+    - Barn, en annen husstand, utløpt prøvetid og brukere uten medlemskap avvises.
+    - En mal for denne måneden står i `today_tasks` som månedsoppgave og er ikke forfalt. En fra forrige måned er forfalt.
+    - Utføring gir samme måned neste år og kjøkkenteksten. Angring gir den 1. i måneden tilbake, og oppgaven er ikke forfalt.
+
+Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.

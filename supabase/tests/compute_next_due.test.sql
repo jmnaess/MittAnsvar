@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(42);
+select plan(61);
 
 create schema tests;
 
@@ -185,6 +185,62 @@ select throws_ok(
   $$insert into public.tasks (household_id, title, recurrence_type, recurrence_unit, recurrence_every)
     values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Uke uten dager', 'calendar', 'week', 1)$$,
   '23514', null, 'ukentlig uten ukedager avvises');
+
+-- ===========================================================================
+-- 7. Månedsoppgaver (calendar, year, month_day null). Se DATABASE.md §2.
+--    Frist = måneden. next_due_on er den 1., forfalt først etter siste dag i måneden.
+-- ===========================================================================
+
+-- Månedsskifte
+select is(private.due_by(tests.task('calendar', 'year', 1, p_month => 11, p_next => '2026-11-01')),
+  '2026-11-30'::date, 'månedsoppgave: siste frist er siste dag i måneden');
+select is(private.is_overdue(tests.task('calendar', 'year', 1, p_month => 11, p_next => '2026-11-01'), '2026-11-30'),
+  false, 'månedsskifte: november-oppgave er ikke forfalt 30. november');
+select is(private.is_overdue(tests.task('calendar', 'year', 1, p_month => 11, p_next => '2026-11-01'), '2026-12-01'),
+  true, 'månedsskifte: november-oppgave er forfalt 1. desember');
+select is(private.is_overdue(tests.task('calendar', 'year', 1, p_month => 2, p_next => '2028-02-01'), '2028-02-29'),
+  false, 'skuddår: februar-oppgave er ikke forfalt 29. februar');
+
+-- Årsskifte
+select is(private.is_overdue(tests.task('calendar', 'year', 1, p_month => 12, p_next => '2026-12-01'), '2026-12-31'),
+  false, 'årsskifte: desember-oppgave er ikke forfalt 31. desember');
+select is(private.is_overdue(tests.task('calendar', 'year', 1, p_month => 12, p_next => '2026-12-01'), '2027-01-01'),
+  true, 'årsskifte: desember-oppgave er forfalt 1. januar');
+select is(private.compute_next_due(
+    tests.task('calendar', 'year', 1, p_month => 12, p_next => '2026-12-01'), '2027-01-02'),
+  '2027-12-01'::date, 'årsskifte: desember-oppgave utført 2. januar får frist desember samme år, ikke året etter');
+
+-- Utført i måneden og etter måneden
+select is(private.compute_next_due(
+    tests.task('calendar', 'year', 1, p_month => 11, p_next => '2026-11-01'), '2026-11-17'),
+  '2027-11-01'::date, 'månedsoppgave utført i måneden: samme måned neste år');
+select is(private.compute_next_due(
+    tests.task('calendar', 'year', 1, p_month => 11, p_next => '2026-11-01'), '2026-12-03'),
+  '2027-11-01'::date, 'månedsoppgave utført for sent: fortsatt samme måned neste år');
+
+-- Første frist ved aktivering
+select is(private.first_due(tests.task('calendar', 'year', 1, p_month => 11, p_anchor => '2026-11-17')),
+  '2026-11-01'::date, 'første frist: aktivert i måneden = denne måneden');
+select is(private.first_due(tests.task('calendar', 'year', 1, p_month => 11, p_anchor => '2026-11-30')),
+  '2026-11-01'::date, 'første frist: aktivert siste dag i måneden = denne måneden');
+select is(private.first_due(tests.task('calendar', 'year', 1, p_month => 12, p_anchor => '2026-11-17')),
+  '2026-12-01'::date, 'første frist: aktivert måneden før = neste måned');
+select is(private.first_due(tests.task('calendar', 'year', 1, p_month => 12, p_anchor => '2026-12-31')),
+  '2026-12-01'::date, 'første frist: desember aktivert nyttårsaften = denne måneden');
+select is(private.first_due(tests.task('calendar', 'year', 1, p_month => 1, p_anchor => '2026-12-31')),
+  '2027-01-01'::date, 'første frist: januar aktivert nyttårsaften = januar neste år');
+
+-- Fast dato fungerer som før
+select is(private.due_by(tests.task('calendar', 'year', 1, p_month => 12, p_month_day => 1, p_next => '2026-12-01')),
+  '2026-12-01'::date, 'fast dato: siste frist er datoen');
+select is(private.is_overdue(tests.task('calendar', 'year', 1, p_month => 12, p_month_day => 1, p_next => '2026-12-01'), '2026-12-02'),
+  true, 'fast dato: 1. desember er forfalt 2. desember');
+select is(private.first_due(tests.task('calendar', 'year', 1, p_month => 11, p_month_day => 1, p_anchor => '2026-11-17')),
+  '2027-11-01'::date, 'fast dato: 1. november laget 17. november = neste år');
+select is(private.is_month_task(tests.task('calendar', 'month', 1, p_month_day => 1)), false,
+  'den 1. hver måned er ikke en månedsoppgave');
+select is(private.due_by(tests.task('once', p_next => null)), null::date,
+  'utført engangsoppgave har ingen siste frist');
 
 select * from finish();
 rollback;

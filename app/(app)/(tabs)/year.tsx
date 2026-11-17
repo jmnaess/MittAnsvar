@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, SectionList, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../src/components/Button';
 import { colors } from '../../../src/components/theme';
@@ -11,6 +11,7 @@ import { useActivateTemplates, useTemplates } from '../../../src/features/templa
 import { groupByMonth, suggestForHousehold } from '../../../src/features/templates/suggest';
 import type { TaskTemplate } from '../../../src/features/templates/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 
 /**
  * Årshjul: tolv måneder med denne måneden øverst. Hver måned viser malene som passer
@@ -86,6 +87,11 @@ export default function YearScreen() {
   }
 
   const loadError = templates.error ?? tasks.error;
+  const refetchTemplates = templates.refetch;
+  const refetchTasks = tasks.refetch;
+  const pullToRefresh = usePullToRefresh(
+    useCallback(() => Promise.all([refetchTemplates(), refetchTasks()]), [refetchTemplates, refetchTasks]),
+  );
 
   return (
     <SectionList
@@ -94,11 +100,7 @@ export default function YearScreen() {
       sections={sections}
       keyExtractor={(t) => t.id}
       stickySectionHeadersEnabled={false}
-      onRefresh={() => {
-        templates.refetch();
-        tasks.refetch();
-      }}
-      refreshing={templates.isRefetching || tasks.isRefetching}
+      {...pullToRefresh}
       ListHeaderComponent={
         <View style={styles.header}>
           <Text style={styles.intro}>

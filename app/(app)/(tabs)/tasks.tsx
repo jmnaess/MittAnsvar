@@ -8,12 +8,14 @@ import { useTasks } from '../../../src/features/tasks/hooks';
 import { isJob } from '../../../src/features/tasks/recurrence';
 import type { Task } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 
 /** Oversikt over alle aktive oppgaver, slik at de kan finnes og endres. */
 export default function TasksScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
-  const { data: tasks, error, isPending, refetch, isRefetching } = useTasks(household!.id);
+  const { data: tasks, error, isPending, refetch } = useTasks(household!.id);
+  const pullToRefresh = usePullToRefresh(refetch);
   const { data: members } = useMembers(household!.id);
 
   const nameOf = (task: Task) =>
@@ -25,8 +27,7 @@ export default function TasksScreen() {
       contentContainerStyle={styles.container}
       data={tasks ?? []}
       keyExtractor={(task) => task.id}
-      onRefresh={refetch}
-      refreshing={isRefetching}
+      {...pullToRefresh}
       ListHeaderComponent={
         <View style={styles.header}>
           <Button title="+ Ny oppgave" onPress={() => router.push('/task/new')} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ChoiceChips } from '../../../components/ChoiceChips';
 import { TextField } from '../../../components/TextField';
@@ -57,7 +57,7 @@ export type TaskFormState = ReturnType<typeof useTaskForm>;
 type Props = {
   form: TaskFormState;
   members: Member[];
-  /** «Lønn (kr)» vises bare for voksne. */
+  /** «Lønn (kr)» vises bare for voksne, og bare når ansvarlig er et barn, «Felles» eller jobb. */
   canSetReward: boolean;
   disabled?: boolean;
 };
@@ -70,6 +70,17 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
   const assigneeOptions = isJob
     ? [{ value: SHARED, label: 'Alle barna' }, ...children.map((m) => ({ value: m.id, label: m.display_name }))]
     : [{ value: SHARED, label: 'Felles' }, ...members.map((m) => ({ value: m.id, label: m.display_name }))];
+
+  // Voksne får aldri lønn, så feltet skjules når en voksen har ansvaret.
+  const assigneeIsAdult = members.some((m) => m.id === form.assignee && m.role === 'adult');
+  const showReward = canSetReward && !assigneeIsAdult;
+
+  // Tøm beløpet når en voksen blir ansvarlig, så det ikke lagres i det skjulte.
+  // Effekt i stedet for i onChange, så det også gjelder gamle oppgaver og medlemmer som lastes sent.
+  const { reward, setReward } = form;
+  useEffect(() => {
+    if (assigneeIsAdult && reward !== '') setReward('');
+  }, [assigneeIsAdult, reward, setReward]);
 
   // Byttes det til jobb mens en voksen er ansvarlig, blir jobben åpen for alle barna.
   function changeRecurrence(next: RecurrenceForm) {
@@ -102,7 +113,7 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
           : 'Felles betyr at hvem som helst kan gjøre den.'}
       </Text>
       <RecurrencePicker value={form.recurrenceForm} onChange={changeRecurrence} disabled={disabled} />
-      {canSetReward && (
+      {showReward && (
         <>
           <TextField
             label="Lønn (kr)"

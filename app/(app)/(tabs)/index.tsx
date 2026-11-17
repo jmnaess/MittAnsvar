@@ -16,6 +16,7 @@ import { useTodayTasks } from '../../../src/features/tasks/hooks';
 import type { Member } from '../../../src/features/household/types';
 import type { TodayTask } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
 
@@ -32,7 +33,8 @@ export default function TodayScreen() {
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
   const { session } = useSession();
-  const { data: tasks, error, isPending, refetch, isRefetching } = useTodayTasks(householdId);
+  const { data: tasks, error, isPending, refetch } = useTodayTasks(householdId);
+  const pullToRefresh = usePullToRefresh(refetch);
   const { data: members = [] } = useMembers(householdId);
   const complete = useCompleteTask(householdId);
   const undo = useUndoCompletion(householdId);
@@ -93,8 +95,7 @@ export default function TodayScreen() {
         contentContainerStyle={styles.container}
         sections={sections}
         keyExtractor={(task) => task.id}
-        onRefresh={refetch}
-        refreshing={isRefetching}
+        {...pullToRefresh}
         stickySectionHeadersEnabled={false}
         ListHeaderComponent={
           error || actionError ? (

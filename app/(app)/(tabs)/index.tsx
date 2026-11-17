@@ -4,21 +4,28 @@ import { SectionList, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../../src/components/Avatar';
 import { colors } from '../../../src/components/theme';
 import { useSession } from '../../../src/features/auth/SessionProvider';
+import { chooseCompletionAction } from '../../../src/features/completions/chooseDoer';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
 import { useCompleteTask, useUndoCompletion } from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
-import { groupTodayByMember, THIS_MONTH_KEY } from '../../../src/features/tasks/groupToday';
+import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../../../src/features/tasks/groupToday';
+import { formatKroner } from '../../../src/features/tasks/reward';
 import { useTodayTasks } from '../../../src/features/tasks/hooks';
+import type { Member } from '../../../src/features/household/types';
 import type { TodayTask } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
-type Toast = { completionId: string; title: string; message: string | null };
+type Toast = { completionId: string; title: string; message: string | null; reward?: string };
+
+/** «Hvem gjorde det?»: hvilke personer som kan velges, og om en er forhåndsvalgt. */
+type Picking = { task: TodayTask; members: Member[]; preselectedId: string | null };
 
 /**
  * «I dag»: forfalte oppgaver og dagens oppgaver, gruppert per medlem og felles.
- * Månedsoppgaver (f.eks. fra årshjulet) som ikke er forfalt, ligger nederst under «Denne måneden».
+ * Månedsoppgaver (f.eks. fra årshjulet) som ikke er forfalt, ligger under «Denne måneden», og
+ * ledige jobber nederst under «Ledige jobber».
  */
 export default function TodayScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
@@ -31,7 +38,7 @@ export default function TodayScreen() {
   const undo = useUndoCompletion(householdId);
 
   const [toast, setToast] = useState<Toast | null>(null);
-  const [picking, setPicking] = useState<TodayTask | null>(null);
+  const [picking, setPicking] = useState<Picking | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Hent på nytt når fanen vises igjen: datoen kan ha skiftet, eller en annen voksen har krysset av.
@@ -39,8 +46,7 @@ export default function TodayScreen() {
 
   const me = members.find((m) => m.auth_user_id === session?.user.id);
   const sections = groupTodayByMember(tasks ?? [], members);
-  const nameOf = (memberId: string | null) =>
-    members.find((m) => m.id === memberId)?.display_name ?? 'Felles';
+  const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
 
   function markDone(task: TodayTask, memberId: string) {
     setActionError(null);
@@ -48,16 +54,26 @@ export default function TodayScreen() {
       { taskId: task.id, memberId },
       {
         onSuccess: (result) =>
-          setToast({ completionId: result.completionId, title: task.title, message: result.feedbackText }),
+          setToast({
+            completionId: result.completionId,
+            title: task.title,
+            message: result.feedbackText,
+            reward: result.rewardNok
+              ? `+${formatKroner(result.rewardNok)} til ${nameOf(memberId) ?? 'barnet'}`
+              : undefined,
+          }),
         onError: (e) => setActionError(toNorwegianMessage(e)),
       },
     );
   }
 
-  // Ett trykk: den ansvarlige gjorde det. Felles oppgave: den som trykker.
+  // Som regel ett trykk. Ved lønn eller åpne jobber spør vi hvem som gjorde det (se chooseDoer.ts).
   function handlePress(task: TodayTask) {
-    const doer = task.assigned_member_id ?? me?.id;
-    if (doer) markDone(task, doer);
+    const action = chooseCompletionAction(task, me, members);
+    if (action.kind === 'direct') markDone(task, action.memberId);
+    if (action.kind === 'pick') {
+      setPicking({ task, members: action.members, preselectedId: action.preselectedId });
+    }
   }
 
   function handleUndo() {
@@ -102,20 +118,28 @@ export default function TodayScreen() {
         renderItem={({ item, section }) => (
           <TodayTaskRow
             task={item}
-            assigneeName={section.key === THIS_MONTH_KEY ? nameOf(item.assigned_member_id) : undefined}
+            assigneeName={
+              section.key === THIS_MONTH_KEY
+                ? (nameOf(item.assigned_member_id) ?? 'Felles')
+                : section.key === JOBS_KEY
+                  ? nameOf(item.assigned_member_id)
+                  : undefined
+            }
             busy={complete.isPending && complete.variables?.taskId === item.id}
             onPress={() => handlePress(item)}
-            onLongPress={() => setPicking(item)}
+            onLongPress={() => setPicking({ task: item, members, preselectedId: null })}
           />
         )}
       />
 
       <MemberPickerModal
-        taskTitle={picking?.title ?? null}
-        members={members}
+        taskTitle={picking?.task.title ?? null}
+        members={picking?.members ?? members}
+        preselectedId={picking?.preselectedId}
+        meId={me?.id}
         onClose={() => setPicking(null)}
         onPick={(member) => {
-          if (picking) markDone(picking, member.id);
+          if (picking) markDone(picking.task, member.id);
           setPicking(null);
         }}
       />
@@ -125,6 +149,7 @@ export default function TodayScreen() {
           resetKey={toast.completionId}
           title={toast.title}
           message={toast.message}
+          reward={toast.reward}
           undoing={undo.isPending}
           onUndo={handleUndo}
           onHide={() => setToast(null)}

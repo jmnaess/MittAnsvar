@@ -7,6 +7,8 @@ type Props = {
   title: string;
   /** Tilbakemeldingen fra serveren. null = ingen tekst passet, vis en standardtekst. */
   message: string | null;
+  /** Lønn til et barn, f.eks. «+10 kr til Leah». */
+  reward?: string;
   onUndo: () => void;
   onHide: () => void;
   undoing?: boolean;
@@ -18,7 +20,7 @@ type Props = {
 const VISIBLE_MS = 6000;
 
 /** Banner nederst etter avkrysning: tilbakemelding og «Angre» i noen sekunder. */
-export function FeedbackToast({ title, message, onUndo, onHide, undoing, resetKey }: Props) {
+export function FeedbackToast({ title, message, reward, onUndo, onHide, undoing, resetKey }: Props) {
   // onHide er en ny funksjon ved hver render. Med en ref starter nedtellingen bare på nytt
   // når det kommer en ny avkrysning (resetKey), ikke ved hver render.
   const onHideRef = useRef(onHide);
@@ -33,6 +35,7 @@ export function FeedbackToast({ title, message, onUndo, onHide, undoing, resetKe
     <View style={styles.toast} accessibilityLiveRegion="polite" accessibilityRole="alert">
       <View style={styles.text}>
         <Text style={styles.done}>✓ {title}</Text>
+        {reward && <Text style={styles.reward}>{reward}</Text>}
         <Text style={styles.message}>{message ?? 'Bra jobbet!'}</Text>
       </View>
       <Pressable
@@ -69,6 +72,7 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 4 },
   done: { color: '#9ca3af', fontSize: 14 },
   message: { color: '#fff', fontSize: 16 },
+  reward: { color: '#86efac', fontSize: 17, fontWeight: '700' },
   undo: { paddingHorizontal: 4 },
   undoText: { color: '#93c5fd', fontSize: 16, fontWeight: '600' },
   disabled: { opacity: 0.5, color: colors.muted },

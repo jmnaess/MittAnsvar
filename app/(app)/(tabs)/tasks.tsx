@@ -5,6 +5,8 @@ import { colors } from '../../../src/components/theme';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { TaskRow } from '../../../src/features/tasks/components/TaskRow';
 import { useTasks } from '../../../src/features/tasks/hooks';
+import { isJob } from '../../../src/features/tasks/recurrence';
+import type { Task } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 /** Oversikt over alle aktive oppgaver, slik at de kan finnes og endres. */
@@ -14,8 +16,9 @@ export default function TasksScreen() {
   const { data: tasks, error, isPending, refetch, isRefetching } = useTasks(household!.id);
   const { data: members } = useMembers(household!.id);
 
-  const nameOf = (memberId: string | null) =>
-    members?.find((m) => m.id === memberId)?.display_name ?? 'Felles';
+  const nameOf = (task: Task) =>
+    members?.find((m) => m.id === task.assigned_member_id)?.display_name ??
+    (isJob(task) ? 'Alle barna' : 'Felles');
 
   return (
     <FlatList
@@ -38,7 +41,7 @@ export default function TasksScreen() {
       renderItem={({ item }) => (
         <TaskRow
           task={item}
-          assigneeName={nameOf(item.assigned_member_id)}
+          assigneeName={nameOf(item)}
           onPress={() => router.push({ pathname: '/task/[id]', params: { id: item.id } })}
         />
       )}

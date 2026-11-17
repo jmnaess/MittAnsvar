@@ -33,10 +33,13 @@ Utvikling på Ubuntu. Testing på fysisk mobil med Expo Go – ikke emulator.
 - Etter fullført oppgave vises en kort tilbakemelding: faktabasert
   ("Visste du at …") eller humoristisk ("Hvor mange hybelkaniner fant du?").
   Husstanden velger tone: fakta, humor eller begge.
+- Lønn per oppgave: voksne kan sette et beløp i hele kroner. Bare barn får lønn.
+  Beløpet lagres på utføringen. Voksne registrerer utbetalinger manuelt, maks saldoen.
+- Ledige jobber: oppgaver uten dato (engangs eller gjentakende) som barna kan ta.
 
 ## Ikke i MVP
-Poeng, belønninger, streaks, ukepenger/Vipps, AI, chat, bilder,
-kalenderintegrasjoner, widgets.
+Poeng, streaks, Vipps eller annen betaling i appen, felles mål, godkjenning av jobber,
+AI, chat, bilder, kalenderintegrasjoner, widgets.
 
 ## Arbeidsmåte
 - Analyse og plan før kode. Spør hvis noe er uklart.

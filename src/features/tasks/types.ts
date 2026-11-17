@@ -16,11 +16,21 @@ export type RecurrenceUnit = Enums['recurrence_unit'];
 /** Gjentakelseskolonnene på tasks. Se docs/DATABASE.md §2. */
 export type Recurrence = Pick<
   Task,
-  'recurrence_type' | 'recurrence_unit' | 'recurrence_every' | 'weekdays' | 'month_day' | 'month'
+  | 'recurrence_type'
+  | 'recurrence_unit'
+  | 'recurrence_every'
+  | 'weekdays'
+  | 'month_day'
+  | 'month'
+  | 'job_repeats'
 >;
 
-/** Det brukeren fyller ut i skjemaet. null som ansvarlig = felles. */
+/**
+ * Det brukeren fyller ut i skjemaet. null som ansvarlig = felles (for jobber: alle barna).
+ * reward_nok: lønn i hele kroner, null = ingen lønn.
+ */
 export type TaskInput = Recurrence & {
   title: string;
   assigned_member_id: string | null;
+  reward_nok: number | null;
 };

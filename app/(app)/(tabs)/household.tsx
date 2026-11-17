@@ -13,6 +13,8 @@ import {
   useRevokeInvite,
 } from '../../../src/features/household/hooks';
 import { inviteShareMessage } from '../../../src/features/household/inviteCode';
+import { useBalances } from '../../../src/features/rewards/hooks';
+import { formatKroner } from '../../../src/features/tasks/reward';
 import type { Household, Member } from '../../../src/features/household/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
@@ -21,9 +23,12 @@ export default function HouseholdScreen() {
   const { data: household } = useMyHousehold();
   const { session } = useSession();
   const { data: members, error } = useMembers(household!.id);
+  const { data: balances } = useBalances(household!.id);
 
   const me = members?.find((m) => m.auth_user_id === session?.user.id);
   const isAdult = me?.role === 'adult';
+  const balanceOf = (memberId: string) =>
+    balances?.find((b) => b.member_id === memberId)?.balance_nok ?? 0;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -33,9 +38,11 @@ export default function HouseholdScreen() {
           <MemberRow
             key={member.id}
             member={member}
+            extra={member.role === 'child' ? `Opptjent: ${formatKroner(balanceOf(member.id))}` : undefined}
+            accessibilityHint="Se opptjening og registrer utbetaling"
             onPress={
               isAdult && member.role === 'child'
-                ? () => router.push({ pathname: '/child/[id]', params: { id: member.id } })
+                ? () => router.push({ pathname: '/earnings/[id]', params: { id: member.id } })
                 : undefined
             }
           />

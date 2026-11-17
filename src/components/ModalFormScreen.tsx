@@ -8,6 +8,8 @@ type Props = {
   canSave?: boolean;
   saving?: boolean;
   onSave?: () => void;
+  /** Knappen til venstre. «Lukk» passer for skjermer uten skjema. */
+  closeTitle?: string;
   children: ReactNode;
 };
 
@@ -27,7 +29,7 @@ type Props = {
  * - keyboardShouldPersistTaps="handled": trykk på knapper virker med tastaturet oppe, mens
  *   trykk på tomme flater lukker tastaturet.
  */
-export function ModalFormScreen({ canSave, saving, onSave, children }: Props) {
+export function ModalFormScreen({ canSave, saving, onSave, closeTitle = 'Avbryt', children }: Props) {
   function save() {
     Keyboard.dismiss();
     onSave?.();
@@ -38,7 +40,7 @@ export function ModalFormScreen({ canSave, saving, onSave, children }: Props) {
       <Stack.Screen
         options={{
           headerTransparent: false,
-          headerLeft: () => <HeaderButton title="Avbryt" onPress={() => router.back()} />,
+          headerLeft: () => <HeaderButton title={closeTitle} onPress={() => router.back()} />,
           headerRight: onSave
             ? () => (
                 <HeaderButton title="Lagre" bold onPress={save} disabled={!canSave || saving} />

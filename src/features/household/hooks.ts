@@ -12,7 +12,8 @@ import {
   updateChild,
   updateHousehold,
 } from './api';
-import type { ChildInput, FeedbackTone } from './types';
+import { useSession } from '../auth/SessionProvider';
+import type { ChildInput, FeedbackTone, Member } from './types';
 
 // Nøkler for cachen. Etter en endring «invaliderer» vi nøkkelen, så dataene hentes på nytt.
 export const householdKeys = {
@@ -31,6 +32,13 @@ export function useMembers(householdId: string | undefined) {
     queryFn: () => listMembers(householdId!),
     enabled: !!householdId,
   });
+}
+
+/** Mitt eget medlem i husstanden (undefined til medlemmene er hentet). */
+export function useMyMember(householdId: string | undefined): Member | undefined {
+  const { session } = useSession();
+  const { data: members } = useMembers(householdId);
+  return members?.find((m) => m.auth_user_id === session?.user.id);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import { ChoiceChips } from '../../../components/ChoiceChips';
 import { MultiChoiceChips } from '../../../components/MultiChoiceChips';
 import { TextField } from '../../../components/TextField';
@@ -23,6 +23,7 @@ const MODE_OPTIONS: { value: RecurrenceMode; label: string }[] = [
   { value: 'calendar', label: 'Fast dag' },
   { value: 'interval', label: 'Etter sist utført' },
   { value: 'once', label: 'Én gang' },
+  { value: 'job', label: 'Ledig jobb' },
 ];
 
 const CALENDAR_UNIT_OPTIONS: { value: CalendarUnit; label: string }[] = [
@@ -54,9 +55,10 @@ const HINTS: Record<RecurrenceMode, string> = {
   calendar: 'Første gang er den første dagen som passer, fra og med i dag.',
   interval: 'Første gang er i dag. Deretter teller vi fra hver gang den blir gjort.',
   once: 'Vises i dag og forsvinner når den er gjort.',
+  job: 'Uten dato. Ligger under «Ledige jobber» til et barn tar den, og blir aldri forfalt.',
 };
 
-/** Velger gjentakelse: fast dag i kalenderen, et intervall etter sist utført, eller én gang. */
+/** Velger gjentakelse: fast dag i kalenderen, et intervall etter sist utført, én gang eller ledig jobb. */
 export function RecurrencePicker({ value, onChange, disabled }: Props) {
   const set = (changes: Partial<RecurrenceForm>) => onChange({ ...value, ...changes });
   const digitsOnly = (text: string) => text.replace(/\D/g, '');
@@ -155,6 +157,18 @@ export function RecurrencePicker({ value, onChange, disabled }: Props) {
         </>
       )}
 
+      {value.mode === 'job' && (
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>Kan gjøres flere ganger</Text>
+          <Switch
+            value={value.jobRepeats}
+            onValueChange={(jobRepeats) => set({ jobRepeats })}
+            disabled={disabled}
+            accessibilityLabel="Kan gjøres flere ganger"
+          />
+        </View>
+      )}
+
       {recurrence && <Text style={styles.summary}>{describeRecurrence(recurrence)}</Text>}
       <Text style={styles.hint}>{HINTS[value.mode]}</Text>
     </View>
@@ -165,4 +179,6 @@ const styles = StyleSheet.create({
   wrapper: { gap: 12 },
   summary: { fontSize: 16, fontWeight: '600', color: colors.text },
   hint: { fontSize: 13, color: colors.muted },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  switchLabel: { fontSize: 16, color: colors.text },
 });

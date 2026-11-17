@@ -6,6 +6,8 @@ export type CompletionResult = {
   /** null hvis det ikke finnes noen tekst som passer tonen og målgruppen. */
   feedbackText: string | null;
   nextDueOn: string | null;
+  /** Lønnen som ble tjent. null = ingen lønn, eller en voksen gjorde oppgaven. */
+  rewardNok: number | null;
 };
 
 /**
@@ -23,6 +25,7 @@ export async function completeTask(taskId: string, memberId: string): Promise<Co
     completionId: row.completion_id,
     feedbackText: row.feedback_text ?? null,
     nextDueOn: row.next_due_on ?? null,
+    rewardNok: row.reward_nok ?? null,
   };
 }
 

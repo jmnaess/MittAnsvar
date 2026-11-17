@@ -35,6 +35,10 @@ export default function AppLayout() {
           options={{ headerShown: true, title: 'Endre barn', presentation: 'modal' }}
         />
         <Stack.Screen
+          name="earnings/[id]"
+          options={{ headerShown: true, title: 'Opptjent', presentation: 'modal' }}
+        />
+        <Stack.Screen
           name="task/new"
           options={{ headerShown: true, title: 'Ny oppgave', presentation: 'modal' }}
         />

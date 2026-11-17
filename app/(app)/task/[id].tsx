@@ -4,9 +4,10 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../src/components/Button';
 import { ModalFormScreen } from '../../../src/components/ModalFormScreen';
 import { colors } from '../../../src/components/theme';
-import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
+import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useArchiveTask, useTasks, useUpdateTask } from '../../../src/features/tasks/hooks';
+import { isJob } from '../../../src/features/tasks/recurrence';
 import type { Task } from '../../../src/features/tasks/types';
 import { formatDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
@@ -40,6 +41,7 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
   const { data: members } = useMembers(householdId);
   const updateTask = useUpdateTask(householdId);
   const archiveTask = useArchiveTask(householdId);
+  const me = useMyMember(householdId);
   const form = useTaskForm(task);
 
   const busy = updateTask.isPending || archiveTask.isPending;
@@ -71,9 +73,18 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
     <ModalFormScreen canSave={!!form.value} saving={busy} onSave={save}>
       {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
       <Text style={styles.due}>
-        {task.next_due_on ? `Neste gang: ${formatDate(task.next_due_on)}` : 'Ferdig'}
+        {isJob(task)
+          ? 'Ledig jobb'
+          : task.next_due_on
+            ? `Neste gang: ${formatDate(task.next_due_on)}`
+            : 'Ferdig'}
       </Text>
-      <TaskFields form={form} members={members ?? []} disabled={busy} />
+      <TaskFields
+        form={form}
+        members={members ?? []}
+        canSetReward={me?.role === 'adult'}
+        disabled={busy}
+      />
       <Text style={styles.hint}>Endrer du hvor ofte, beregnes neste gang på nytt fra i dag.</Text>
       <View style={styles.delete}>
         <Button variant="danger" title="Slett oppgave" onPress={confirmDelete} disabled={busy} />

@@ -9,8 +9,14 @@ export function isMonthTask(r: Recurrence): boolean {
   return r.recurrence_type === 'calendar' && r.recurrence_unit === 'year' && r.month_day === null;
 }
 
+/** Ledig jobb: ingen dato, blir aldri forfalt (steg 9). */
+export function isJob(r: Pick<Recurrence, 'recurrence_type'>): boolean {
+  return r.recurrence_type === 'job';
+}
+
 /** Neste frist med år: «november 2027» for månedsoppgaver, ellers «1. desember 2026». */
 export function formatNextDue(task: Recurrence & { next_due_on: string | null }): string {
+  if (isJob(task)) return 'Ledig jobb';
   if (!task.next_due_on) return 'Ferdig';
   return isMonthTask(task) ? formatMonthYear(task.next_due_on) : formatLongDate(task.next_due_on);
 }
@@ -18,7 +24,7 @@ export function formatNextDue(task: Recurrence & { next_due_on: string | null })
 // Skjematilstand ↔ gjentakelseskolonnene i databasen, og en norsk beskrivelse.
 // Neste frist beregnes IKKE her. Det gjør databasen (private.compute_next_due).
 
-export type RecurrenceMode = 'calendar' | 'interval' | 'once';
+export type RecurrenceMode = 'calendar' | 'interval' | 'once' | 'job';
 export type CalendarUnit = 'week' | 'month' | 'year';
 export type IntervalUnit = 'day' | 'week' | 'month' | 'year';
 
@@ -32,6 +38,8 @@ export type RecurrenceForm = {
   month: number; // 1–12
   intervalEvery: string;
   intervalUnit: IntervalUnit;
+  /** Bare for ledig jobb: kan gjøres flere ganger (ellers forsvinner den når den er gjort). */
+  jobRepeats: boolean;
 };
 
 /** Høyeste «hver N.» databasen tillater (check-constraint på recurrence_every). */
@@ -47,6 +55,7 @@ export function defaultRecurrenceForm(): RecurrenceForm {
     month: 1,
     intervalEvery: '14',
     intervalUnit: 'day',
+    jobRepeats: false,
   };
 }
 
@@ -57,12 +66,23 @@ function parseIntIn(text: string, min: number, max: number): number | null {
   return n >= min && n <= max ? n : null;
 }
 
-const NONE = { recurrence_unit: null, recurrence_every: null, weekdays: null, month_day: null, month: null };
+const NONE = {
+  recurrence_unit: null,
+  recurrence_every: null,
+  weekdays: null,
+  month_day: null,
+  month: null,
+  job_repeats: false,
+};
 
 /** Skjema → kolonner. Gir null når skjemaet ikke er gyldig ennå. */
 export function toRecurrence(form: RecurrenceForm): Recurrence | null {
   if (form.mode === 'once') {
     return { recurrence_type: 'once', ...NONE };
+  }
+
+  if (form.mode === 'job') {
+    return { recurrence_type: 'job', ...NONE, job_repeats: form.jobRepeats };
   }
 
   if (form.mode === 'interval') {
@@ -97,6 +117,7 @@ export function toRecurrence(form: RecurrenceForm): Recurrence | null {
 export function fromRecurrence(r: Recurrence): RecurrenceForm {
   const form = defaultRecurrenceForm();
   form.mode = r.recurrence_type;
+  form.jobRepeats = r.job_repeats;
 
   if (r.recurrence_type === 'interval') {
     form.intervalEvery = String(r.recurrence_every ?? 1);
@@ -146,6 +167,7 @@ export function describeRecurrence(r: Recurrence): string {
   const every = r.recurrence_every ?? 1;
 
   if (r.recurrence_type === 'once') return 'Én gang';
+  if (r.recurrence_type === 'job') return r.job_repeats ? 'Ledig jobb, kan gjøres flere ganger' : 'Ledig jobb';
 
   if (r.recurrence_type === 'interval') {
     const [singular, plural] = UNIT_WORDS[r.recurrence_unit ?? 'day'];

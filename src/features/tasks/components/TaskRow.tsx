@@ -1,24 +1,28 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../components/theme';
 import { formatDate, formatMonthYear } from '../../../lib/dates';
-import { describeRecurrence, isMonthTask } from '../recurrence';
+import { describeRecurrence, isJob, isMonthTask } from '../recurrence';
+import { formatKroner } from '../reward';
 import type { Task } from '../types';
 
 type Props = {
   task: Task;
-  /** Navnet på den ansvarlige, eller «Felles». */
+  /** Navnet på den ansvarlige, «Felles», eller «Alle barna» for jobber. */
   assigneeName: string;
   onPress: () => void;
 };
 
-/** Én oppgave i oversikten: tittel, ansvarlig, gjentakelse og neste frist. */
+/** Én oppgave i oversikten: tittel, ansvarlig, gjentakelse, lønn og neste frist. */
 export function TaskRow({ task, assigneeName, onPress }: Props) {
   // Månedsoppgaver har hele måneden som frist, så en dato (den 1.) ville vært misvisende.
-  const due = !task.next_due_on
-    ? 'Ferdig'
-    : isMonthTask(task)
-      ? formatMonthYear(task.next_due_on)
-      : formatDate(task.next_due_on);
+  // Jobber har ingen frist. «Ledig jobb» står allerede i beskrivelsen.
+  const due = isJob(task)
+    ? null
+    : !task.next_due_on
+      ? 'Ferdig'
+      : isMonthTask(task)
+        ? formatMonthYear(task.next_due_on)
+        : formatDate(task.next_due_on);
 
   return (
     <Pressable
@@ -30,10 +34,12 @@ export function TaskRow({ task, assigneeName, onPress }: Props) {
       <View style={styles.text}>
         <Text style={styles.title}>{task.title}</Text>
         <Text style={styles.detail}>
-          {assigneeName} · {describeRecurrence(task)}
+          {[assigneeName, describeRecurrence(task), task.reward_nok && formatKroner(task.reward_nok)]
+            .filter(Boolean)
+            .join(' · ')}
         </Text>
       </View>
-      <Text style={styles.due}>{due}</Text>
+      {due && <Text style={styles.due}>{due}</Text>}
       <Text style={styles.chevron}>›</Text>
     </Pressable>
   );

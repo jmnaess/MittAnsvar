@@ -53,7 +53,7 @@ const KNOWN: Record<string, string> = {
   // Invitasjon av voksen
   invite_invalid: 'Koden er feil, utløpt eller allerede brukt. Be om en ny kode.',
   too_many_attempts: 'For mange feil forsøk. Vent 15 minutter og prøv igjen.',
-  not_adult: 'Bare voksne kan invitere.',
+  not_adult: 'Bare voksne kan gjøre dette.',
   // Oppgaver
   subscription_required: 'Prøveperioden er over. Husstanden trenger abonnement for å gjøre endringer.',
   recurrence_not_found: 'Fant ingen dato som passer gjentakelsen. Prøv et annet valg.',
@@ -63,6 +63,8 @@ const KNOWN: Record<string, string> = {
   completion_not_found: 'Avkrysningen finnes ikke lenger.',
   undo_not_allowed: 'Bare den siste avkrysningen kan angres.',
   undo_expired: 'Det er for lenge siden til å angre.',
+  // Utbetaling
+  amount_exceeds_balance: 'Beløpet kan ikke være større enn saldoen.',
   // Postgres
   '23503': 'Personen du valgte, finnes ikke lenger i husstanden.',
   '23505': 'Dette finnes allerede.',

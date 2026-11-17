@@ -63,13 +63,14 @@ app/                          # expo-router: kun skjermer, tynne
   sign-in.tsx
   (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
   (app)/onboarding.tsx            # velg: opprett (husstand → barn) eller bli med (kode, navn, avatar); forslag senere
-  (app)/(tabs)/index.tsx          # «I dag»
+  (app)/(tabs)/index.tsx          # «I dag», nederst «Ledige jobber»
   (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre)
   (app)/(tabs)/year.tsx           # Årshjul: 12 måneder med maler og brytere, «Velg anbefalte»
-  (app)/(tabs)/household.tsx      # medlemmer, legg til barn, inviter voksen; koble enhet (steg 15)
+  (app)/(tabs)/household.tsx      # medlemmer med saldo, legg til barn, inviter voksen; koble enhet (steg 16)
   (app)/(tabs)/settings.tsx       # husstandsnavn, tone, konto
   (app)/child/new.tsx             # legg til barn
   (app)/child/[id].tsx            # endre / slette barn
+  (app)/earnings/[id].tsx         # barnets opptjening: saldo, historikk, «Registrer utbetaling»
   (app)/task/[id].tsx
   (app)/task/new.tsx
   kiosk/index.tsx                 # felles husstandsvisning
@@ -80,8 +81,9 @@ src/
   features/
     auth/         api.ts, hooks.ts
     household/    api.ts, hooks.ts, inviteCode.ts, components/
-    tasks/        api.ts, hooks.ts, components/
-    completions/  api.ts, hooks.ts, components/MemberPickerModal.tsx
+    tasks/        api.ts, hooks.ts, recurrence.ts, reward.ts, components/
+    completions/  api.ts, hooks.ts, chooseDoer.ts (hvem gjorde det, testes), components/MemberPickerModal.tsx
+    rewards/      api.ts, hooks.ts, components/ (PayoutModal, RewardEventRow)
     templates/    api.ts, hooks.ts, suggest.ts (filter og månedsgruppering), components/TemplateRow.tsx
     feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
     kiosk/        pin.ts, components/
@@ -96,7 +98,7 @@ supabase/
   migrations/                     # SQL, én fil per endring
   functions/revenuecat-webhook/
   functions/delete-account/
-  seed/feedback.sql               # steg 11. Maler og tekster som skal til prod, legges inn via migrasjon
+  seed/feedback.sql               # steg 12. Maler og tekster som skal til prod, legges inn via migrasjon
   tests/rls.test.sql              # pgTAP: RLS-tester
   tests/compute_next_due.test.sql # pgTAP: gjentakelse, månedsoppgaver (månedsskifte, årsskifte)
   tests/templates.test.sql        # pgTAP: maler, aktivering, «Denne måneden», angring
@@ -104,6 +106,7 @@ supabase/
   tests/complete_task.test.sql    # pgTAP: avkrysning, angring, tone, tidssone
   tests/invites.test.sql          # pgTAP: invitasjon av voksen, sperre, RLS
   tests/upcoming_occurrences.test.sql # pgTAP: fremtidige forekomster (påminnelser, senere årshjul)
+  tests/rewards.test.sql          # pgTAP: lønn, utbetalinger, saldo, ledige jobber
 docs/
 ```
 
@@ -187,7 +190,7 @@ Ikke ennå: fjerne en annen voksen, lenker inn i appen.
 - **Behandlingsgrunnlag:** avtale med den voksne kontoeieren (art. 6(1)(b)).
 - **Databehandleravtaler:** Supabase (EU-region). RevenueCat er amerikansk og krever SCC/DPF, men de får bare UUID. Apple og Google er selvstendige behandlingsansvarlige for betaling.
 - **Personvernerklæring** på norsk før lansering. Den må også nevne barnedata.
-- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk). Sletting av en barneprofil sletter også barnets fullføringer.
+- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk). Sletting av en barneprofil sletter også barnets fullføringer og utbetalinger.
 - **Innsyn og dataportabilitet:** i MVP manuelt på e-post. Eksport i appen kommer senere.
 - **Logger:** ikke logg navn eller oppgavetekster i Edge Functions.
 
@@ -213,19 +216,20 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 4 | Oppstart: `create_household` (type, bolig, navn), legg til barneprofiler | Husstand og barn synes i appen |
 | 5a | `tasks` med begge gjentakelsesmodusene, `compute_next_due` (pgTAP), oppgaveskjema og fanen «Oppgaver» | Oppgaver kan lages, endres og slettes, fristen stemmer |
 | 5b | `task_completions`, `complete_task`/`undo_completion`, et startsett tilbakemeldingstekster, «I dag» med avkrysning, tilbakemelding og angring | Avkrysning lagres som historikk, fristen flyttes og kan angres |
-| 6 | *Gjort:* invitere voksen nr. 2 (se steg 13). Gjenstår: historikk per oppgave | |
+| 6 | *Gjort:* invitere voksen nr. 2 (se steg 14). Gjenstår: historikk per oppgave | |
 | 7 | *Gjort:* årshjul med maler. `task_templates` med 25 maler, `activate_templates`, månedsoppgaver (frist = måned, se [DATABASE.md §2](DATABASE.md#månedsoppgaver-steg-7)), fanen «Årshjul» med brytere og «Velg anbefalte», «Denne måneden» i «I dag» | Mal aktiveres, vises i «Denne måneden» uten å være forfalt, og neste frist blir samme måned neste år |
-| 8 | *Gjort:* lokale påminnelser (se steg 12 og §9). Gjenstår: egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
-| 9 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
-| 10 | Årshjulet viser også egne årlige oppgaver: RPC `get_upcoming_occurrences` | Egne og malbaserte oppgaver vises i samme 12 måneder |
-| 11 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
-| 12 | *Gjort i steg 8:* lokale påminnelser (`get_upcoming_occurrences`, daglig oppsummering, månedsoppgaver) | Varsel kommer på forfallsdagen |
-| 13 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |
-| 14 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
-| 15 | QR-kobling av barnets enhet (anonym auth, `link_tokens`, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
-| 16 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
-| 17 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
-| 18 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |
+| 8 | *Gjort:* lokale påminnelser (se steg 13 og §9). Gjenstår: egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
+| 9 | Lønn per oppgave og jobbtavle (se §10). `tasks.reward_nok`, beløpet kopieres til `task_completions.reward_nok`, `payouts`, `record_payout`, `member_balances`, `recurrence_type = 'job'` med `job_repeats`. Skjema: «Lønn (kr)» og «Ledig jobb», «Ledige jobber» i «I dag», saldo og utbetaling under «Husstand» | `npm run db:test` er grønn. På mobilen: 10 kr på en oppgave gir «+10 kr» og saldo, en engangsjobb forsvinner, en gjentakende jobb blir stående, angring trekker fra, og utbetaling gir saldo 0 |
+| 10 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
+| 11 | Årshjulet viser også egne årlige oppgaver: RPC `get_upcoming_occurrences` | Egne og malbaserte oppgaver vises i samme 12 måneder |
+| 12 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
+| 13 | *Gjort i steg 8:* lokale påminnelser (`get_upcoming_occurrences`, daglig oppsummering, månedsoppgaver) | Varsel kommer på forfallsdagen |
+| 14 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |
+| 15 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
+| 16 | QR-kobling av barnets enhet (anonym auth, `link_tokens`, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
+| 17 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
+| 18 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
+| 19 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |
 
 ---
 
@@ -246,6 +250,7 @@ Tatt 29.09.2026. Alle forslagene fra analysen i §1 er godkjent.
 11. **Innhold:** AI lager utkast, og utvikleren går gjennom alt manuelt. Til lansering: **40–60 maler** og **80–100 tilbakemeldingstekster**. Sikkerhetsfakta (røykvarsler, el) sjekkes mot offentlige kilder.
 12. **Delt omsorg:** én husstand per bruker holder til lansering.
 13. **Neste frist beregnes i databasen**, ikke i klienten. `complete_task` tar ikke imot frist eller dato. Se [DATABASE.md §2](DATABASE.md#2-gjentakelse-fast-kalender-og-intervall).
+14. **Lønn (steg 9, tatt 17.11.2026):** voksne kan sette et beløp i hele kroner på en oppgave. Bare barn får lønn. Beløpet kopieres til avkrysningen, så en senere prisendring ikke endrer det som er tjent. Utbetaling registreres av en voksen og kan ikke være større enn saldoen. Selve betalingen skjer utenfor appen (ingen Vipps). Se §10.
 
 ---
 
@@ -323,3 +328,30 @@ Denne måneden: Rense takrenner
 - Har brukeren sagt nei i systemet (`canAskAgain = false`), viser både spørsmålet og Innstillinger en forklaring og knappen «Åpne innstillinger» (`Linking.openSettings`). Tillatelsen leses på nytt når appen kommer tilbake i forgrunnen.
 - Android krever en varselkanal (`reminders`, «Påminnelser»). Den lages før vi spør, fordi Android 13+ ikke viser dialogen uten.
 
+---
+
+## 10. Lønn og ledige jobber (steg 9)
+
+Barn kan tjene penger på oppgaver. Appen holder bare regnskapet. Selve betalingen gjør familien selv. Datamodell: [DATABASE.md §1–3](DATABASE.md#3-task_completions-og-historikk).
+
+**Lønn per oppgave**
+- En voksen setter «Lønn (kr)» i oppgaveskjemaet (valgfritt, 1–10 000). Feltet vises bare for voksne, og RLS på `tasks` gjør at bare voksne kan skrive det.
+- `complete_task` kopierer beløpet til avkrysningen når den som gjorde oppgaven er et barn. Voksne får `null`. Banneret viser da «+10 kr til Leah».
+- Angring sletter avkrysningen, og beløpet forsvinner med den.
+- **Saldo** = sum av beløp på avkrysninger − sum av utbetalinger (view `member_balances`). Den vises under hvert barn i fanen «Husstand».
+
+**Hvem gjorde det?** (`completions/chooseDoer.ts`)
+- Vanlige oppgaver uten lønn: ett trykk, som før.
+- En voksen trykker på en oppgave med lønn som er tildelt et barn: velgeren viser barnet (forhåndsvalgt) og «meg», og «Kryss av» bekrefter. Ellers kunne barnet fått betalt for noe en voksen gjorde.
+- Åpen jobb: velg hvilket av barna som gjorde den. Et barn på egen enhet krysser av for seg selv.
+
+**Ledige jobber**
+- `recurrence_type = 'job'`: ingen dato, `next_due_on` er alltid `null`. Jobben blir aldri forfalt og er ikke med i påminnelsene.
+- Engangsjobb: arkiveres når den er gjort, og angring legger den tilbake. Gjentakende jobb («Kan gjøres flere ganger»): blir stående.
+- For alle barna (ingen ansvarlig) eller ett bestemt barn. Vises nederst i «I dag» under «Ledige jobber», med beløp.
+
+**Utbetaling.** Trykk på et barn under «Husstand» åpner `earnings/[id]`: saldo, de siste 20 avkrysningene med lønn og utbetalinger, og «Registrer utbetaling». Beløpet er forhåndsutfylt med hele saldoen, kan endres, og må bekreftes. `record_payout` avviser beløp over saldoen.
+
+**Kjent kanttilfelle:** en utbetaling, og så en angring innen 10 minutter, kan gi negativ saldo. Det godtar vi.
+
+**Ikke i dette steget:** felles mål, godkjenning av jobber, Vipps eller annen betaling, og barnas egne enheter.

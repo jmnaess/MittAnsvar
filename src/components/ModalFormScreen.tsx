@@ -15,11 +15,17 @@ type Props = {
  * Ramme for skjemaer som vises som modal: Avbryt til venstre og Lagre til høyre i headeren,
  * slik iOS-modaler pleier å se ut. Da dekker tastaturet aldri Lagre.
  *
- * - contentInsetAdjustmentBehavior="automatic": iOS flytter innholdet under headeren når den
- *   ligger over innholdet, og bare med det som overlapper.
+ * Header og tastatur (iOS 26):
+ * - headerTransparent: false. Uten egen bakgrunn gjør expo-router headeren gjennomsiktig
+ *   (Liquid Glass), og da legges innholdet bak den. Med fast bakgrunn legger react-native-screens
+ *   innholdet under headeren på vanlig måte. Avbryt/Lagre beholder glass-utseendet.
+ * - contentInsetAdjustmentBehavior="never": iOS skal ikke legge til et eget toppinnrykk. Med
+ *   "automatic" kaller React Native scrollTo ved hvert tastaturvarsel, og scrollTo kjenner bare
+ *   contentInset (0), ikke det automatiske innrykket. Da hoppet innholdet opp bak headeren.
+ * - automaticallyAdjustKeyboardInsets: den eneste tastaturmekanismen. Legger til plass nederst
+ *   for tastaturet og scroller bare når feltet med fokus ellers ville blitt dekket.
  * - keyboardShouldPersistTaps="handled": trykk på knapper virker med tastaturet oppe, mens
  *   trykk på tomme flater lukker tastaturet.
- * - automaticallyAdjustKeyboardInsets: man kan scrolle til felt som ligger bak tastaturet.
  */
 export function ModalFormScreen({ canSave, saving, onSave, children }: Props) {
   function save() {
@@ -31,6 +37,7 @@ export function ModalFormScreen({ canSave, saving, onSave, children }: Props) {
     <>
       <Stack.Screen
         options={{
+          headerTransparent: false,
           headerLeft: () => <HeaderButton title="Avbryt" onPress={() => router.back()} />,
           headerRight: onSave
             ? () => (
@@ -41,7 +48,7 @@ export function ModalFormScreen({ canSave, saving, onSave, children }: Props) {
       />
       <ScrollView
         contentContainerStyle={styles.container}
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"

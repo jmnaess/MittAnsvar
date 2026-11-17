@@ -1,5 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { listBalances, listRewardHistory, recordPayout } from './api';
+import { useInvalidateTasks } from '../tasks/hooks';
+import {
+  approveCompletions,
+  listBalances,
+  listPendingCompletions,
+  listRewardHistory,
+  recordPayout,
+  rejectCompletion,
+  type MemberBalance,
+} from './api';
 
 // Saldo og historikk ligger under ['rewards', householdId]. Avkrysning, angring og utbetaling
 // invaliderer den nøkkelen.
@@ -8,6 +17,8 @@ export const rewardKeys = {
   balances: (householdId: string) => ['rewards', householdId, 'balances'] as const,
   history: (householdId: string, memberId: string) =>
     ['rewards', householdId, 'history', memberId] as const,
+  // Under ['rewards', householdId], så avkrysning og angring også henter denne på nytt.
+  pending: (householdId: string) => ['rewards', householdId, 'pending'] as const,
 };
 
 export function useBalances(householdId: string) {
@@ -17,10 +28,10 @@ export function useBalances(householdId: string) {
   });
 }
 
-/** Saldoen til ett barn i hele kroner (0 til den er hentet). */
-export function useBalance(householdId: string, memberId: string): number {
+/** Saldoraden til ett barn (undefined til den er hentet). Vis den med formatBalance. */
+export function useBalance(householdId: string, memberId: string): MemberBalance | undefined {
   const { data } = useBalances(householdId);
-  return data?.find((b) => b.member_id === memberId)?.balance_nok ?? 0;
+  return data?.find((b) => b.member_id === memberId);
 }
 
 export function useRewardHistory(householdId: string, memberId: string) {
@@ -42,4 +53,32 @@ export function useRecordPayout(householdId: string) {
       recordPayout(memberId, amountNok),
     onSettled,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Godkjenning (steg 10b)
+// ---------------------------------------------------------------------------
+
+export function usePendingCompletions(householdId: string) {
+  return useQuery({
+    queryKey: rewardKeys.pending(householdId),
+    queryFn: () => listPendingCompletions(householdId),
+  });
+}
+
+/** Avvisning kan sette fristen tilbake og legge en jobb tilbake på tavla, så også oppgavene hentes. */
+function useInvalidateAfterReview(householdId: string) {
+  const invalidateRewards = useInvalidateRewards(householdId);
+  const invalidateTasks = useInvalidateTasks(householdId);
+  return () => Promise.all([invalidateRewards(), invalidateTasks()]);
+}
+
+export function useApproveCompletions(householdId: string) {
+  const onSettled = useInvalidateAfterReview(householdId);
+  return useMutation({ mutationFn: approveCompletions, onSettled });
+}
+
+export function useRejectCompletion(householdId: string) {
+  const onSettled = useInvalidateAfterReview(householdId);
+  return useMutation({ mutationFn: rejectCompletion, onSettled });
 }

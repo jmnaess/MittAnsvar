@@ -30,6 +30,7 @@ View: today_tasks (tasks), member_balances (members + task_completions + payouts
 | `audience` | `adult`, `child`, `any` |
 | `recurrence_type` | `once`, `calendar`, `interval`, `job` (steg 9, egen migrasjon fordi en ny enum-verdi ikke kan brukes i samme transaksjon) |
 | `recurrence_unit` | `day`, `week`, `month`, `year` |
+| `completion_status` | `pending`, `approved`, `rejected` (steg 10b) |
 
 ### `households`
 | Kolonne | Type | Merknad |
@@ -147,7 +148,7 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 
 Indeks `(household_id, member_id, paid_at desc)`. Skrives bare via RPC-en `record_payout` (se §5).
 
-**View `member_balances`** (`security_invoker = true`): én rad per barn (et barn ser bare sin egen rad, steg 10a) med `member_id`, `household_id`, `earned_nok` (sum av `task_completions.reward_nok`), `paid_nok` (sum av `payouts.amount_nok`) og `balance_nok = earned_nok − paid_nok`. Saldoen lagres ikke, så den kan aldri komme ut av takt med historikken. RLS på de underliggende tabellene gjelder.
+**View `member_balances`** (`security_invoker = true`): én rad per barn (et barn ser bare sin egen rad, steg 10a) med `member_id`, `household_id`, `earned_nok` (sum av godkjente `task_completions.reward_nok`), `pending_nok` (sum av ventende, steg 10b), `paid_nok` (sum av `payouts.amount_nok`) og `balance_nok = earned_nok − paid_nok` (det som kan betales ut). Avviste beløp teller ikke. Appen viser `balance_nok + pending_nok` med det som venter i parentes: «35 kr (10 kr venter)» (`rewards/format.ts`). Saldoen lagres ikke, så den kan aldri komme ut av takt med historikken. RLS på de underliggende tabellene gjelder.
 
 Kjent kanttilfelle: en utbetaling, og så en angring innen 10 minutter, kan gi negativ saldo. Det godtas.
 
@@ -285,7 +286,7 @@ Angring, aktivering og `today_tasks` testes i `templates.test.sql` (se §5).
 
 ## 3. `task_completions` og historikk
 
-Hver avkrysning blir en ny rad. Tabellen er append-only: raden oppdateres aldri, og slettes bare ved «angre».
+Hver avkrysning blir en ny rad. Tabellen er nesten append-only: bare `status` kan endres (steg 10b, via `approve_completions` og `reject_completion`), og raden slettes bare ved «angre».
 
 | Kolonne | Type | Merknad |
 |---------|------|---------|
@@ -299,6 +300,7 @@ Hver avkrysning blir en ny rad. Tabellen er append-only: raden oppdateres aldri,
 | due_on | date null | fristen denne avkrysningen dekket. Brukes til «i tide?» og til angring |
 | feedback_message_id | uuid null → feedback_messages on delete set null | hvilken tekst som ble vist, for å unngå gjentakelser |
 | reward_nok | integer null | lønnen som ble tjent (steg 9), kopiert fra `tasks.reward_nok`. null = ingen lønn, eller en voksen gjorde oppgaven. Senere prisendring påvirker ikke raden |
+| status | completion_status not null default `approved` | steg 10b. `pending` når et barn krysser av en oppgave med lønn på sin egen enhet. Alt annet (uten lønn, eller registrert av en voksen, også for et barn) er `approved` med én gang. `rejected` = ikke godkjent: beløpet teller ikke, og oppgaven regnes som ikke gjort. Raden beholdes, så barnet ser det. Delvis indeks `(household_id) where status = 'pending'` |
 
 Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(household_id, completed_by_member_id)`. `task_id` og `completed_by_member_id` har sammensatte FK-er med `household_id`, slik at oppgave og medlem alltid hører til samme husstand som raden.
 
@@ -311,7 +313,11 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
   4. `completed_on = (now() at time zone households.timezone)::date`. Klienten sender verken dato eller frist.
   5. Velger en tilbakemeldingstekst (se §4), setter inn raden (`due_on` = oppgavens nåværende `next_due_on`) og setter `tasks.next_due_on = private.compute_next_due(oppgaven, completed_on)`. Alt skjer i én transaksjon.
   6. Steg 9: `reward_nok` = oppgavens beløp hvis den som gjorde oppgaven er et barn, ellers `null`. Er oppgaven en engangsjobb, settes `archived_at = now()`.
-- `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som registrerte den (`recorded_by`), innen 10 minutter. Raden slettes (med beløpet), og `tasks.next_due_on` settes tilbake til `due_on`. En engangsjobb får `archived_at = null` igjen. Feil: `completion_not_found`, `undo_not_allowed`, `undo_expired`. Appen viser «Angre» i 6 sekunder.
+  7. Steg 10b: `status` = `pending` hvis det er lønn og kalleren er et barn, ellers `approved`. Returneres også.
+- `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som registrerte den (`recorded_by`), innen 10 minutter. Raden slettes (med beløpet), og `tasks.next_due_on` settes tilbake til `due_on`. En engangsjobb får `archived_at = null` igjen. Feil: `completion_not_found`, `undo_not_allowed`, `undo_expired`. Appen viser «Angre» i 6 sekunder. Steg 10b: en avvist rad kan ikke angres (`undo_not_allowed`), og avviste rader teller ikke som «nyere avkrysning». Et barn kan fortsatt angre sin egen ventende avkrysning.
+- `approve_completions(p_completion_ids uuid[]) returns int` (steg 10b): en voksen godkjenner én eller flere («Godkjenn alle»). Bare `pending` endres, så det er trygt å trykke to ganger. Returnerer antall godkjente.
+- `reject_completion(p_completion_id)` (steg 10b): «Ikke godkjent». Status blir `rejected`. Er det den siste ikke-avviste avkrysningen på oppgaven, settes `next_due_on` tilbake til `due_on`, og en engangsjobb får `archived_at = null` (som angring). Finnes en nyere, endres bare statusen. Låser oppgaven og leser raden på nytt, så to voksne ikke behandler samme rad samtidig. Feil: `not_pending`.
+- Begge krever at kalleren er voksen i husstanden til alle radene og `household_has_access`. Barn, andre husstander og ukjente id-er gir samme feil (`not_adult`), via `private.assert_adult_for_completions`.
 
 **Historikkspørringer** (vanlig select, ingen egne tabeller):
 - Sist utført: `select completed_at from task_completions where task_id = $1 order by completed_at desc limit 1`
@@ -448,7 +454,8 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
 | `activate_templates(p_household_id, p_template_ids) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid) |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
-| `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
+| `approve_completions(p_completion_ids)` / `reject_completion(p_completion_id)` | voksen, `household_has_access` | godkjenning av lønn (se §3). Feil: `not_adult` (barn, annen husstand, ukjent id), `subscription_required`, `not_pending` (bare avvisning) |
+| `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Fra steg 10b er grensen godkjent saldo (ventende og avviste teller ikke). Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
 | `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade) og barnas anonyme brukere (steg 10a). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
 
@@ -495,5 +502,13 @@ Minimum før lansering:
     - Frakobling: barn og annen husstand avvises. Koblingen fjernes, den anonyme brukeren slettes, historikken består, og den gamle sesjonen ser ingenting. Barnet kan kobles til igjen.
     - `delete_account.test.sql`: siste voksne sletter også barnas anonyme brukere. Er det en voksen igjen, beholdes de.
     - `child_settings.test.sql`: barnet kan endre egen avatar via `set_my_avatar` (ugyldig nøkkel avvises), men ikke eget navn, fødselsår, rolle eller kobling, og ikke andres avatar. `unlink_my_device` kobler fra bare barnet selv og sletter bare dets anonyme bruker. Voksne og anon avvises.
+
+14. Godkjenning av lønn (`reward_approval.test.sql`, steg 10b):
+    - Barn med lønn på egen enhet gir `pending`. Uten lønn, og alt en voksen registrerer (også for barnet), gir `approved`.
+    - Saldoen viser ventende med én gang, men utbetaling over godkjent saldo avvises, selv om noe venter.
+    - Barn, en annen husstand, ukjente id-er og anon kan ikke godkjenne eller avvise. Status kan ikke endres direkte.
+    - Godkjenning endrer bare ventende rader og er trygg å gjenta. «Godkjenn alle» godkjenner flere.
+    - Avvisning trekker beløpet. Siste avkrysning på en gjentakende oppgave gir fristen tilbake, og oppgaven er i «I dag» igjen. En engangsjobb blir ledig igjen. Finnes en nyere avkrysning, står fristen.
+    - Avvist kan ikke avvises, godkjennes eller angres. Barnet ser at raden er avvist, kan angre egen ventende, og kan gjøre en avvist oppgave på nytt.
 
 Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.

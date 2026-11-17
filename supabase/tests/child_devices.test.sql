@@ -231,6 +231,9 @@ select lives_ok($$select public.complete_task('aaaaaaaa-1111-0000-0000-000000000
 select tests.logout();
 
 select tests.login_as('00000000-0000-0000-0000-00000000a001');
+-- Steg 10b: barnas avkrysninger med lønn venter. Godkjenn alt, så saldoene under kan betales ut.
+-- (Godkjenning testes i reward_approval.test.sql.)
+select public.approve_completions(array(select id from public.task_completions where status = 'pending'));
 select lives_ok($$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000003', 4)$$,
   'voksen registrerer utbetaling til søsken');
 select lives_ok($$select public.complete_task('aaaaaaaa-1111-0000-0000-000000000006', 'aaaaaaaa-0000-0000-0000-000000000002')$$,

@@ -48,7 +48,9 @@ export default function ChildTodayScreen() {
             completionId: result.completionId,
             title: task.title,
             message: result.feedbackText,
-            reward: result.rewardNok ? `+${formatKroner(result.rewardNok)}` : undefined,
+            reward: result.rewardNok
+              ? `+${formatKroner(result.rewardNok)}${result.pending ? ' – venter på godkjenning' : ''}`
+              : undefined,
           }),
         onError: (e) => setActionError(toNorwegianMessage(e)),
       },

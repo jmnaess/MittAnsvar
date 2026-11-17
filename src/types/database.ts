@@ -233,14 +233,14 @@ isOneToOne: false
                   ]
                 },"task_completions": {
                   Row: {
-                    "completed_at": string,"completed_by_member_id": string,"completed_on": string,"due_on": string | null,"feedback_message_id": string | null,"household_id": string,"id": string,"recorded_by": string | null,"reward_nok": number | null,"task_id": string
+                    "completed_at": string,"completed_by_member_id": string,"completed_on": string,"due_on": string | null,"feedback_message_id": string | null,"household_id": string,"id": string,"recorded_by": string | null,"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "completed_at"?: string,"completed_by_member_id": string,"completed_on": string,"due_on"?: string | null,"feedback_message_id"?: string | null,"household_id": string,"id"?: string,"recorded_by"?: string | null,"reward_nok"?: number | null,"task_id": string
+                    "completed_at"?: string,"completed_by_member_id": string,"completed_on": string,"due_on"?: string | null,"feedback_message_id"?: string | null,"household_id": string,"id"?: string,"recorded_by"?: string | null,"reward_nok"?: number | null,"status"?: Database["public"]['Enums']["completion_status"],"task_id": string
                   }
                   Update: {
-                    "completed_at"?: string,"completed_by_member_id"?: string,"completed_on"?: string,"due_on"?: string | null,"feedback_message_id"?: string | null,"household_id"?: string,"id"?: string,"recorded_by"?: string | null,"reward_nok"?: number | null,"task_id"?: string
+                    "completed_at"?: string,"completed_by_member_id"?: string,"completed_on"?: string,"due_on"?: string | null,"feedback_message_id"?: string | null,"household_id"?: string,"id"?: string,"recorded_by"?: string | null,"reward_nok"?: number | null,"status"?: Database["public"]['Enums']["completion_status"],"task_id"?: string
                   }
                   Relationships: [
                     {
@@ -350,7 +350,7 @@ isOneToOne: false
           Views: {
             "member_balances": {
                   Row: {
-                    "balance_nok": number | null,"earned_nok": number | null,"household_id": string,"member_id": string,"paid_nok": number | null
+                    "balance_nok": number | null,"earned_nok": number | null,"household_id": string,"member_id": string,"paid_nok": number | null,"pending_nok": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -421,9 +421,12 @@ isOneToOne: false
 "activate_templates":
 { Args: { "p_household_id": string,"p_template_ids": (string)[] }; Returns: number
                            },
+"approve_completions":
+{ Args: { "p_completion_ids": (string)[] }; Returns: number
+                           },
 "complete_task":
 { Args: { "p_member_id": string,"p_task_id": string }; Returns: {
-              "completion_id": string,"feedback_text": string,"next_due_on": string,"reward_nok": number
+              "completion_id": string,"feedback_text": string,"next_due_on": string,"reward_nok": number,"status": Database["public"]['Enums']["completion_status"]
             }[]
                            },
 "create_household":
@@ -453,6 +456,9 @@ isOneToOne: false
 "redeem_link_token":
 { Args: { "p_code": string }; Returns: string
                            },
+"reject_completion":
+{ Args: { "p_completion_id": string }; Returns: undefined
+                           },
 "set_my_avatar":
 { Args: { "p_avatar": string }; Returns: undefined
                            },
@@ -467,7 +473,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "audience": "adult"|"child"|"any","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year"
+            "audience": "adult"|"child"|"any","completion_status": "pending"|"approved"|"rejected","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -587,7 +593,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "audience": ["adult", "child", "any"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"]
+            "audience": ["adult", "child", "any"],"completion_status": ["pending", "approved", "rejected"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"]
           }
         }
 } as const

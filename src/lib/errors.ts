@@ -69,8 +69,9 @@ const KNOWN: Record<string, string> = {
   completion_not_found: 'Avkrysningen finnes ikke lenger.',
   undo_not_allowed: 'Bare den siste avkrysningen kan angres.',
   undo_expired: 'Det er for lenge siden til å angre.',
-  // Utbetaling
-  amount_exceeds_balance: 'Beløpet kan ikke være større enn saldoen.',
+  // Utbetaling og godkjenning
+  amount_exceeds_balance: 'Beløpet kan ikke være større enn det som er godkjent.',
+  not_pending: 'Denne er allerede godkjent eller avvist.',
   // Postgres
   '23503': 'Personen du valgte, finnes ikke lenger i husstanden.',
   '23505': 'Dette finnes allerede.',

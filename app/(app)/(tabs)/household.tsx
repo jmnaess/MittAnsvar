@@ -14,7 +14,7 @@ import {
 } from '../../../src/features/household/hooks';
 import { inviteShareMessage } from '../../../src/features/household/inviteCode';
 import { useBalances } from '../../../src/features/rewards/hooks';
-import { formatKroner } from '../../../src/features/tasks/reward';
+import { formatBalance } from '../../../src/features/rewards/format';
 import type { Household, Member } from '../../../src/features/household/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
@@ -27,8 +27,7 @@ export default function HouseholdScreen() {
 
   const me = members?.find((m) => m.auth_user_id === session?.user.id);
   const isAdult = me?.role === 'adult';
-  const balanceOf = (memberId: string) =>
-    balances?.find((b) => b.member_id === memberId)?.balance_nok ?? 0;
+  const balanceOf = (memberId: string) => balances?.find((b) => b.member_id === memberId);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -40,7 +39,7 @@ export default function HouseholdScreen() {
             member={member}
             extra={
               member.role === 'child'
-                ? `Opptjent: ${formatKroner(balanceOf(member.id))}${member.auth_user_id ? ' · 📱 Egen enhet' : ''}`
+                ? `Opptjent: ${formatBalance(balanceOf(member.id))}${member.auth_user_id ? ' · 📱 Egen enhet' : ''}`
                 : undefined
             }
             accessibilityHint="Se opptjening, registrer utbetaling og koble til enhet"

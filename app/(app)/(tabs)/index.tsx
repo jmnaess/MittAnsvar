@@ -8,6 +8,7 @@ import { chooseCompletionAction } from '../../../src/features/completions/choose
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
 import { useCompleteTask, useUndoCompletion } from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
+import { PendingApprovalSection } from '../../../src/features/rewards/components/PendingApprovalSection';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../../../src/features/tasks/groupToday';
@@ -26,6 +27,7 @@ type Picking = { task: TodayTask; members: Member[]; preselectedId: string | nul
 
 /**
  * «I dag»: forfalte oppgaver og dagens oppgaver, gruppert per medlem og felles.
+ * Øverst «Til godkjenning» for voksne når et barn har krysset av med lønn på egen enhet.
  * Månedsoppgaver (f.eks. fra årshjulet) som ikke er forfalt, ligger under «Denne måneden», og
  * ledige jobber nederst under «Ledige jobber». Voksne legger ut jobber med «+» i headeren og
  * endrer dem med langt trykk.
@@ -127,6 +129,8 @@ export default function TodayScreen() {
             {(error || actionError) && (
               <Text style={styles.error}>{actionError ?? toNorwegianMessage(error)}</Text>
             )}
+            {/* Steg 10b: barnas avkrysninger med lønn som venter. Vises bare når noe venter. */}
+            {isAdult && <PendingApprovalSection householdId={householdId} members={members} />}
             {/* I headeren, ikke ListEmptyComponent: for voksne er «Ledige jobber» alltid med. */}
             {nothingToDo && (
               <View style={styles.empty}>

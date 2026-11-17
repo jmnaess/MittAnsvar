@@ -8,15 +8,17 @@ import { formatKroner } from '../../tasks/reward';
 type Props = {
   visible: boolean;
   childName: string;
-  /** Hele saldoen. Feltet starter med denne, og beløpet kan ikke være større. */
+  /** Godkjent saldo. Feltet starter med denne, og beløpet kan ikke være større. */
   balance: number;
+  /** Venter på godkjenning, og kan ikke betales ut ennå (steg 10b). */
+  pending?: number;
   saving?: boolean;
   onConfirm: (amountNok: number) => void;
   onClose: () => void;
 };
 
 /** «Registrer utbetaling»: beløp (forhåndsutfylt med saldoen), så en bekreftelse. */
-export function PayoutModal({ visible, childName, balance, saving, onConfirm, onClose }: Props) {
+export function PayoutModal({ visible, childName, balance, pending = 0, saving, onConfirm, onClose }: Props) {
   const [amount, setAmount] = useState(String(balance));
 
   // Hver gang modalen åpnes: start med hele saldoen.
@@ -49,9 +51,14 @@ export function PayoutModal({ visible, childName, balance, saving, onConfirm, on
           />
           <Text style={valid ? styles.hint : styles.error}>
             {valid
-              ? `Saldo: ${formatKroner(balance)}. Selve betalingen gjør dere utenfor appen.`
+              ? `Godkjent: ${formatKroner(balance)}. Selve betalingen gjør dere utenfor appen.`
               : `Beløpet må være mellom 1 og ${formatKroner(balance)}.`}
           </Text>
+          {pending > 0 && (
+            <Text style={styles.hint}>
+              {formatKroner(pending)} venter på godkjenning og kan ikke betales ut ennå.
+            </Text>
+          )}
           <Button title="Registrer utbetaling" onPress={confirm} disabled={!valid || saving} />
           <Pressable onPress={onClose} style={styles.cancel} accessibilityRole="button">
             <Text style={styles.cancelText}>Avbryt</Text>

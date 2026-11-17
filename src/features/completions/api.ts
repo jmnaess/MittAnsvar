@@ -8,6 +8,8 @@ export type CompletionResult = {
   nextDueOn: string | null;
   /** Lønnen som ble tjent. null = ingen lønn, eller en voksen gjorde oppgaven. */
   rewardNok: number | null;
+  /** «pending» når et barn ga seg selv lønn på egen enhet: venter på godkjenning (steg 10b). */
+  pending: boolean;
 };
 
 /**
@@ -26,6 +28,7 @@ export async function completeTask(taskId: string, memberId: string): Promise<Co
     feedbackText: row.feedback_text ?? null,
     nextDueOn: row.next_due_on ?? null,
     rewardNok: row.reward_nok ?? null,
+    pending: row.status === 'pending',
   };
 }
 

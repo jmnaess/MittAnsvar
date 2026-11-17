@@ -63,7 +63,7 @@ app/                          # expo-router: kun skjermer, tynne
   sign-in.tsx
   (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
   (app)/onboarding.tsx            # velg: opprett (husstand → barn) eller bli med (kode, navn, avatar); forslag senere
-  (app)/(tabs)/index.tsx          # «I dag», nederst «Ledige jobber»
+  (app)/(tabs)/index.tsx          # «I dag»: øverst «Til godkjenning», nederst «Ledige jobber»
   (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre)
   (app)/(tabs)/year.tsx           # Årshjul: 12 måneder med maler og brytere, «Velg anbefalte»
   (app)/(tabs)/household.tsx      # medlemmer med saldo og «Egen enhet», legg til barn, inviter voksen
@@ -90,7 +90,8 @@ src/
     tasks/        api.ts, hooks.ts, recurrence.ts, reward.ts, job.ts (jobbskjema, hvilke barn),
                   groupToday.ts, childToday.ts (barnets «I dag»), components/
     completions/  api.ts, hooks.ts, chooseDoer.ts (hvem gjorde det, testes), components/MemberPickerModal.tsx
-    rewards/      api.ts, hooks.ts, components/ (PayoutModal, RewardEventRow)
+    rewards/      api.ts, hooks.ts, format.ts (saldo med «venter»), components/ (PayoutModal, RewardEventRow,
+                  PendingApprovalSection)
     templates/    api.ts, hooks.ts, suggest.ts (filter og månedsgruppering), components/TemplateRow.tsx
     feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
     kiosk/        pin.ts, components/
@@ -117,6 +118,7 @@ supabase/
   tests/job_members.test.sql      # pgTAP: jobber for utvalgte barn
   tests/child_devices.test.sql    # pgTAP: barnets enhet, kode, frakobling, hva barn ser og kan krysse av
   tests/child_settings.test.sql   # pgTAP: barnets avatar og utlogging (kobler fra seg selv)
+  tests/reward_approval.test.sql  # pgTAP: godkjenning av lønn, avvisning, saldo og utbetaling
 docs/
 ```
 
@@ -266,6 +268,7 @@ Tatt 29.09.2026. Alle forslagene fra analysen i §1 er godkjent.
 12. **Delt omsorg:** én husstand per bruker holder til lansering.
 13. **Neste frist beregnes i databasen**, ikke i klienten. `complete_task` tar ikke imot frist eller dato. Se [DATABASE.md §2](DATABASE.md#2-gjentakelse-fast-kalender-og-intervall).
 14. **Lønn (steg 9, tatt 17.11.2026):** voksne kan sette et beløp i hele kroner på en oppgave. Bare barn får lønn. Beløpet kopieres til avkrysningen, så en senere prisendring ikke endrer det som er tjent. Utbetaling registreres av en voksen og kan ikke være større enn saldoen. Selve betalingen skjer utenfor appen (ingen Vipps). Se §10.
+15. **Barnas enhet og godkjenning (steg 10, tatt 17.11.2026):** én kort kode (QR eller inntasting) kobler barnets anonyme bruker til barneprofilen. Ett barn har én enhet. Barnets avkrysninger med lønn må godkjennes av en voksen. Saldoen som vises, tar med det som venter, men bare godkjent beløp kan betales ut. Se §3 og §10.
 
 ---
 
@@ -366,8 +369,16 @@ Barn kan tjene penger på oppgaver. Appen holder bare regnskapet. Selve betaling
 - For alle barna, ett barn eller flere utvalgte barn (`tasks.job_member_ids`, tom = alle). Vises nederst i «I dag» under «Ledige jobber», med beløp og «Leah og Ola» / «Alle barna».
 - Voksne legger ut jobber med «+» øverst i «I dag» (kort skjema: hva, lønn, for hvem, «Kan gjøres flere ganger») og endrer dem med langt trykk. Seksjonen vises alltid for voksne, også tom. Barn ser den bare når det finnes jobber. Det fulle oppgaveskjemaet kan også lage jobber.
 
-**Utbetaling.** Trykk på et barn under «Husstand» åpner `earnings/[id]`: saldo, de siste 20 avkrysningene med lønn og utbetalinger, og «Registrer utbetaling». Beløpet er forhåndsutfylt med hele saldoen, kan endres, og må bekreftes. `record_payout` avviser beløp over saldoen.
+**Utbetaling.** Trykk på et barn under «Husstand» åpner `earnings/[id]`: saldo, de siste 20 avkrysningene med lønn og utbetalinger, og «Registrer utbetaling». Beløpet er forhåndsutfylt med den godkjente saldoen, kan endres, og må bekreftes. `record_payout` avviser beløp over godkjent saldo.
+
+**Godkjenning av lønn (steg 10b).** Et barn kan krysse av på sin egen enhet. Da må en voksen godkjenne pengene.
+- **Tilstand per avkrysning:** venter, godkjent eller ikke godkjent (`task_completions.status`). Krysser et barn av en oppgave med lønn på egen enhet, blir den «venter». Avkrysninger uten lønn, og alt en voksen registrerer, er godkjent med én gang.
+- **Saldoen** øker med én gang og viser hva som venter: «35 kr (10 kr venter)» = 25 godkjent + 10 venter. Slik vises den under «Husstand», på barnets side og i «Min lønn». Bare godkjent beløp kan betales ut. Utbetalingen viser hvor mye som venter.
+- **«Til godkjenning»** øverst i de voksnes «I dag» når noe venter: avatar, oppgave og beløp, med «Godkjenn» og «Ikke godkjent» per rad og «Godkjenn alle». «Ikke godkjent» bekreftes.
+- **«Ikke godkjent»** betyr at oppgaven ikke er gjort: beløpet trekkes, fristen settes tilbake hvis det var siste avkrysning, og en engangsjobb blir ledig igjen. I historikken står «Ikke godkjent» med gjennomstreket beløp, så barnet ser det. Barnet kan gjøre oppgaven på nytt.
+- Barnet kan fortsatt angre sin egen avkrysning innen 10 minutter. Banneret viser «+10 kr – venter på godkjenning».
+- Ikke i dette steget: barn som melder inn egne ekstra jobber, push-varsler om ting som venter, felles mål.
 
 **Kjent kanttilfelle:** en utbetaling, og så en angring innen 10 minutter, kan gi negativ saldo. Det godtar vi.
 
-**Ikke i dette steget:** felles mål, godkjenning av jobber, Vipps eller annen betaling, og barnas egne enheter.
+**Ikke i steg 9:** felles mål, Vipps eller annen betaling. Godkjenning og barnas egne enheter kom i steg 10.

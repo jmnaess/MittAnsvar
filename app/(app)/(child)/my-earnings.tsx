@@ -6,7 +6,7 @@ import { colors } from '../../../src/components/theme';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { RewardEventRow } from '../../../src/features/rewards/components/RewardEventRow';
 import { useBalances, useRewardHistory } from '../../../src/features/rewards/hooks';
-import { formatKroner } from '../../../src/features/tasks/reward';
+import { formatBalance } from '../../../src/features/rewards/format';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 /** «Min lønn» på barnets enhet: egen saldo og historikk. RLS gjør at barnet bare ser sitt eget. */
@@ -22,7 +22,7 @@ type Props = { householdId: string; memberId: string; name: string; avatar: stri
 
 function Earnings({ householdId, memberId, name, avatar }: Props) {
   const balances = useBalances(householdId);
-  const balance = balances.data?.find((b) => b.member_id === memberId)?.balance_nok ?? 0;
+  const balance = balances.data?.find((b) => b.member_id === memberId);
   const { data: history, error, isPending, refetch } = useRewardHistory(householdId, memberId);
 
   // En voksen kan ha registrert en utbetaling siden sist. refetch er stabil, så dette kjører
@@ -36,7 +36,7 @@ function Earnings({ householdId, memberId, name, avatar }: Props) {
         <Avatar avatar={avatar} size={48} />
         <View>
           <Text style={styles.name}>{name}</Text>
-          <Text style={styles.balance}>Saldo: {formatKroner(balance)}</Text>
+          <Text style={styles.balance}>Saldo: {formatBalance(balance)}</Text>
         </View>
       </View>
 

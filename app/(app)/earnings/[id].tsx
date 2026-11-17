@@ -11,7 +11,7 @@ import type { Member } from '../../../src/features/household/types';
 import { PayoutModal } from '../../../src/features/rewards/components/PayoutModal';
 import { RewardEventRow } from '../../../src/features/rewards/components/RewardEventRow';
 import { useBalance, useRecordPayout, useRewardHistory } from '../../../src/features/rewards/hooks';
-import { formatKroner } from '../../../src/features/tasks/reward';
+import { formatBalance } from '../../../src/features/rewards/format';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 /**
@@ -24,7 +24,10 @@ export default function EarningsScreen() {
   const householdId = household!.id;
   const { data: members } = useMembers(householdId);
   const me = useMyMember(householdId);
-  const balance = useBalance(householdId, id);
+  const balanceRow = useBalance(householdId, id);
+  // Bare godkjent beløp kan betales ut. Det som venter, vises i saldoen og i utbetalingen.
+  const payable = balanceRow?.balance_nok ?? 0;
+  const pending = balanceRow?.pending_nok ?? 0;
   const { data: history, error, isPending } = useRewardHistory(householdId, id);
   const payout = useRecordPayout(householdId);
   const [paying, setPaying] = useState(false);
@@ -40,11 +43,11 @@ export default function EarningsScreen() {
         <Avatar avatar={child.avatar} size={48} />
         <View style={styles.headerText}>
           <Text style={styles.name}>{child.display_name}</Text>
-          <Text style={styles.balance}>Saldo: {formatKroner(balance)}</Text>
+          <Text style={styles.balance}>Saldo: {formatBalance(balanceRow)}</Text>
         </View>
       </View>
 
-      {isAdult && balance > 0 && (
+      {isAdult && payable > 0 && (
         <Button title="Registrer utbetaling" onPress={() => setPaying(true)} disabled={payout.isPending} />
       )}
       {payout.error && <Text style={styles.error}>{toNorwegianMessage(payout.error)}</Text>}
@@ -71,7 +74,8 @@ export default function EarningsScreen() {
       <PayoutModal
         visible={paying}
         childName={child.display_name}
-        balance={balance}
+        balance={payable}
+        pending={pending}
         saving={payout.isPending}
         onClose={() => setPaying(false)}
         onConfirm={(amountNok) =>

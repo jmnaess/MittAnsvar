@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { tabIcon } from '../../../src/components/tabIcon';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { ReminderPrompt } from '../../../src/features/notifications/components/ReminderPrompt';
@@ -19,11 +20,14 @@ export default function TabsLayout() {
   return (
     <>
       <Tabs>
-        <Tabs.Screen name="index" options={{ title: 'I dag' }} />
-        <Tabs.Screen name="tasks" options={{ title: 'Oppgaver' }} />
-        <Tabs.Screen name="year" options={{ title: 'Årshjul' }} />
-        <Tabs.Screen name="household" options={{ title: 'Husstand' }} />
-        <Tabs.Screen name="settings" options={{ title: 'Innstillinger' }} />
+        <Tabs.Screen name="index" options={{ title: 'I dag', tabBarIcon: tabIcon('sunny') }} />
+        <Tabs.Screen name="tasks" options={{ title: 'Oppgaver', tabBarIcon: tabIcon('list') }} />
+        <Tabs.Screen name="year" options={{ title: 'Årshjul', tabBarIcon: tabIcon('calendar') }} />
+        <Tabs.Screen name="household" options={{ title: 'Husstand', tabBarIcon: tabIcon('home') }} />
+        <Tabs.Screen
+          name="settings"
+          options={{ title: 'Innstillinger', tabBarIcon: tabIcon('settings') }}
+        />
       </Tabs>
       <ReminderPrompt userId={userId} />
     </>

@@ -227,10 +227,12 @@ Angring, aktivering og `today_tasks` testes i `templates.test.sql` (se §5).
 
 `next_due_on` lagres på oppgaven. Da blir «I dag» enkel (`next_due_on <= today`).
 
-**Årshjulet** henter fremtidige forekomster med RPC-en `get_upcoming_occurrences(p_household_id uuid, p_from date, p_to date) returns table (task_id uuid, due_on date)`:
+**Fremtidige forekomster** hentes med RPC-en `get_upcoming_occurrences(p_household_id uuid, p_from date, p_to date) returns table (task_id uuid, due_on date)`. Den er laget i steg 8 for påminnelser (ARCHITECTURE.md §9), og årshjulet bruker den i steg 10:
 - Starter på `next_due_on` for hver aktiv oppgave og kaller `compute_next_due` gjentatte ganger, som om hver forekomst blir utført på fristen.
-- Tar bare med oppgaver med enhet `month` eller `year`, pluss engangsoppgaver. Daglige og ukentlige rutiner hører til «I dag» og ville druknet årshjulet.
-- Maks 12 måneder (`p_to - p_from <= 366`), ellers feil.
+- En forfalt kalenderoppgave spoles fram til første forekomst fra og med `p_from` (`next_occurrence(t, p_from - 1)`). Den forfalte forekomsten selv er ikke med. Utførte engangsoppgaver (`next_due_on` null) og arkiverte oppgaver er ikke med.
+- Filtrerer **ikke** på enhet, fordi påminnelser trenger daglige og ukentlige rutiner. Årshjulet tar selv bare med `month`, `year` og engangsoppgaver, så daglige rutiner ikke drukner det.
+- Maks ett år (`p_to - p_from <= 366`). Ellers, eller hvis `p_to < p_from`, kastes `invalid_window` (22023).
+- Testet i `supabase/tests/upcoming_occurrences.test.sql`: ukentlig, årsskifte, månedsoppgave, forfalt som spoles fram, intervall, engangsoppgave, arkivert, RLS og ugyldig vindu.
 - Er `stable` og `security invoker`. RLS på `tasks` gjelder dermed som vanlig, og funksjonen trenger ingen egne tilgangssjekker.
 
 **Hvorfor ikke RRULE (iCal)?** Det er kraftig, men vanskelig å validere og vise i UI. De sju kolonnene dekker alle behovene i MVP og kan konverteres til RRULE senere.

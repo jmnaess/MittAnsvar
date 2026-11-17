@@ -279,6 +279,11 @@ isOneToOne: false
 "delete_my_account_data":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"get_upcoming_occurrences":
+{ Args: { "p_from": string,"p_household_id": string,"p_to": string }; Returns: {
+              "due_on": string,"task_id": string
+            }[]
+                           },
 "undo_completion":
 { Args: { "p_completion_id": string }; Returns: undefined
                            }

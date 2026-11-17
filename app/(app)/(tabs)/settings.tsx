@@ -9,15 +9,20 @@ import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMyHousehold, useUpdateHousehold } from '../../../src/features/household/hooks';
 import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
 import type { Household } from '../../../src/features/household/types';
+import { ReminderSettingsSection } from '../../../src/features/notifications/components/ReminderSettingsSection';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 export default function SettingsScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
+  const { session } = useSession();
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <HouseholdSection household={household!} />
+      <Section title="Påminnelser">
+        <ReminderSettingsSection userId={session!.user.id} />
+      </Section>
       <AccountSection />
     </ScrollView>
   );

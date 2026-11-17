@@ -17,6 +17,8 @@ import {
   useMembers,
 } from '../../src/features/household/hooks';
 import type { ChildInput } from '../../src/features/household/types';
+import { useSession } from '../../src/features/auth/SessionProvider';
+import { setReminderPromptPending } from '../../src/features/notifications/settings';
 import { toNorwegianMessage } from '../../src/lib/errors';
 
 // Oppstart for en innlogget bruker uten husstand. Tre visninger på samme skjerm:
@@ -65,8 +67,12 @@ function CreateFlow({ onBack }: { onBack: () => void }) {
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
 
+  const { session } = useSession();
+
   async function finish() {
     setFinishing(true);
+    // Spør om påminnelser når fanene vises (se ReminderPrompt), ikke ved første oppstart.
+    await setReminderPromptPending(session!.user.id, true);
     await queryClient.invalidateQueries({ queryKey: householdKeys.mine });
     setFinishing(false); // skjermen er normalt borte nå; dette gjelder hvis hentingen feilet
   }
@@ -99,6 +105,16 @@ function CreateFlow({ onBack }: { onBack: () => void }) {
 
 function JoinStep({ onBack }: { onBack: () => void }) {
   const acceptInvite = useAcceptInvite();
+  const { session } = useSession();
+
+  // Flagget settes før husstanden hentes på nytt (det gjør useAcceptInvite ved suksess),
+  // så spørsmålet er klart når fanene vises.
+  async function join(input: Parameters<typeof acceptInvite.mutateAsync>[0]) {
+    await setReminderPromptPending(session!.user.id, true);
+    acceptInvite.mutate(input, {
+      onError: () => setReminderPromptPending(session!.user.id, false),
+    });
+  }
 
   return (
     <>
@@ -108,7 +124,7 @@ function JoinStep({ onBack }: { onBack: () => void }) {
       </Text>
       <JoinHouseholdForm
         busy={acceptInvite.isPending}
-        onSubmit={(input) => acceptInvite.mutate(input)}
+        onSubmit={join}
       />
       {acceptInvite.error && (
         <Text style={styles.error}>{toNorwegianMessage(acceptInvite.error)}</Text>

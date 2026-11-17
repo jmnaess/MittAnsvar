@@ -7,6 +7,9 @@ type Enums = Database['public']['Enums'];
 export type Task = Tables['tasks']['Row'];
 export type TodayTask = Views['today_tasks']['Row'];
 
+/** En fremtidig forekomst fra get_upcoming_occurrences. */
+export type Occurrence = Database['public']['Functions']['get_upcoming_occurrences']['Returns'][number];
+
 export type RecurrenceType = Enums['recurrence_type'];
 export type RecurrenceUnit = Enums['recurrence_unit'];
 

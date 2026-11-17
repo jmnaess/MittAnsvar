@@ -48,6 +48,38 @@ export function formatLongDate(isoDate: string): string {
   return `${day}. ${MONTH_NAMES[month - 1]} ${year}`;
 }
 
+// ---------------------------------------------------------------------------
+// Regning med kalenderdatoer ('YYYY-MM-DD'). UTC brukes bare som regnestykke, så sommertid
+// og enhetens tidssone ikke påvirker resultatet.
+// ---------------------------------------------------------------------------
+
+function fromUtc(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** '2026-12-30' + 3 → '2027-01-02' */
+export function addDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return fromUtc(new Date(Date.UTC(year, month - 1, day + days)));
+}
+
+/** '2028-02-10' → '2028-02-29' */
+export function lastDayOfMonth(isoDate: string): string {
+  const [year, month] = isoDate.split('-').map(Number);
+  return fromUtc(new Date(Date.UTC(year, month, 0))); // dag 0 i neste måned = siste dag i denne
+}
+
+/** '2026-11-17' → '2026-11-01' */
+export function firstDayOfMonth(isoDate: string): string {
+  return `${isoDate.slice(0, 7)}-01`;
+}
+
+/** Enhetens lokale kalenderdato for et tidspunkt. Påminnelser går etter klokken på mobilen. */
+export function toIsoDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /** '2026-11-17' → 'tir. 17. nov.' */
 export function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);

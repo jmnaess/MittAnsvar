@@ -1,7 +1,7 @@
 import { unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../types/database';
-import type { Task, TaskInput, TodayTask } from './types';
+import type { Occurrence, Task, TaskInput, TodayTask } from './types';
 
 type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
 
@@ -27,6 +27,24 @@ export async function listTodayTasks(householdId: string): Promise<TodayTask[]> 
       .eq('household_id', householdId)
       .order('next_due_on')
       .order('title'),
+  );
+}
+
+/**
+ * Forekomster i [from, to], som om hver oppgave blir utført på fristen. Beregnes i databasen
+ * (samme regel som neste frist). Maks ett år.
+ */
+export async function listUpcomingOccurrences(
+  householdId: string,
+  from: string,
+  to: string,
+): Promise<Occurrence[]> {
+  return unwrap(
+    await supabase.rpc('get_upcoming_occurrences', {
+      p_household_id: householdId,
+      p_from: from,
+      p_to: to,
+    }),
   );
 }
 

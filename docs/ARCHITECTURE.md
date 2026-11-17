@@ -87,7 +87,9 @@ src/
     kiosk/        pin.ts, components/
     devices/      api.ts (QR-token)
     subscription/ revenuecat.ts, useAccess.ts
-    notifications/ schedule.ts
+    notifications/ plan.ts + text.ts (rene, testes), schedule.ts (expo-notifications), settings.ts,
+                  permissions.ts, hooks.ts, components/ (ReminderPrompt, ReminderSettingsSection)
+                  __tests__/ (Jest: npm test)
   components/     generiske UI-komponenter (Button, Avatar, Screen …)
   types/database.ts               # generert, ikke rediger
 supabase/
@@ -101,6 +103,7 @@ supabase/
   tests/tasks.test.sql            # pgTAP: tasks, trigger, today_tasks
   tests/complete_task.test.sql    # pgTAP: avkrysning, angring, tone, tidssone
   tests/invites.test.sql          # pgTAP: invitasjon av voksen, sperre, RLS
+  tests/upcoming_occurrences.test.sql # pgTAP: fremtidige forekomster (påminnelser, senere årshjul)
 docs/
 ```
 
@@ -212,11 +215,11 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 5b | `task_completions`, `complete_task`/`undo_completion`, et startsett tilbakemeldingstekster, «I dag» med avkrysning, tilbakemelding og angring | Avkrysning lagres som historikk, fristen flyttes og kan angres |
 | 6 | *Gjort:* invitere voksen nr. 2 (se steg 13). Gjenstår: historikk per oppgave | |
 | 7 | *Gjort:* årshjul med maler. `task_templates` med 25 maler, `activate_templates`, månedsoppgaver (frist = måned, se [DATABASE.md §2](DATABASE.md#månedsoppgaver-steg-7)), fanen «Årshjul» med brytere og «Velg anbefalte», «Denne måneden» i «I dag» | Mal aktiveres, vises i «Denne måneden» uten å være forfalt, og neste frist blir samme måned neste år |
-| 8 | Egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
+| 8 | *Gjort:* lokale påminnelser (se steg 12 og §9). Gjenstår: egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
 | 9 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle | Nye husstander får relevante forslag |
 | 10 | Årshjulet viser også egne årlige oppgaver: RPC `get_upcoming_occurrences` | Egne og malbaserte oppgaver vises i samme 12 måneder |
 | 11 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
-| 12 | Lokale påminnelser for egne oppgaver | Varsel kommer på forfallsdagen |
+| 12 | *Gjort i steg 8:* lokale påminnelser (`get_upcoming_occurrences`, daglig oppsummering, månedsoppgaver) | Varsel kommer på forfallsdagen |
 | 13 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |
 | 14 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
 | 15 | QR-kobling av barnets enhet (anonym auth, `link_tokens`, `redeem_link_token`, frakobling) | Barnet ser og krysser av egne oppgaver |
@@ -237,7 +240,7 @@ Tatt 29.09.2026. Alle forslagene fra analysen i §1 er godkjent.
 5. **Etter utløpt abonnement:** skrivebeskyttet. Ingen data slettes.
 6. **Voksne:** alle er like, ingen «eier».
 7. **Barn med enhet:** ser hele husstandens oppgaver, men krysser bare av egne.
-8. **Påminnelser:** lokale varsler i MVP.
+8. **Påminnelser:** lokale varsler i MVP. Én daglig oppsummering per bruker og enhet, se §9.
 9. **Innlogging:** bare e-postkode i MVP. Apple og Google kommer senere.
 10. **Tone:** velges per husstand. Tekstene har målgruppe (barn, voksen eller alle).
 11. **Innhold:** AI lager utkast, og utvikleren går gjennom alt manuelt. Til lansering: **40–60 maler** og **80–100 tilbakemeldingstekster**. Sikkerhetsfakta (røykvarsler, el) sjekkes mot offentlige kilder.
@@ -282,3 +285,41 @@ Merk:
 - Egne testhusstander bør filtreres bort, f.eks. med `and h.id not in (...)` i `where`.
 - Slettede husstander forsvinner (`on delete cascade`), så tallene gjelder bare husstander som fortsatt finnes.
 - En angret avkrysning slettes og teller ikke.
+
+---
+
+## 9. Påminnelser (lokale varsler, steg 8)
+
+Varslene planlegges på telefonen med `expo-notifications`. Det virker i Expo Go, også på Android (der er det bare push fra server som mangler). Det sendes ingen push fra server, ingen varsler til barnas enheter og ingen varsler når andre krysser av.
+
+**Hva som sendes.** Maks ett varsel per dag, på tidspunktet brukeren har valgt (standard kl. 07:30, enhetens lokale tid):
+
+```
+I dag: Søppel, Rense sluk + 2 forfalt
+Denne måneden: Rense takrenner
+```
+
+- **Forfaller i dag:** oppgaver med en forekomst den dagen. Månedsoppgaver er ikke med her.
+- **Forfalt:** fristen er passert, og oppgaven har ikke en ny forekomst den dagen. En månedsoppgave er først forfalt etter siste dag i måneden sin (som `due_by`). Forfalte oppgaver nevnes bare som antall. Er det *bare* forfalte, blir teksten «2 forfalte oppgaver venter».
+- **Månedsoppgaver:** nevnes den 1. («Denne måneden: …») og første dag i siste uke, altså siste dag − 6 («Fortsatt denne måneden: …»), hvis de fortsatt ikke er gjort. Linjen slås sammen med dagsoppsummeringen.
+- Maks 4 titler, deretter «og 3 til». Er det ingenting å si, sendes ikke noe varsel den dagen.
+- **Omfang:** «Mine og felles» er oppgaver til meg og oppgaver uten ansvarlig. «Hele husstanden» er alle.
+- Trykk på varselet åpner «I dag» (`data.url = '/'`, håndtert i `useOpenTodayOnTap`).
+
+**Hvordan.**
+1. Databasen gir forekomstene de neste 7 dagene (`get_upcoming_occurrences`, se [DATABASE.md §2](DATABASE.md#2-gjentakelse-fast-kalender-og-intervall)). Regelen for gjentakelse finnes dermed fortsatt bare ett sted.
+2. `plan.ts` og `text.ts` er rene funksjoner. De tar oppgaver, forekomster, innstillinger, «i dag» og mitt medlem, og gir en liste `{ date, hour, minute, body }`. De er testet med Jest (`npm test`), også månedsoppgaver, årsskifte, skuddår og dager uten oppgaver.
+3. `schedule.ts` fjerner **alle** planlagte varsler og planlegger listen på nytt. Varsler med et tidspunkt som har passert, hoppes over. Kallene står i kø, så to planlegginger aldri går samtidig.
+
+**Når det planlegges på nytt.** `useReminderSync` er montert i fanene. Den kjører når appen åpnes, når den kommer i forgrunnen, når innstillingene endres, og når oppgavene endres. Opprett, endre, slett, kryss av og angre invaliderer allerede `['tasks', householdId]`, og forekomstene ligger under den samme nøkkelen. Derfor trengs ingen egne kall i mutasjonene.
+
+**Modellen er «ingenting blir gjort».** Planen antar at ingen krysser av før dagen kommer. Krysser jeg av, planlegges det på nytt med en gang. **Kjent begrensning:** krysser en annen voksen av på sin mobil, står oppgaven fortsatt i mitt varsel til neste gang min app åpnes. Å fikse det krever push fra server, og det kommer senere.
+
+**Innstillinger** lagres per bruker på enheten i `secureStorage` (`reminders.<userId>`), ikke i databasen: av/på, tidspunkt og omfang. Ved utlogging og sletting av konto fjernes alle planlagte varsler.
+
+**Tillatelse.**
+- Vi spør ikke ved første oppstart. Når husstanden er opprettet, eller brukeren har blitt med, setter oppstarten et flagg (`reminders.prompt.<userId>`). Fanene viser da «Vil du få beskjed om dagens oppgaver?» med knappene «Ja takk» og «Ikke nå».
+- Først ved «Ja takk» vises systemdialogen. Sier brukeren ja, slås påminnelser på med standardverdiene.
+- Har brukeren sagt nei i systemet (`canAskAgain = false`), viser både spørsmålet og Innstillinger en forklaring og knappen «Åpne innstillinger» (`Linking.openSettings`). Tillatelsen leses på nytt når appen kommer tilbake i forgrunnen.
+- Android krever en varselkanal (`reminders`, «Påminnelser»). Den lages før vi spør, fordi Android 13+ ikke viser dialogen uten.
+

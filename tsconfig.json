@@ -1,7 +1,9 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // TypeScript 6 tar ikke med globale typer av seg selv. Jest trengs for testene.
+    "types": ["jest"]
   },
   // Edge Functions er Deno-kode og typesjekkes ikke sammen med appen.
   // Listen erstatter Expos standard, så standardoppføringene må gjentas.

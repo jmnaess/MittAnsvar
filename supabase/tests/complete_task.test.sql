@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(51);
+select plan(54);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i de andre testfilene)
@@ -281,9 +281,22 @@ select throws_ok(
 
 -- ===========================================================================
 -- 9. Tone both: begge tonene brukes, og de siste 20 gjentas ikke
--- Voksne har 11 faktatekster (alle + voksne). 12 avkrysninger uten gjentakelse må da gi
--- minst én humortekst, og det er bare 10 humortekster, så også minst to faktatekster.
+-- En voksen med en oppgave i kategorien other kan få 7 faktatekster og 11 humortekster
+-- (aktive, for alle eller voksne, uten kategori). 12 avkrysninger uten gjentakelse er flere enn
+-- begge tallene, så begge tonene må komme med. Testen under sjekker forutsetningen, så den
+-- feiler tydelig hvis tekstene endres slik at garantien ikke lenger holder.
 -- ===========================================================================
+select tests.logout();
+create view tests.adult_other_texts as
+select tone from public.feedback_messages
+where is_active and audience in ('any', 'adult') and category is null;
+select ok(
+  (select count(*) filter (where tone = 'fact')  < 12
+      and count(*) filter (where tone = 'humor') < 12
+      and count(*) >= 12
+   from tests.adult_other_texts),
+  'forutsetning: under 12 tekster per tone, og minst 12 totalt, for voksne');
+
 select tests.login_as('00000000-0000-0000-0000-00000000d001');
 select tests.complete('both' || i, '44444444-0000-0000-0000-000000000001', 'dddddddd-0000-0000-0000-000000000001')
 from generate_series(1, 12) i;
@@ -295,6 +308,10 @@ select is((select count(distinct m.tone)::int from tests.res r
 select is((select count(distinct c.feedback_message_id)::int from tests.res r
            join public.task_completions c on c.id = r.completion_id
            where r.name like 'both%'), 12, 'ingen tekst gjentas blant de siste 20');
+select is((select count(*)::int from tests.res r
+           join public.task_completions c on c.id = r.completion_id
+           join public.feedback_messages m on m.id = c.feedback_message_id
+           where not m.is_active), 0, 'deaktiverte tekster velges aldri');
 
 -- ===========================================================================
 -- 10. Tidssone: completed_on er datoen i husstandens tidssone, ikke i UTC.
@@ -319,6 +336,9 @@ select isnt((select completed_on from public.task_completions where id = tests.c
 -- ===========================================================================
 select tests.login_as('00000000-0000-0000-0000-00000000f001');
 select ok((select count(*) from public.feedback_messages) > 0, 'innloggede kan lese tilbakemeldingstekster');
+select is((select count(*)::int from public.feedback_messages
+           where text = 'Gratulerer, du var voksen i dag også.'), 0,
+  'innloggede ser ikke deaktiverte tekster');
 select throws_ok($$insert into public.feedback_messages (tone, text) values ('humor', 'Hack')$$,
   '42501', null, 'innloggede kan ikke legge til tekster');
 select tests.logout();

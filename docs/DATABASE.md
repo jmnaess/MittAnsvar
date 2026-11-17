@@ -255,7 +255,7 @@ Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, bolig
 3. Sorter: ikke blant de 20 sist viste i husstanden først, deretter kategori foran generell, deretter tilfeldig. Er alle vist nylig, gjentas en tekst.
 4. `feedback_message_id` lagres på avkrysningen.
 
-Startsettet (33 tekster) ligger i migrasjonen `*_task_completions.sql`. Det flyttes til `supabase/seed/feedback.sql` og utvides til 80–100 i steg 11.
+Startsettet (33 tekster) ligger i migrasjonen `*_task_completions.sql` og er justert i `*_adjust_feedback_messages.sql` (36 aktive, 5 deaktivert). Tekster deaktiveres med `is_active = false` i stedet for å slettes, så tidligere avkrysninger beholder koblingen. Det flyttes til `supabase/seed/feedback.sql` og utvides til 80–100 i steg 11.
 
 ---
 

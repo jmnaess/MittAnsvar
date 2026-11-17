@@ -1,9 +1,122 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { deleteAccount, signOut, toNorwegianMessage } from '../../../src/features/auth/api';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Button } from '../../../src/components/Button';
+import { ChoiceChips } from '../../../src/components/ChoiceChips';
+import { TextField } from '../../../src/components/TextField';
+import { colors } from '../../../src/components/theme';
+import { deleteAccount, signOut } from '../../../src/features/auth/api';
 import { useSession } from '../../../src/features/auth/SessionProvider';
+import { MemberRow } from '../../../src/features/household/components/MemberRow';
+import {
+  useMembers,
+  useMyHousehold,
+  useUpdateHousehold,
+} from '../../../src/features/household/hooks';
+import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
+import type { Household } from '../../../src/features/household/types';
+import { toNorwegianMessage } from '../../../src/lib/errors';
 
 export default function SettingsScreen() {
+  // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
+  const { data: household } = useMyHousehold();
+
+  return (
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <HouseholdSection household={household!} />
+      <MembersSection householdId={household!.id} />
+      <AccountSection />
+    </ScrollView>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+function HouseholdSection({ household }: { household: Household }) {
+  const update = useUpdateHousehold(household.id);
+  const [name, setName] = useState(household.name);
+  const [saved, setSaved] = useState(false);
+
+  const trimmed = name.trim();
+  const nameChanged = trimmed !== household.name;
+
+  function saveName() {
+    setSaved(false);
+    update.mutate({ name: trimmed }, { onSuccess: () => setSaved(true) });
+  }
+
+  return (
+    <>
+      <Section title="Husstand">
+        <TextField
+          label="Navn"
+          value={name}
+          onChangeText={(text) => {
+            setName(text);
+            setSaved(false);
+          }}
+          maxLength={50}
+          autoCapitalize="words"
+          editable={!update.isPending}
+        />
+        <Button
+          title="Lagre navn"
+          onPress={saveName}
+          disabled={update.isPending || !nameChanged || trimmed === ''}
+        />
+        {saved && <Text style={styles.success}>Navnet er lagret.</Text>}
+      </Section>
+
+      <Section title="Tilbakemeldinger">
+        <Text style={styles.muted}>
+          Etter en fullført oppgave viser vi en kort tekst. Velg hva slags.
+        </Text>
+        <ChoiceChips
+          options={FEEDBACK_TONE_OPTIONS}
+          // Vis det brukeren trykket på mens lagringen pågår.
+          value={update.isPending && update.variables.feedback_tone
+            ? update.variables.feedback_tone
+            : household.feedback_tone}
+          onChange={(tone) => update.mutate({ feedback_tone: tone })}
+          disabled={update.isPending}
+        />
+      </Section>
+
+      {update.error && <Text style={styles.error}>{toNorwegianMessage(update.error)}</Text>}
+    </>
+  );
+}
+
+function MembersSection({ householdId }: { householdId: string }) {
+  const { data: members, error } = useMembers(householdId);
+
+  return (
+    <Section title="Medlemmer">
+      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
+      {members?.map((member) => (
+        <MemberRow
+          key={member.id}
+          member={member}
+          onPress={
+            member.role === 'child'
+              ? () => router.push({ pathname: '/child/[id]', params: { id: member.id } })
+              : undefined
+          }
+        />
+      ))}
+      <Button variant="outline" title="Legg til barn" onPress={() => router.push('/child/new')} />
+    </Section>
+  );
+}
+
+function AccountSection() {
   const { session } = useSession();
   const [busy, setBusy] = useState(false);
 
@@ -43,48 +156,21 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Innlogget som</Text>
+    <Section title="Konto">
+      <Text style={styles.muted}>Innlogget som</Text>
       <Text style={styles.email}>{session?.user.email}</Text>
-      <Pressable
-        onPress={confirmSignOut}
-        disabled={busy}
-        style={[styles.outlineButton, busy && styles.disabled]}
-        accessibilityRole="button"
-      >
-        <Text style={styles.outlineText}>Logg ut</Text>
-      </Pressable>
-      <Pressable
-        onPress={confirmDeleteAccount}
-        disabled={busy}
-        style={[styles.dangerButton, busy && styles.disabled]}
-        accessibilityRole="button"
-      >
-        <Text style={styles.dangerText}>Slett konto</Text>
-      </Pressable>
-    </View>
+      <Button variant="outline" title="Logg ut" onPress={confirmSignOut} disabled={busy} />
+      <Button variant="danger" title="Slett konto" onPress={confirmDeleteAccount} disabled={busy} />
+    </Section>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 8 },
-  label: { fontSize: 14, color: '#666' },
-  email: { fontSize: 17, fontWeight: '600', marginBottom: 16 },
-  outlineButton: {
-    borderWidth: 1,
-    borderColor: '#b91c1c',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  outlineText: { color: '#b91c1c', fontSize: 16, fontWeight: '600' },
-  dangerButton: {
-    backgroundColor: '#b91c1c',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  dangerText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  disabled: { opacity: 0.5 },
+  container: { padding: 24, gap: 28 },
+  section: { gap: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  muted: { fontSize: 14, color: colors.muted },
+  email: { fontSize: 17, fontWeight: '600', marginBottom: 8 },
+  success: { color: colors.success, fontSize: 15 },
+  error: { color: colors.danger, fontSize: 15 },
 });

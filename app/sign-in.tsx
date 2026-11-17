@@ -1,15 +1,9 @@
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { sendCode, toNorwegianMessage, verifyCode } from '../src/features/auth/api';
+import { Button } from '../src/components/Button';
+import { sendCode, verifyCode } from '../src/features/auth/api';
+import { toNorwegianMessage } from '../src/lib/errors';
 
 const CODE_LENGTH = 6;
 
@@ -85,7 +79,7 @@ export default function SignInScreen() {
               onSubmitEditing={handleSendCode}
               returnKeyType="send"
             />
-            <PrimaryButton
+            <Button
               title="Send kode"
               onPress={handleSendCode}
               disabled={busy || !trimmedEmail.includes('@')}
@@ -106,14 +100,19 @@ export default function SignInScreen() {
               autoFocus
               editable={!busy}
             />
-            <PrimaryButton
+            <Button
               title="Logg inn"
               onPress={handleVerify}
               disabled={busy || code.length !== CODE_LENGTH}
             />
             <View style={styles.links}>
-              <LinkButton title="Send ny kode" onPress={handleResend} disabled={busy} />
-              <LinkButton title="Bruk en annen e-post" onPress={handleChangeEmail} disabled={busy} />
+              <Button variant="link" title="Send ny kode" onPress={handleResend} disabled={busy} />
+              <Button
+                variant="link"
+                title="Bruk en annen e-post"
+                onPress={handleChangeEmail}
+                disabled={busy}
+              />
             </View>
           </>
         )}
@@ -122,29 +121,6 @@ export default function SignInScreen() {
         {info && <Text style={styles.info}>{info}</Text>}
       </KeyboardAvoidingView>
     </SafeAreaView>
-  );
-}
-
-type ButtonProps = { title: string; onPress: () => void; disabled?: boolean };
-
-function PrimaryButton({ title, onPress, disabled }: ButtonProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={[styles.button, disabled && styles.buttonDisabled]}
-      accessibilityRole="button"
-    >
-      <Text style={styles.buttonText}>{title}</Text>
-    </Pressable>
-  );
-}
-
-function LinkButton({ title, onPress, disabled }: ButtonProps) {
-  return (
-    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button">
-      <Text style={[styles.link, disabled && styles.linkDisabled]}>{title}</Text>
-    </Pressable>
   );
 }
 
@@ -162,12 +138,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   codeInput: { fontSize: 24, letterSpacing: 8, textAlign: 'center' },
-  button: { backgroundColor: '#2563eb', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   links: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  link: { color: '#2563eb', fontSize: 15, paddingVertical: 8 },
-  linkDisabled: { opacity: 0.5 },
   error: { color: '#b91c1c', fontSize: 15 },
   info: { color: '#15803d', fontSize: 15 },
 });

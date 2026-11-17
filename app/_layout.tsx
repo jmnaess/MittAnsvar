@@ -1,13 +1,17 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SessionProvider, useSession } from '../src/features/auth/SessionProvider';
+import { queryClient } from '../src/lib/queryClient';
 
 export default function RootLayout() {
   return (
-    <SessionProvider>
-      <StatusBar style="auto" />
-      <RootStack />
-    </SessionProvider>
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
+        <StatusBar style="auto" />
+        <RootStack />
+      </SessionProvider>
+    </QueryClientProvider>
   );
 }
 

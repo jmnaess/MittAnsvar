@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { queryClient } from '../../lib/queryClient';
 import { supabase } from '../../lib/supabase';
 
 type SessionState = { session: Session | null; isLoading: boolean };
@@ -12,7 +13,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // onAuthStateChange sender INITIAL_SESSION med sesjonen fra SecureStore,
     // og deretter en hendelse ved hver innlogging, utlogging og fornying.
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      // Tøm cachen ved utlogging (også etter sletting av konto), så en ny bruker
+      // på samme mobil aldri ser forrige brukers husstand.
+      if (event === 'SIGNED_OUT') queryClient.clear();
       setState({ session, isLoading: false });
     });
     return () => data.subscription.unsubscribe();

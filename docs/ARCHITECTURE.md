@@ -60,21 +60,22 @@ Status: planlagt, beslutningene er tatt (se §7). Datamodell og RLS i detalj: se
 ```
 app/                          # expo-router: kun skjermer, tynne
   _layout.tsx
-  (auth)/sign-in.tsx
-  (onboarding)/household.tsx      # type, bolig, navn
-  (onboarding)/members.tsx        # legg til barn
-  (onboarding)/suggestions.tsx    # velg foreslåtte oppgaver
+  sign-in.tsx
+  (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
+  (app)/onboarding.tsx            # trinn: husstand (type, bolig, navn) → barn (kan hoppes over); forslag senere
   (app)/(tabs)/index.tsx          # «I dag»
   (app)/(tabs)/year.tsx           # Årshjul
-  (app)/(tabs)/household.tsx      # medlemmer, koble enhet
-  (app)/(tabs)/settings.tsx
+  (app)/(tabs)/household.tsx      # koble enhet (steg 15)
+  (app)/(tabs)/settings.tsx       # husstandsnavn, tone, medlemmer, konto
+  (app)/child/new.tsx             # legg til barn
+  (app)/child/[id].tsx            # endre / slette barn
   (app)/task/[id].tsx
   (app)/task/new.tsx
   kiosk/index.tsx                 # felles husstandsvisning
   link-device.tsx                 # barnets enhet: skann QR
   paywall.tsx
 src/
-  lib/            supabase.ts, queryClient.ts, dates.ts
+  lib/            supabase.ts, queryClient.ts, errors.ts (unwrap + norske feilmeldinger), dates.ts
   features/
     auth/         api.ts, hooks.ts
     household/    api.ts, hooks.ts, components/

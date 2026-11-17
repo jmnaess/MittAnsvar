@@ -307,7 +307,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 
 | Funksjon | Hvem | Gjør |
 |----------|------|------|
-| `create_household(name, type, housing_type, display_name, avatar)` | innlogget, ikke-anonym, uten husstand | household + voksen-member, `trial_ends_at = now() + 14 d` |
+| `create_household(p_name, p_type, p_housing_type, p_display_name, p_avatar) returns uuid` | innlogget, ikke-anonym, uten husstand | household + voksen-member i én transaksjon, `trial_ends_at = now() + 14 d`. Feil (errcode `P0001`, nøkkel som melding): `not_authenticated`, `anonymous_not_allowed`, `already_in_household` |
 | `create_link_token(kind, member_id)` | voksen | returnerer råtoken, lagrer hash |
 | `redeem_link_token(token, display_name?, avatar?)` | innlogget (anonym for `child`, e-post for `adult`) | kobler `auth_user_id` eller oppretter voksen-member |
 | `unlink_member_device(member_id)` | voksen | `auth_user_id = null` på barnet |

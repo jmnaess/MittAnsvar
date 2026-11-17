@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
+import type { Database } from '../types/database';
 import { secureStorage } from './secureStorage';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -12,7 +13,8 @@ if (!url || !key) {
   );
 }
 
-export const supabase = createClient(url, key, {
+// <Database> gir typesjekk på tabeller, kolonner og RPC-er (generert med npm run db:types).
+export const supabase = createClient<Database>(url, key, {
   auth: {
     storage: secureStorage,
     autoRefreshToken: true,

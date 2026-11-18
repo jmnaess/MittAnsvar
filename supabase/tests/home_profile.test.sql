@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(32);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i de andre testfilene)
@@ -167,9 +167,48 @@ select is(
 -- ===========================================================================
 -- 5. task_templates.requires
 -- ===========================================================================
+-- Innholdet fra *_home_profile_templates.sql
 select is(
-  (select count(*)::int from public.task_templates where requires is not null), 0,
-  'eksisterende maler har ingen betingelse ennå (kommer i innholdsmigrasjonen)');
+  (select requires from public.task_templates where slug = 'winter-tyres'), '{"has_car": true}'::jsonb,
+  'innhold: dekkskift krever bil');
+
+select is(
+  (select row(housing_types, requires)::text from public.task_templates where slug = 'chimney-check'),
+  '(,"{""has_fireplace"": true}")',
+  'innhold: pipesjekk krever peis, ikke lenger «hus»');
+
+select is(
+  (select count(*)::int from public.task_templates
+   where slug in ('ventilation-filter-spring', 'ventilation-filter-autumn') and is_active), 0,
+  'innhold: vår- og høstfilteret er deaktivert');
+
+select is(
+  (select row(recurrence_type, recurrence_unit, recurrence_every, month)::text
+   from public.task_templates where slug = 'heat-pump-filter'),
+  '(interval,week,8,)',
+  'innhold: varmepumpefilteret er en intervallmal, hver 8. uke');
+
+select is(
+  (select row(recurrence_type, recurrence_unit, recurrence_every)::text
+   from public.task_templates where slug = 'ventilation-filter'),
+  '(interval,month,6)',
+  'innhold: ventilasjonsfilteret er en intervallmal, hver 6. måned');
+
+select is(
+  (select array_agg(month order by month) from public.task_templates
+   where title = 'Sjekk at utedelen på varmepumpen er fri for løv, snø og is'),
+  '{1,11}'::smallint[],
+  'innhold: utedelen på varmepumpen i januar og november');
+
+select is(
+  (select count(*)::int from public.task_templates
+   where slug in ('heat-pump-service', 'fireplace-glass-gasket', 'well-filter', 'sewage-minirens', 'cabin-gutters-roof')),
+  0,
+  'innhold: strøkne maler finnes ikke');
+
+select is(
+  (select count(*)::int from public.task_templates where requires is not null and is_active), 24,
+  'innhold: 24 aktive maler har betingelse (4 eksisterende, 18 nye årsmaler, 2 intervallmaler)');
 
 select lives_ok($$select tests.insert_template('t-null', null)$$,
   'requires null = ingen betingelse');

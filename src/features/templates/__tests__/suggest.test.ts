@@ -16,19 +16,26 @@ const task = (overrides: Partial<Task>) =>
     ...overrides,
   }) as Task;
 
+// Malene som vises i årshjulet.
+const shown = new Set(['gutters']);
+
 describe('isOwnYearlyTask', () => {
   it('tar med egne årlige oppgaver, med og uten dag', () => {
-    expect(isOwnYearlyTask(task({}))).toBe(true);
-    expect(isOwnYearlyTask(task({ month_day: 15 }))).toBe(true);
+    expect(isOwnYearlyTask(task({}), shown)).toBe(true);
+    expect(isOwnYearlyTask(task({ month_day: 15 }), shown)).toBe(true);
   });
 
   it('tar ikke med oppgaver fra maler (de vises som malen)', () => {
-    expect(isOwnYearlyTask(task({ template_id: 'gutters' }))).toBe(false);
+    expect(isOwnYearlyTask(task({ template_id: 'gutters' }), shown)).toBe(false);
+  });
+
+  it('tar med oppgaver fra maler som ikke vises (f.eks. deaktivert), så de ikke forsvinner', () => {
+    expect(isOwnYearlyTask(task({ template_id: 'ventilation-filter-spring' }), shown)).toBe(true);
   });
 
   it('tar ikke med ukentlige oppgaver eller «hvert år etter sist utført»', () => {
-    expect(isOwnYearlyTask(task({ recurrence_unit: 'week', month: null }))).toBe(false);
-    expect(isOwnYearlyTask(task({ recurrence_type: 'interval', month: null }))).toBe(false);
+    expect(isOwnYearlyTask(task({ recurrence_unit: 'week', month: null }), shown)).toBe(false);
+    expect(isOwnYearlyTask(task({ recurrence_type: 'interval', month: null }), shown)).toBe(false);
   });
 });
 

@@ -6,6 +6,9 @@
 > (ofte fordi det avhenger av produsent, kommune eller anlegg).
 > Rett direkte i tabellene: endre, stryk rader, eller skriv `OK` i Status.
 >
+> **Lagt inn** i `supabase/migrations/20261118170000_home_profile_templates.sql`. Senere rettelser
+> må komme som en ny migrasjon (finn malen på slug), ikke ved å endre den.
+>
 > **Utkast 2 (2026-11-18):** rettet etter gjennomgang. Rader merket `OK` er godkjent.
 > Rader merket `Ny i utkast 2` eller `Endret i utkast 2` trenger fortsatt ditt blikk.
 

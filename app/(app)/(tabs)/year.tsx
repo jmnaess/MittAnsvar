@@ -10,7 +10,11 @@ import type { Task } from '../../../src/features/tasks/types';
 import { OwnYearTaskRow } from '../../../src/features/templates/components/OwnYearTaskRow';
 import { TemplateRow } from '../../../src/features/templates/components/TemplateRow';
 import { useActivateTemplates, useTemplates } from '../../../src/features/templates/hooks';
-import { groupByMonth, suggestForHousehold } from '../../../src/features/templates/suggest';
+import {
+  activeTemplateIds,
+  groupByMonth,
+  yearWheelTemplates,
+} from '../../../src/features/templates/suggest';
 import type { TaskTemplate } from '../../../src/features/templates/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
@@ -37,7 +41,11 @@ export default function YearScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isAdult = members.find((m) => m.auth_user_id === session?.user.id)?.role === 'adult';
-  const suggested = suggestForHousehold(templates.data ?? [], household!);
+  const suggested = yearWheelTemplates(
+    templates.data ?? [],
+    household!,
+    activeTemplateIds(tasks.data ?? []),
+  );
   // Bare rekkefølgen avhenger av mobilens dato. Frister regnes alltid ut i databasen.
   const sections = groupByMonth(suggested, tasks.data ?? [], new Date().getMonth() + 1);
   const nameOf = (memberId: string | null) =>

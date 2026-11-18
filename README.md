@@ -15,15 +15,17 @@ A family responsibility and household task management app for parents and childr
   Voksne kan trykke på en kommende oppgave for å endre den. Barnet ser det samme for seg selv
   på egen enhet, men «Kommende» viser bare 2 uker og ikke de hyppige oppgavene.
 
-## Hjemprofil (under arbeid)
+## Hjemprofil (18. november 2026)
 
 - **Om hjemmet:** noen spørsmål om boligen (boligtype, hage, bil, hytte, varmepumpe, peis,
   ventilasjon, vannbåren varme, brønn og avløp). Vises etter at husstanden er opprettet (kan
   hoppes over) og under Innstillinger → «Hjemmet». Bare voksne.
 - **Forslag:** etter svarene vises en liste med oppgaver til årshjulet, alle valgt, som kan
   velges bort før «Legg til». Endres svarene senere, foreslås bare nye oppgaver. Ingenting slettes.
-- **Innhold:** malene med betingelser kommer i en egen migrasjon etter gjennomgang av
-  `docs/hjemprofil-oppgaver-UTKAST.md`.
+- **Innhold:** 23 nye maler og betingelser på eksisterende, fra `docs/hjemprofil-oppgaver-UTKAST.md`.
+  Filtrene i varmepumpe og ventilasjon gjentas «8 uker / 6 måneder etter sist» og ligger i Oppgaver,
+  ikke i årshjulet. Første frist er ett intervall frem.
+- **Årshjulet:** aktive oppgaver blir værende selv om svarene endres.
 
 ## Kom i gang
 

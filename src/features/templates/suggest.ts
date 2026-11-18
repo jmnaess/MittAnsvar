@@ -35,6 +35,21 @@ export function suggestForHousehold(
   return templates.filter((t) => isYearWheelTemplate(t) && fitsHousehold(t, household));
 }
 
+/**
+ * Malene årshjulet viser: de som passer husstanden, og de husstanden allerede har aktive
+ * (også om svarene i hjemprofilen er endret siden, eller malen har fått en betingelse).
+ * En aktiv oppgave skal aldri forsvinne fra årshjulet fordi et svar ble endret.
+ */
+export function yearWheelTemplates(
+  templates: TaskTemplate[],
+  household: SuggestionHousehold,
+  active: Set<string>,
+): TaskTemplate[] {
+  return templates.filter(
+    (t) => isYearWheelTemplate(t) && (fitsHousehold(t, household) || active.has(t.id)),
+  );
+}
+
 /** Maler hjemprofilen kan foreslå: årshjulet og intervallmalene. */
 function suggestForHomeProfile(templates: TaskTemplate[], household: SuggestionHousehold): TaskTemplate[] {
   return templates.filter(
@@ -115,12 +130,14 @@ export function formatSuggestionWhen(months: number[]): string {
 
 /**
  * Husstandens egne årlige oppgaver: én gang i året i en bestemt måned (med eller uten dag),
- * og ikke laget fra en mal (de vises som malen, med bryter). Arkiverte er allerede borte fra
- * listen. «Hvert år etter sist utført» (intervall) har ingen fast måned og er ikke med.
+ * og ikke vist som en mal i årshjulet (de vises som malen, med bryter). En oppgave fra en mal
+ * som ikke vises (f.eks. deaktivert), regnes som egen, så den ikke forsvinner fra årshjulet.
+ * Arkiverte er allerede borte fra listen. «Hvert år etter sist utført» (intervall) har ingen fast
+ * måned og er ikke med.
  */
-export function isOwnYearlyTask(task: Task): boolean {
+export function isOwnYearlyTask(task: Task, shownTemplateIds: Set<string>): boolean {
   return (
-    task.template_id === null &&
+    (task.template_id === null || !shownTemplateIds.has(task.template_id)) &&
     task.recurrence_type === 'calendar' &&
     task.recurrence_unit === 'year' &&
     task.month !== null
@@ -149,7 +166,10 @@ export function groupByMonth(
   ownTasks: Task[],
   currentMonth: number,
 ): MonthSection[] {
-  const own = ownTasks.filter(isOwnYearlyTask).sort((a, b) => a.title.localeCompare(b.title, 'nb'));
+  const shown = new Set(templates.map((t) => t.id));
+  const own = ownTasks
+    .filter((t) => isOwnYearlyTask(t, shown))
+    .sort((a, b) => a.title.localeCompare(b.title, 'nb'));
   return Array.from({ length: 12 }, (_, i) => {
     const month = ((currentMonth - 1 + i) % 12) + 1;
     const name = MONTH_NAMES[month - 1];

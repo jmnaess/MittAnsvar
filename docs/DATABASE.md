@@ -382,6 +382,12 @@ Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_b
 
 **Startsett:** 25 maler, 22 i `*_task_templates.sql` og 3 i `*_adjust_task_templates.sql`. Den siste justerer også tre forklaringer, og finner malene på slug. 24 er månedsoppgaver, og røykvarslerne har fast dato 1. desember. Justeringer endrer bare malene. Oppgaver som allerede er aktivert, er kopier og beholder den gamle teksten. Sikkerhetstekstene er generelle og henviser til fagfolk. De må gjennomgås manuelt før lansering, og malene skal utvides til 40–60.
 
+**Hjemprofil** (`*_home_profile_templates.sql`, fra `docs/hjemprofil-oppgaver-UTKAST.md` utkast 2):
+- **Betingelser på eksisterende maler:** dekkskift krever bil, `chimney-check` krever peis (i stedet for «hus»), og `garden-mower` krever hage.
+- **Erstattet:** `ventilation-filter-spring/autumn` er deaktivert og erstattet av intervallmalen `ventilation-filter`.
+- **Nye maler:** 21 årsmaler og 2 intervallmaler (`heat-pump-filter` hver 8. uke, `ventilation-filter` hver 6. måned). Det gir 46 aktive maler.
+- **Årshjulet** viser maler som passer husstanden, og i tillegg maler husstanden allerede har aktive (`yearWheelTemplates`). En aktiv oppgave forsvinner dermed ikke når et svar endres. En oppgave fra en deaktivert mal vises som egen.
+
 **Aktivering:** RPC `activate_templates(p_household_id, p_template_ids uuid[]) returns int` **kopierer** malene til nye `tasks`-rader med `template_id` satt og returnerer antall nye oppgaver.
 - Maler som allerede er aktive, hoppes over (`on conflict do nothing` på den unike indeksen). Samme RPC brukes for én bryter og for «Velg anbefalte».
 - Den kjører som `security invoker`. RLS på `tasks` (voksen og `household_has_access`) og triggeren (`anchor_on` = i dag, `first_due`) gjelder dermed som for andre oppgaver.

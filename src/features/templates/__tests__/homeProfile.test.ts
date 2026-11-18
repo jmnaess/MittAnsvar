@@ -7,6 +7,7 @@ import {
   suggestAfterProfileChange,
   suggestForHousehold,
   type SuggestionHousehold,
+  yearWheelTemplates,
 } from '../suggest';
 import type { TaskTemplate } from '../types';
 
@@ -198,6 +199,20 @@ describe('intervallmaler', () => {
     expect(ids(suggestAfterProfileChange(withInterval, after, after, new Set()))).toEqual([]);
     expect(ids(suggestAfterProfileChange(withInterval, before, after, new Set(['heat-pump-filter']))))
       .toEqual(['heat-pump']);
+  });
+});
+
+describe('yearWheelTemplates', () => {
+  it('viser maler som passer, og aktive maler selv om de ikke lenger passer', () => {
+    // Bilen er solgt (has_car: false), men dekkskiftet er fortsatt aktivt.
+    const h = household({ has_car: false });
+    expect(ids(yearWheelTemplates(all, h, new Set()))).toEqual(['fridge']);
+    expect(ids(yearWheelTemplates(all, h, new Set(['tyres'])))).toEqual(['fridge', 'tyres']);
+  });
+
+  it('viser aldri intervallmaler', () => {
+    const filter = template('filter', { recurrence_type: 'interval', recurrence_unit: 'week', recurrence_every: 8, month: null });
+    expect(ids(yearWheelTemplates([fridge, filter], household(), new Set(['filter'])))).toEqual(['fridge']);
   });
 });
 

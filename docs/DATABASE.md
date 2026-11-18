@@ -31,6 +31,7 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | `recurrence_type` | `once`, `calendar`, `interval`, `job` (steg 9, egen migrasjon fordi en ny enum-verdi ikke kan brukes i samme transaksjon) |
 | `recurrence_unit` | `day`, `week`, `month`, `year` |
 | `completion_status` | `pending`, `approved`, `rejected` (steg 10b) |
+| `sewage_type` | `municipal`, `septic_tank`, `mini_treatment_plant` (hjemprofil) |
 
 ### `households`
 | Kolonne | Type | Merknad |
@@ -43,6 +44,10 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | timezone | text not null default `'Europe/Oslo'` | |
 | trial_ends_at | timestamptz not null | settes av `create_household`, kan ikke endres fra klient |
 | created_at | timestamptz not null default now() | |
+| has_garden, has_car, has_cabin, has_air_heat_pump, has_fireplace, has_balanced_ventilation, has_hydronic_heating, has_private_well | boolean null | **hjemprofil**. `null` = ikke svart |
+| sewage_type | sewage_type null | hjemprofil: avløp. `null` = ikke svart |
+
+**Hjemprofil:** spørsmål om boligen som styrer forslag i årshjulet (via `task_templates.requires`, §4). Boligtype er `housing_type`. Profilen ligger som kolonner på `households` (én per husstand), så RLS er som for resten av husstanden: alle medlemmer leser, voksne endrer. Et ubesvart spørsmål oppfyller aldri en betingelse.
 
 ### `members`
 | Kolonne | Type | Merknad |
@@ -367,6 +372,7 @@ Begge er globale tabeller uten `household_id`. Innholdet legges inn via migrasjo
 | category | text not null | samme verdier som `tasks.category`. Styrer tilbakemeldingstekstene |
 | household_types | household_type[] null | null = alle. Barnemaler: `{family}` |
 | housing_types | housing_type[] null | null = alle. «Hus» (eget tak og uteområde) = `{townhouse, house}` |
+| requires | jsonb null | betingelser på hjemprofilen. null = ingen. Alle nøkler må stemme. `has_*`: `true`/`false`. `sewage_type`: ikke-tom liste, én må stemme. Eksempel: `{"has_air_heat_pump": true}`, `{"sewage_type": ["septic_tank"]}`. Gyldige nøkler håndheves av `private.template_requires_valid` |
 | *gjentakelse* | samme kolonner og check-constraint som `tasks`, unntatt `anchor_on` | årshjulet: `calendar, year, every 1`, `month`, og `month_day` null (månedsoppgave) eller satt (fast dato) |
 | source_url | text null | f.eks. DSB for røykvarsler. Tom til lenkene er sjekket |
 | sort_order | smallint not null default 0 | rekkefølge innen måneden |
@@ -425,7 +431,7 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 
 | Tabell | SELECT | INSERT | UPDATE | DELETE |
 |--------|--------|--------|--------|--------|
-| households | medlem | – (RPC `create_household`) | voksen; kolonner: `name`, `type`, `housing_type`, `feedback_tone` | – (Edge `delete-account`) |
+| households | medlem | – (RPC `create_household`) | voksen; kolonner: `name`, `type`, `housing_type`, `feedback_tone` og hjemprofilen (`has_*`, `sewage_type`) | – (Edge `delete-account`) |
 | members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year`. Barn: bare egen avatar via RPC `set_my_avatar` | voksen, bare `role = 'child'` |
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
 | today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
@@ -466,6 +472,10 @@ grant update (display_name, avatar, birth_year) on public.members to authenticat
 
 revoke update on public.households from authenticated;
 grant update (name, type, housing_type, feedback_tone) on public.households to authenticated;
+-- Hjemprofil (egen migrasjon, *_home_profile.sql):
+grant update (has_garden, has_car, has_cabin, has_air_heat_pump, has_fireplace,
+              has_balanced_ventilation, has_hydronic_heating, has_private_well, sewage_type)
+  on public.households to authenticated;
 ```
 
 ### RPC-oversikt

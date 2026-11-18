@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"households": {
                   Row: {
-                    "created_at": string,"feedback_tone": Database["public"]['Enums']["feedback_tone"],"housing_type": Database["public"]['Enums']["housing_type"],"id": string,"name": string,"timezone": string,"trial_ends_at": string,"type": Database["public"]['Enums']["household_type"]
+                    "created_at": string,"feedback_tone": Database["public"]['Enums']["feedback_tone"],"has_air_heat_pump": boolean | null,"has_balanced_ventilation": boolean | null,"has_cabin": boolean | null,"has_car": boolean | null,"has_fireplace": boolean | null,"has_garden": boolean | null,"has_hydronic_heating": boolean | null,"has_private_well": boolean | null,"housing_type": Database["public"]['Enums']["housing_type"],"id": string,"name": string,"sewage_type": Database["public"]['Enums']["sewage_type"] | null,"timezone": string,"trial_ends_at": string,"type": Database["public"]['Enums']["household_type"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"feedback_tone"?: Database["public"]['Enums']["feedback_tone"],"housing_type": Database["public"]['Enums']["housing_type"],"id"?: string,"name": string,"timezone"?: string,"trial_ends_at": string,"type": Database["public"]['Enums']["household_type"]
+                    "created_at"?: string,"feedback_tone"?: Database["public"]['Enums']["feedback_tone"],"has_air_heat_pump"?: boolean | null,"has_balanced_ventilation"?: boolean | null,"has_cabin"?: boolean | null,"has_car"?: boolean | null,"has_fireplace"?: boolean | null,"has_garden"?: boolean | null,"has_hydronic_heating"?: boolean | null,"has_private_well"?: boolean | null,"housing_type": Database["public"]['Enums']["housing_type"],"id"?: string,"name": string,"sewage_type"?: Database["public"]['Enums']["sewage_type"] | null,"timezone"?: string,"trial_ends_at": string,"type": Database["public"]['Enums']["household_type"]
                   }
                   Update: {
-                    "created_at"?: string,"feedback_tone"?: Database["public"]['Enums']["feedback_tone"],"housing_type"?: Database["public"]['Enums']["housing_type"],"id"?: string,"name"?: string,"timezone"?: string,"trial_ends_at"?: string,"type"?: Database["public"]['Enums']["household_type"]
+                    "created_at"?: string,"feedback_tone"?: Database["public"]['Enums']["feedback_tone"],"has_air_heat_pump"?: boolean | null,"has_balanced_ventilation"?: boolean | null,"has_cabin"?: boolean | null,"has_car"?: boolean | null,"has_fireplace"?: boolean | null,"has_garden"?: boolean | null,"has_hydronic_heating"?: boolean | null,"has_private_well"?: boolean | null,"housing_type"?: Database["public"]['Enums']["housing_type"],"id"?: string,"name"?: string,"sewage_type"?: Database["public"]['Enums']["sewage_type"] | null,"timezone"?: string,"trial_ends_at"?: string,"type"?: Database["public"]['Enums']["household_type"]
                   }
                   Relationships: [
                     
@@ -283,14 +283,14 @@ isOneToOne: false
                   ]
                 },"task_templates": {
                   Row: {
-                    "category": string,"description": string,"household_types": (Database["public"]['Enums']["household_type"])[] | null,"housing_types": (Database["public"]['Enums']["housing_type"])[] | null,"id": string,"is_active": boolean,"month": number | null,"month_day": number | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"slug": string,"sort_order": number,"source_url": string | null,"title": string,"weekdays": (number)[] | null
+                    "category": string,"description": string,"household_types": (Database["public"]['Enums']["household_type"])[] | null,"housing_types": (Database["public"]['Enums']["housing_type"])[] | null,"id": string,"is_active": boolean,"month": number | null,"month_day": number | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"requires": Json | null,"slug": string,"sort_order": number,"source_url": string | null,"title": string,"weekdays": (number)[] | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "category": string,"description": string,"household_types"?: (Database["public"]['Enums']["household_type"])[] | null,"housing_types"?: (Database["public"]['Enums']["housing_type"])[] | null,"id"?: string,"is_active"?: boolean,"month"?: number | null,"month_day"?: number | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"slug": string,"sort_order"?: number,"source_url"?: string | null,"title": string,"weekdays"?: (number)[] | null
+                    "category": string,"description": string,"household_types"?: (Database["public"]['Enums']["household_type"])[] | null,"housing_types"?: (Database["public"]['Enums']["housing_type"])[] | null,"id"?: string,"is_active"?: boolean,"month"?: number | null,"month_day"?: number | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"requires"?: Json | null,"slug": string,"sort_order"?: number,"source_url"?: string | null,"title": string,"weekdays"?: (number)[] | null
                   }
                   Update: {
-                    "category"?: string,"description"?: string,"household_types"?: (Database["public"]['Enums']["household_type"])[] | null,"housing_types"?: (Database["public"]['Enums']["housing_type"])[] | null,"id"?: string,"is_active"?: boolean,"month"?: number | null,"month_day"?: number | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"slug"?: string,"sort_order"?: number,"source_url"?: string | null,"title"?: string,"weekdays"?: (number)[] | null
+                    "category"?: string,"description"?: string,"household_types"?: (Database["public"]['Enums']["household_type"])[] | null,"housing_types"?: (Database["public"]['Enums']["housing_type"])[] | null,"id"?: string,"is_active"?: boolean,"month"?: number | null,"month_day"?: number | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"requires"?: Json | null,"slug"?: string,"sort_order"?: number,"source_url"?: string | null,"title"?: string,"weekdays"?: (number)[] | null
                   }
                   Relationships: [
                     
@@ -564,7 +564,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "audience": "adult"|"child"|"any","completion_status": "pending"|"approved"|"rejected","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year"
+            "audience": "adult"|"child"|"any","completion_status": "pending"|"approved"|"rejected","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year","sewage_type": "municipal"|"septic_tank"|"mini_treatment_plant"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -684,7 +684,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "audience": ["adult", "child", "any"],"completion_status": ["pending", "approved", "rejected"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"]
+            "audience": ["adult", "child", "any"],"completion_status": ["pending", "approved", "rejected"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"],"sewage_type": ["municipal", "septic_tank", "mini_treatment_plant"]
           }
         }
 } as const

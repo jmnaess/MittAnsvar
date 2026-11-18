@@ -98,8 +98,10 @@ function textPairs({ colors, personColors, sharedColors }: Theme): [string, stri
 }
 
 /**
- * Ting som ikke er tekst, men som må synes: tom sjekkboks og personens ring.
- * Kravet er 3:1 (WCAG 1.4.11). Haken i en avkrysset sjekkboks er et ikon, men vi krever 4.5:1.
+ * Ting som ikke er tekst, men som må synes: tom sjekkboks, personens ring og haken i en avkrysset
+ * sjekkboks. Kravet er 3:1 (WCAG 1.4.11, grafikk og ikoner).
+ * Ringen står på hvite rader og surfaceMuted-rader (sjekkboksen), og på personens tint (kanten i
+ * «Hvem gjorde det?»).
  */
 function nonTextPairs({ colors, personColors, sharedColors }: Theme): [string, string, string][] {
   const pairs: [string, string, string][] = [
@@ -109,6 +111,7 @@ function nonTextPairs({ colors, personColors, sharedColors }: Theme): [string, s
   for (const [key, c] of Object.entries({ ...personColors, Felles: sharedColors })) {
     pairs.push([`${key} ring på tint`, c.ring, c.tint]);
     pairs.push([`${key} ring på surface`, c.ring, colors.surface]);
+    pairs.push([`${key} ring på surfaceMuted`, c.ring, colors.surfaceMuted]);
   }
   return pairs;
 }
@@ -128,15 +131,7 @@ describe.each([
   it.each(textPairs(theme))('%s har minst 4.5:1', (_pair, fg, bg) => {
     expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
-});
-
-// Bare mørkt foreløpig: den lyse paletten er eldre og når ikke 3:1 for alle ringer, tom sjekkboks
-// og hvit hake på lyse ringer (f.eks. lion). Utvid til begge når lyst tema er justert.
-describe('kontrast, ikke-tekst, mørkt tema', () => {
-  it.each(checkPairs(themes.dark))('%s har minst 4.5:1', (_pair, fg, bg) => {
-    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
-  });
-  it.each(nonTextPairs(themes.dark))('%s har minst 3:1', (_pair, fg, bg) => {
+  it.each([...nonTextPairs(theme), ...checkPairs(theme)])('%s har minst 3:1', (_pair, fg, bg) => {
     expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(3);
   });
 });

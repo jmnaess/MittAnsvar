@@ -13,7 +13,7 @@ export const lightColors = {
   surfaceMuted: '#FAF6EF',
   border: '#F1EBE1',
   borderStrong: '#E4DCCF',
-  checkboxBorder: '#C9BDAC',
+  checkboxBorder: '#A08A6C',
   text: '#2B2118',
   textMuted: '#6B5E52',
   textWarm: '#5C4A2A',
@@ -163,16 +163,16 @@ export type TypographyVariant = keyof typeof typography;
 export type PersonColor = { tint: string; ink: string; ring: string };
 
 export const lightPersonColors: Record<string, PersonColor> = {
-  bear: { tint: '#F6E9DA', ink: '#5A3A1E', ring: '#B07D52' },
+  bear: { tint: '#F6E9DA', ink: '#5A3A1E', ring: '#AE7B50' },
   cat: { tint: '#FCE3EA', ink: '#7A2E45', ring: '#D2557A' },
-  fox: { tint: '#FFE9D6', ink: '#7A3410', ring: '#E36B2C' },
-  frog: { tint: '#E6F4DD', ink: '#2F5E28', ring: '#58A84C' },
-  rabbit: { tint: '#E9EDFB', ink: '#2E3A6E', ring: '#7C86C2' },
+  fox: { tint: '#FFE9D6', ink: '#7A3410', ring: '#DF601E' },
+  frog: { tint: '#E6F4DD', ink: '#2F5E28', ring: '#509945' },
+  rabbit: { tint: '#E9EDFB', ink: '#2E3A6E', ring: '#7983C1' },
   // Ringen er brun som ugla i tegningen, ikke lilla som tinten.
   owl: { tint: '#EFE9F8', ink: '#4B3A6E', ring: '#9A7752' },
   panda: { tint: '#EEEFF2', ink: '#2F3338', ring: '#4A4F57' },
-  lion: { tint: '#FFF0CC', ink: '#6B4A00', ring: '#D99A1E' },
-  dog: { tint: '#E4EEF6', ink: '#24435E', ring: '#5B8DB8' },
+  lion: { tint: '#FFF0CC', ink: '#6B4A00', ring: '#B48019' },
+  dog: { tint: '#E4EEF6', ink: '#24435E', ring: '#588BB7' },
   unicorn: { tint: '#FBE6F6', ink: '#6A2C5E', ring: '#C064A8' },
 };
 

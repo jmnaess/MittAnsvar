@@ -19,8 +19,8 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 - Ny farge: legg den i **både** `lightColors` og `darkColors` (TypeScript krever det).
 - All tekst har minst **4.5:1** kontrast mot bakgrunnen, i begge temaer. Testen
   `src/ui/__tests__/ui.test.ts` sjekker alle tekstpar for lyst og mørkt. Legger du til en farge,
-  legg paret til i testen. For mørkt tema sjekkes også ikke-tekst (tom sjekkboks og ringer, 3:1)
-  og haken på ringene (4.5:1).
+  legg paret til i testen. Ikke-tekst må ha minst **3:1** i begge temaer: tom sjekkboks mot
+  surface/surfaceMuted, personens ring mot tint, surface og surfaceMuted, og haken på ringen.
 - Trykkflater er minst **44 × 44**.
 - **Forfalt** vises som merkelapp (`Chip tone="overdue"`) til høyre på raden, **aldri med dato**.
 - Utført rad: tittelen gjennomstreket i `textMuted`, sjekkboksen fylt med personens ring-farge.
@@ -53,7 +53,7 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 | surface | `#FFFFFF` | `#28211A` | kort, rader på farget bakgrunn |
 | surfaceMuted | `#FAF6EF` | `#322A21` | rader inne i kort |
 | border / borderStrong | `#F1EBE1` / `#E4DCCF` | `#3A3128` / `#4D4236` | skiller, kant på sekundærknapp |
-| checkboxBorder | `#C9BDAC` | `#857563` | tom sjekkboks |
+| checkboxBorder | `#A08A6C` | `#857563` | tom sjekkboks |
 | text / textMuted / textWarm | `#2B2118` / `#6B5E52` / `#5C4A2A` | `#F5EDE1` / `#BFB1A0` / `#E8D3AC` | tekst |
 | primary / primaryPressed / onPrimary | `#0E6E6E` / `#0A5252` / `#FFFFFF` | `#5CBDB6` / `#4AA59F` / `#14201F` | knapper, valgt fane |
 | sun / sunSoft | `#F2B705` / `#FFF4D1` | `#F2B705` / `#3A2F14` | godkjenningsbanner, framheving |
@@ -82,15 +82,15 @@ Lyst tema (`lightPersonColors`):
 
 | Avatar | tint | ink | ring |
 |---|---|---|---|
-| bear | `#F6E9DA` | `#5A3A1E` | `#B07D52` |
+| bear | `#F6E9DA` | `#5A3A1E` | `#AE7B50` |
 | cat | `#FCE3EA` | `#7A2E45` | `#D2557A` |
-| fox | `#FFE9D6` | `#7A3410` | `#E36B2C` |
-| frog | `#E6F4DD` | `#2F5E28` | `#58A84C` |
-| rabbit | `#E9EDFB` | `#2E3A6E` | `#7C86C2` |
+| fox | `#FFE9D6` | `#7A3410` | `#DF601E` |
+| frog | `#E6F4DD` | `#2F5E28` | `#509945` |
+| rabbit | `#E9EDFB` | `#2E3A6E` | `#7983C1` |
 | owl | `#EFE9F8` | `#4B3A6E` | `#9A7752` |
 | panda | `#EEEFF2` | `#2F3338` | `#4A4F57` |
-| lion | `#FFF0CC` | `#6B4A00` | `#D99A1E` |
-| dog | `#E4EEF6` | `#24435E` | `#5B8DB8` |
+| lion | `#FFF0CC` | `#6B4A00` | `#B48019` |
+| dog | `#E4EEF6` | `#24435E` | `#588BB7` |
 | unicorn | `#FBE6F6` | `#6A2C5E` | `#C064A8` |
 | Felles (og ukjent) | `#F4EFE6` | `#5C4A2A` | primary |
 

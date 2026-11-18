@@ -8,13 +8,18 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SessionProvider, useSession } from '../src/features/auth/SessionProvider';
 import { queryClient } from '../src/lib/queryClient';
 import { ThemeProvider, useTheme } from '../src/ui/ThemeProvider';
 import { navigationTheme } from '../src/ui/tabOptions';
+
+// Oppstartsbildet blir stående til fonter, tema og sesjon er klare. Se RootStack.
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   // Fontene lastes før noe vises, ellers blinker teksten fra systemfont til Fredoka/Nunito.
@@ -61,6 +66,11 @@ function ThemedRoot() {
 // uten index-rute gir adressen "/", som bare finnes i (app) → «Unmatched Route».
 function RootStack() {
   const { session, isLoading } = useSession();
+
+  // RootStack vises først når fonter og tema er klare, så sesjonen er det siste vi venter på.
+  useEffect(() => {
+    if (!isLoading) SplashScreen.hide();
+  }, [isLoading]);
 
   // Ikke vis innloggingsskjermen et øyeblikk mens sesjonen leses fra enheten.
   if (isLoading) return null;

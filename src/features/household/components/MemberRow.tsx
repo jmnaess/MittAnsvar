@@ -1,4 +1,5 @@
-import { Avatar, ListRow } from '../../../ui';
+import { ListRow } from '../../../ui';
+import { MemberAvatar } from './MemberAvatar';
 import type { Member } from '../types';
 
 type Props = {
@@ -21,7 +22,7 @@ export function MemberRow({ member, extra, onPress, accessibilityHint = 'Endre e
     <ListRow
       title={member.display_name}
       meta={[describe(member), extra]}
-      left={<Avatar avatar={member.avatar} size={44} />}
+      left={<MemberAvatar member={member} size={44} />}
       onPress={onPress}
       accessibilityHint={onPress ? accessibilityHint : undefined}
     />

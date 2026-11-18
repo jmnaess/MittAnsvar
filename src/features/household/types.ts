@@ -13,6 +13,8 @@ export type HouseholdType = Enums['household_type'];
 export type HousingType = Enums['housing_type'];
 export type FeedbackTone = Enums['feedback_tone'];
 export type SewageType = Enums['sewage_type'];
+/** figure = den tegnede avataren, photo = profilbildet (hvis det finnes). */
+export type AvatarMode = Enums['avatar_mode'];
 
 /** Ja/nei-spørsmålene i hjemprofilen. null = ikke svart. */
 export const HOME_PROFILE_FLAGS = [

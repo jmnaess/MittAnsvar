@@ -41,11 +41,17 @@ export default function HouseholdScreen() {
                 ? `Opptjent: ${formatBalance(balanceOf(member.id))}${member.auth_user_id ? ' · Egen enhet' : ''}`
                 : undefined
             }
-            accessibilityHint="Se opptjening, registrer utbetaling og koble til enhet"
+            accessibilityHint={
+              member.role === 'child'
+                ? 'Se opptjening, registrer utbetaling og koble til enhet'
+                : 'Legg inn eller fjern profilbilde'
+            }
             onPress={
-              isAdult && member.role === 'child'
-                ? () => router.push({ pathname: '/earnings/[id]', params: { id: member.id } })
-                : undefined
+              !isAdult
+                ? undefined
+                : member.role === 'child'
+                  ? () => router.push({ pathname: '/earnings/[id]', params: { id: member.id } })
+                  : () => router.push({ pathname: '/member/[id]', params: { id: member.id } })
             }
           />
         ))}

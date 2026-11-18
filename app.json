@@ -30,12 +30,21 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "MittAnsvar bruker kameraet til å skanne QR-koden som kobler et barns enhet til husstanden.",
+          "cameraPermission": "MittAnsvar bruker kameraet til å skanne QR-koden som kobler et barns enhet til husstanden, og til å ta profilbilder.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MittAnsvar bruker bildene dine når du velger et profilbilde.",
+          "cameraPermission": "MittAnsvar bruker kameraet til å skanne QR-koden som kobler et barns enhet til husstanden, og til å ta profilbilder.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

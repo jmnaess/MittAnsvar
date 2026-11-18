@@ -9,12 +9,12 @@ import {
   View,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { Avatar } from './Avatar';
+import { Avatar, type AvatarPhotoSource } from './Avatar';
 import { familyStripLayout, RING_EXTRA, shortName } from './familyStripLayout';
 import { Text } from './Text';
 import { colors, personColor, spacing } from './theme';
 
-export type FamilyStripPerson = { id: string; name: string; avatar: string };
+export type FamilyStripPerson = { id: string; name: string; avatar: string; photo?: AvatarPhotoSource };
 
 type Props = {
   people: FamilyStripPerson[];
@@ -95,7 +95,7 @@ function Person({ person, ring, cellWidth, selected, dimmed, onPress }: PersonPr
       accessibilityHint={selected ? 'Vis alle' : `Vis bare oppgavene til ${name}`}
       style={[styles.person, { width: cellWidth }, dimmed && styles.dimmed]}
     >
-      <Avatar avatar={person.avatar} size={ring - RING_EXTRA} ring={personColor(person.avatar).ring} />
+      <Avatar avatar={person.avatar} photo={person.photo} size={ring - RING_EXTRA} ring={personColor(person.avatar).ring} />
       {/* «Leah» eller «John M.». Et langt navn kuttes rett av, uten «…». */}
       <Text
         variant="label"

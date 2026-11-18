@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Avatar } from './Avatar';
+import { Avatar, type AvatarPhotoSource } from './Avatar';
 import { Text } from './Text';
 import { radius, spacing, type PersonColor } from './theme';
 
@@ -10,17 +10,19 @@ type Props = {
   color: PersonColor;
   /** Avatarnøkkel. Utelatt for «Felles». */
   avatar?: string;
+  /** Profilbilde i stedet for figuren. */
+  photo?: AvatarPhotoSource;
   /** Kort tekst til høyre i overskriften, f.eks. «35 kr tjent». */
   right?: string;
   children: ReactNode;
 };
 
 /** Seksjon i personens farge: navn i ink-farge øverst, hvite rader under. */
-export function SectionCard({ title, color, avatar, right, children }: Props) {
+export function SectionCard({ title, color, avatar, photo, right, children }: Props) {
   return (
     <View style={[styles.card, { backgroundColor: color.tint }]}>
       <View style={styles.header}>
-        {avatar && <Avatar avatar={avatar} size={32} />}
+        {avatar && <Avatar avatar={avatar} photo={photo} size={32} />}
         <Text variant="personName" color={color.ink} style={styles.title} accessibilityRole="header">
           {title}
         </Text>

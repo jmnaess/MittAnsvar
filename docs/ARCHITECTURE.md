@@ -201,7 +201,8 @@ Ikke ennå: fjerne en annen voksen, lenker inn i appen.
 ## 5. Sikkerhet og personvern
 
 **Barns data (dataminimering)**
-- Vi lagrer bare fornavn (eller kallenavn), innebygd avatar og fødselsår. Ingen e-post, bilder, fullt navn, fødselsdato eller posisjon.
+- Vi lagrer bare fornavn (eller kallenavn), innebygd avatar og fødselsår, og eventuelt et profilbilde. Ingen e-post, fullt navn, fødselsdato eller posisjon.
+- **Profilbilde (valgfritt):** legges inn av en voksen, aldri av barnet. Det ligger i en privat bøtte i EU som bare husstanden kan lese (RLS), og vises via signerte URL-er som varer i én time. Bildet krympes til 512×512 på enheten, og EXIF (posisjon) fjernes før opplasting. Det slettes når bildet fjernes, når personen fjernes og når kontoen eller husstanden slettes. Se DATABASE.md §6.
 - Barnet samtykker aldri selv. Det er den voksne som oppretter profilen, og GDPR art. 8 om barns samtykke kommer derfor ikke i spill.
 - Ingen analyse- eller reklame-SDK-er i MVP. Hvis vi trenger analyse senere, velger vi en EU-basert løsning og holder barn utenfor.
 - Barnets enhet har en anonym Supabase-bruker uten e-post eller andre opplysninger.
@@ -210,7 +211,7 @@ Ikke ennå: fjerne en annen voksen, lenker inn i appen.
 - **Behandlingsgrunnlag:** avtale med den voksne kontoeieren (art. 6(1)(b)).
 - **Databehandleravtaler:** Supabase (EU-region). RevenueCat er amerikansk og krever SCC/DPF, men de får bare UUID. Apple og Google er selvstendige behandlingsansvarlige for betaling.
 - **Personvernerklæring** på norsk før lansering. Den må også nevne barnedata.
-- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk), og barnas anonyme brukere slettes, så enhetene deres logges ut. Sletting av en barneprofil sletter også barnets fullføringer og utbetalinger. Når en voksen sletter seg og andre voksne er igjen, beholdes barnas historikk: `recorded_by`, `created_by` og `recorded_by_member_id` settes til null. Feiler slettingen av auth-brukeren med en serverfeil, prøver funksjonen én gang til. En bruker som da står uten husstand, finner «Slett konto» også på oppstartsskjermen.
+- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk), og barnas anonyme brukere slettes, så enhetene deres logges ut. Sletting av en barneprofil sletter også barnets fullføringer og utbetalinger. **Profilbilder** slettes med Storage-API-et før radene, fordi databasen ikke kan slette filer: appen sletter barnets bildemappe før profilen, og `delete-account` sletter mappene som forsvinner med kontoen (hele husstanden for siste voksne) før `delete_my_account_data`. Se DATABASE.md §6. Når en voksen sletter seg og andre voksne er igjen, beholdes barnas historikk: `recorded_by`, `created_by` og `recorded_by_member_id` settes til null. Feiler slettingen av auth-brukeren med en serverfeil, prøver funksjonen én gang til. En bruker som da står uten husstand, finner «Slett konto» også på oppstartsskjermen.
 - **Innsyn og dataportabilitet:** i MVP manuelt på e-post. Eksport i appen kommer senere.
 - **Logger:** ikke logg navn eller oppgavetekster i Edge Functions.
 

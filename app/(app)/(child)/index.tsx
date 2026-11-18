@@ -15,6 +15,7 @@ import {
   useUndoCompletion,
 } from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
+import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalance } from '../../../src/features/rewards/hooks';
@@ -32,7 +33,6 @@ import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
-  Avatar,
   colors,
   EmptyState,
   PageHeader,
@@ -156,7 +156,7 @@ export default function ChildTodayScreen() {
         <PageHeader
           overline={formatWeekdayDate(today)}
           title={me ? `Hei, ${me.display_name}!` : 'I dag'}
-          right={me ? <Avatar avatar={me.avatar} size={48} ring={color.ring} /> : undefined}
+          right={me ? <MemberAvatar member={me} size={48} ring={color.ring} /> : undefined}
         />
 
         <View style={styles.body}>

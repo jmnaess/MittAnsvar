@@ -32,6 +32,7 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | `recurrence_unit` | `day`, `week`, `month`, `year` |
 | `completion_status` | `pending`, `approved`, `rejected` (steg 10b) |
 | `sewage_type` | `municipal`, `septic_tank`, `mini_treatment_plant` (hjemprofil) |
+| `avatar_mode` | `figure`, `photo` (profilbilder) |
 
 ### `households`
 | Kolonne | Type | Merknad |
@@ -56,12 +57,16 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | household_id | uuid not null → households **on delete cascade** | |
 | role | member_role not null | |
 | display_name | text not null | 1–30 tegn, fornavn/kallenavn |
-| avatar | text not null | nøkkel til innebygd illustrasjon, f.eks. `fox` |
+| avatar | text not null | nøkkel til innebygd illustrasjon, f.eks. `fox`. Styrer også personens farger, også når bildet vises |
+| avatar_mode | avatar_mode not null default `figure` | `photo` = vis profilbildet i stedet for figuren |
+| photo_path | text null | sti i bøtta `member-photos`, `{household_id}/{id}/{uuid}.jpg` (se §6) |
 | birth_year | smallint null | bare for barn, brukes til alderstilpassede forslag |
 | auth_user_id | uuid null **unique** → auth.users on delete set null | voksen: e-postbruker; barn: anonym bruker på egen enhet (steg 10a), ellers null. Ett barn har høyst én enhet |
 | created_at | timestamptz not null default now() | |
 
 - Check: `role = 'adult'` ⇒ `birth_year is null`.
+- Check: `photo_path` er `null` eller ligger i medlemmets egen mappe (`members_photo_path_own_folder`).
+- Check: `avatar_mode = 'photo'` ⇒ `photo_path is not null` (`members_photo_mode_needs_photo`). Fjernes bildet, settes modus til `figure` i samme update.
 - `unique(auth_user_id)` betyr én husstand per bruker i MVP. Fjernes constrainten senere, tillates flere husstander.
 - `on delete set null` (ikke cascade): hvis barnets anonyme bruker slettes, skal barneprofilen bestå. `delete-account` sletter den voksnes `members`-rad eksplisitt.
 - Barnets anonyme bruker slettes ved frakobling (`unlink_member_device`) og når husstanden slettes (`delete_my_account_data`). Begge bruker `private.delete_anonymous_users`, som bare sletter brukere med `is_anonymous`.
@@ -464,7 +469,7 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 | Tabell | SELECT | INSERT | UPDATE | DELETE |
 |--------|--------|--------|--------|--------|
 | households | medlem | – (RPC `create_household`) | voksen; kolonner: `name`, `type`, `housing_type`, `feedback_tone` og hjemprofilen (`has_*`, `sewage_type`) | – (Edge `delete-account`) |
-| members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year`. Barn: bare egen avatar via RPC `set_my_avatar` | voksen, bare `role = 'child'` |
+| members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year`, `photo_path`, `avatar_mode`. Barn: bare egen avatar via RPC `set_my_avatar` og figur/bilde via `set_my_avatar_mode` | voksen, bare `role = 'child'` (appen sletter bildemappen først, se §6) |
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
 | today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
 | today_completions (view) | som task_completions: voksen alt, barn bare egne | – | – | – |
@@ -501,6 +506,8 @@ create policy tasks_update on public.tasks for update to authenticated
 ```sql
 revoke update on public.members from authenticated;
 grant update (display_name, avatar, birth_year) on public.members to authenticated;
+-- Profilbilder (*_member_photos.sql):
+grant update (photo_path, avatar_mode) on public.members to authenticated;
 
 revoke update on public.households from authenticated;
 grant update (name, type, housing_type, feedback_tone) on public.households to authenticated;
@@ -523,6 +530,8 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `unlink_member_device(p_member_id)` | voksen | `auth_user_id = null` på barnet, og sletter den anonyme brukeren i `auth.users` (med sesjoner og refresh-token, så barnet logges ut). Trygt å kalle igjen. Feil: `not_adult`, `invalid_member` |
 | `unlink_my_device()` | barn på egen (anonym) enhet | barnet kobler fra seg selv («Logg ut av denne enheten»): egen `auth_user_id = null`, og egen anonym bruker slettes. En vanlig utlogging ville latt profilen stå koblet til en bruker ingen kan logge inn som. Feil: `invalid_member` (voksen, eller ikke koblet) |
 | `set_my_avatar(p_avatar)` | medlem (brukes av barn) | ny avatar på egen `members`-rad, ingenting annet. RPC i stedet for policy, fordi kolonnerettigheter gjelder hele rollen `authenticated`: en update-policy for barn ville også gitt dem navn og fødselsår. Sjekker formen (`^[a-z_]{1,30}$`), ikke listen, så nyere appversjoner kan legge til avatarer. Feil: `not_authenticated`, `invalid_avatar`, `member_not_found` |
+| `set_my_avatar_mode(p_mode)` | medlem (brukes av barn) | figur eller bilde på egen `members`-rad. Bildet legges inn og fjernes bare av voksne. Feil: `not_authenticated`, `member_not_found`, `no_photo` (`photo` uten bilde) |
+| `my_photo_folders_to_delete() returns text[]` | innlogget (kalles av Edge `delete-account`) | bildemappene som forsvinner med kontoen, etter samme regler som `delete_my_account_data`: siste voksne gir alle mapper i husstanden, ellers egen mappe. Barn/uten medlemskap: ingen. Se §6 |
 | `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
 | `activate_templates(p_household_id, p_template_ids) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid) |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
@@ -597,3 +606,42 @@ Minimum før lansering:
     - Jobb, oppgave fram i tid, i dag, over ett år, barn, annen husstand og utløpt prøvetid avvises.
 
 Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
+
+16. Profilbilder (`member_photos.test.sql`):
+    - Bøtta er privat. Voksne kan laste opp for alle i egen husstand (barn og voksne).
+    - Barn kan ikke laste opp eller slette, heller ikke bilde av seg selv. En annen husstand kan ikke lese, laste opp eller slette. Anon ser ingenting.
+    - Stier til et medlem som ikke finnes, et medlem i en annen husstand, filer rett i husstandsmappen og filnavn som ikke er `{uuid}.jpg` avvises.
+    - `photo_path` kan ikke peke på en annen persons mappe, og bilde-modus krever bilde. Barn kan ikke endre `photo_path`. `set_my_avatar_mode` endrer bare egen rad og avviser `photo` uten bilde.
+    - `my_photo_folders_to_delete` gir riktige mapper for siste voksne, voksen med andre voksne og barn. Bildet av et slettet medlem kan ikke leses.
+
+---
+
+## 6. Storage: profilbilder
+
+Bøtta `member-photos` er **privat** (`public = false`), tar bare `image/jpeg` og maks 1 MB. Appen laster opp 512×512 JPEG (kvalitet 0,8), krympet og beskåret på enheten. Den nye kodingen tar ikke med EXIF, så posisjon og kamerainfo blir ikke lastet opp.
+
+**Sti:** `{household_id}/{member_id}/{uuid}.jpg`. Hver opplasting får et nytt filnavn, så cachen i appen aldri viser et gammelt bilde. `members.photo_path` peker på filen som er i bruk. Når et nytt bilde lastes opp, slettes det gamle.
+
+**Visning:** signerte URL-er (`createSignedUrls`, 1 time). Appen henter nye etter 50 minutter. `expo-image` cacher bildet på disk med stien som nøkkel, så en ny URL laster ikke ned bildet på nytt. Bildet vises bare når `avatar_mode = 'photo'`, og hvis det ikke lastes, vises figuren (`src/features/household/photo.ts`).
+
+**Policyer på `storage.objects`** (alle med `bucket_id = 'member-photos'`):
+
+| Operasjon | Hvem |
+|-----------|------|
+| SELECT (lese, liste, signere URL) | medlem i husstanden (også barn med enhet) |
+| INSERT (laste opp) | voksen i husstanden, filnavn `{uuid}.jpg` |
+| DELETE | voksen i husstanden |
+| UPDATE | ingen (appen laster aldri opp over en fil) |
+
+Alle bruker `private.photo_household(name)`. Den gir husstanden bare når stien har formen `{household_id}/{member_id}/fil` **og** medlemmet finnes i den husstanden. Når medlemmet er slettet, kan ingen lese en fil som eventuelt er blitt liggende igjen.
+
+**Sletting.** Supabase stopper `DELETE` på `storage.objects` med SQL (triggeren `storage.protect_delete`), så cascade i databasen kan ikke rydde filene. Filene slettes derfor med Storage-API-et, **før** radene, slik at en feil stopper slettingen og kan prøves igjen. Alle stedene et medlem kan forsvinne:
+
+| Hendelse | Hvor | Hva slettes |
+|----------|------|-------------|
+| Voksen sletter et barn | appen, `deleteChild` (`src/features/household/api.ts`) | barnets mappe, deretter raden |
+| Voksen sletter kontoen, andre voksne finnes | Edge `delete-account` | egen mappe (`my_photo_folders_to_delete`), deretter `delete_my_account_data` |
+| Siste voksne sletter kontoen (husstanden slettes) | Edge `delete-account` | alle mapper i husstanden, deretter `delete_my_account_data` |
+| Voksen fjerner bildet | appen, `removeMemberPhoto` | medlemmets mappe, `photo_path = null`, `avatar_mode = 'figure'` |
+
+Barnets enhet kobles fra (`unlink_*`): profilen består, og bildet blir værende. Det finnes ingen flyt der en voksen forlater husstanden uten å slette kontoen, eller der en voksen fjerner en annen voksen (`members_delete` tillater bare barn). Kommer slike flyter, må de også slette mappen.

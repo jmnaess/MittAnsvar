@@ -54,7 +54,7 @@ export default function OnboardingScreen() {
 function ChooseStep({ onChoose }: { onChoose: (mode: Mode) => void }) {
   return (
     <>
-      <AvatarStack avatars={['fox', 'cat', 'bear', 'frog', 'rabbit']} size={48} max={5} />
+      <AvatarStack people={['fox', 'cat', 'bear', 'frog', 'rabbit'].map((avatar) => ({ avatar }))} size={48} max={5} />
       <Text variant="pageTitle">Velkommen!</Text>
       <Text>
         Lag en ny husstand, eller bli med i en som en annen voksen allerede har laget.

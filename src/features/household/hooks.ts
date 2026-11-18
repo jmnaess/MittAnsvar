@@ -15,12 +15,21 @@ import {
   type HouseholdChanges,
 } from './api';
 import { useSession } from '../auth/SessionProvider';
-import type { ChildInput, Member } from './types';
+import { type AvatarPhoto, memberPhoto, PHOTO_URL_TTL_SECONDS, photoPathsToSign } from './photo';
+import {
+  getSignedPhotoUrls,
+  removeMemberPhoto,
+  setMemberAvatarMode,
+  setMyAvatarMode,
+  uploadMemberPhoto,
+} from './photoApi';
+import type { AvatarMode, ChildInput, Member } from './types';
 
 // Nøkler for cachen. Etter en endring «invaliderer» vi nøkkelen, så dataene hentes på nytt.
 export const householdKeys = {
   mine: ['household'] as const,
   members: (householdId: string) => ['members', householdId] as const,
+  photoUrls: (householdId: string, paths: string[]) => ['photo-urls', householdId, ...paths] as const,
   invites: (householdId: string) => ['invites', householdId] as const,
 };
 
@@ -100,6 +109,72 @@ export function useSetMyAvatar(householdId: string) {
 export function useDeleteChild(householdId: string) {
   const onSuccess = useInvalidateMembers(householdId);
   return useMutation({ mutationFn: deleteChild, onSuccess });
+}
+
+// ---------------------------------------------------------------------------
+// Profilbilder
+// ---------------------------------------------------------------------------
+
+/**
+ * Signerte URL-er til bildene i husstanden, som { sti: url }.
+ * URL-ene varer i en time. Vi henter nye etter 50 minutter, så en URL aldri går ut mens den vises.
+ * Selve bildet caches på disk av expo-image med stien som nøkkel, så nye URL-er laster ikke ned på nytt.
+ */
+export function useMemberPhotoUrls(householdId: string | undefined) {
+  const { data: members } = useMembers(householdId);
+  const paths = members ? photoPathsToSign(members) : [];
+  return useQuery({
+    queryKey: householdKeys.photoUrls(householdId ?? '', paths),
+    queryFn: () => getSignedPhotoUrls(paths),
+    enabled: paths.length > 0,
+    staleTime: (PHOTO_URL_TTL_SECONDS - 10 * 60) * 1000,
+    refetchInterval: (PHOTO_URL_TTL_SECONDS - 10 * 60) * 1000,
+  });
+}
+
+/** Bildet som skal vises for et medlem, eller undefined (figuren). */
+export function useMemberPhoto(
+  member: Pick<Member, 'household_id' | 'avatar_mode' | 'photo_path'> | undefined,
+): AvatarPhoto | undefined {
+  const { data: urls } = useMemberPhotoUrls(member?.household_id);
+  return member ? memberPhoto(member, urls) : undefined;
+}
+
+/** Funksjon som gir bildet for et medlem. For lister, der en hook per rad ikke går. */
+export function useMemberPhotoLookup(householdId: string | undefined) {
+  const { data: urls } = useMemberPhotoUrls(householdId);
+  return (member: Pick<Member, 'avatar_mode' | 'photo_path'> | null | undefined) =>
+    member ? memberPhoto(member, urls) : undefined;
+}
+
+export function useUploadMemberPhoto(householdId: string) {
+  const onSuccess = useInvalidateMembers(householdId);
+  return useMutation({
+    mutationFn: ({ member, localUri }: { member: Member; localUri: string }) =>
+      uploadMemberPhoto(member, localUri),
+    onSuccess,
+  });
+}
+
+export function useRemoveMemberPhoto(householdId: string) {
+  const onSuccess = useInvalidateMembers(householdId);
+  return useMutation({ mutationFn: removeMemberPhoto, onSuccess });
+}
+
+/** Voksen bytter figur/bilde for et medlem. */
+export function useSetMemberAvatarMode(householdId: string) {
+  const onSuccess = useInvalidateMembers(householdId);
+  return useMutation({
+    mutationFn: ({ memberId, mode }: { memberId: string; mode: AvatarMode }) =>
+      setMemberAvatarMode(memberId, mode),
+    onSuccess,
+  });
+}
+
+/** Barnet bytter figur/bilde på sin egen profil. */
+export function useSetMyAvatarMode(householdId: string) {
+  const onSuccess = useInvalidateMembers(householdId);
+  return useMutation({ mutationFn: setMyAvatarMode, onSuccess });
 }
 
 // ---------------------------------------------------------------------------

@@ -53,6 +53,10 @@ export default function AppLayout() {
           options={{ headerShown: true, title: 'Koble til enhet', presentation: 'modal' }}
         />
         <Stack.Screen
+          name="member/[id]"
+          options={{ headerShown: true, title: 'Profilbilde', presentation: 'modal' }}
+        />
+        <Stack.Screen
           name="earnings/[id]"
           options={{ headerShown: true, title: 'Opptjent', presentation: 'modal' }}
         />

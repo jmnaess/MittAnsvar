@@ -13,6 +13,8 @@ function member(id: string, name: string, role: 'adult' | 'child' = 'child'): Me
     birth_year: null,
     auth_user_id: null,
     created_at: '2026-01-01T00:00:00Z',
+    avatar_mode: 'figure',
+    photo_path: null,
   };
 }
 

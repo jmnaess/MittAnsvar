@@ -79,6 +79,12 @@ const KNOWN: Record<string, string> = {
   not_pending: 'Denne er allerede godkjent eller avvist.',
   reward_already_paid: 'Beløpet er allerede betalt ut, så det kan ikke trekkes tilbake.',
   status_not_changeable: 'Statusen kan ikke endres. Last inn på nytt og prøv igjen.',
+  // Profilbilder
+  no_photo: 'Det finnes ikke noe bilde ennå. Be en voksen legge inn et.',
+  camera_permission_denied: 'Appen har ikke tilgang til kameraet. Gi tilgang i innstillingene på telefonen.',
+  photos_permission_denied: 'Appen har ikke tilgang til bildene. Gi tilgang i innstillingene på telefonen.',
+  photo_upload_failed: 'Fikk ikke lastet opp bildet. Sjekk nettet og prøv igjen.',
+  photo_delete_failed: 'Fikk ikke slettet bildet. Sjekk nettet og prøv igjen.',
   // Postgres
   '23503': 'Personen du valgte, finnes ikke lenger i husstanden.',
   '23505': 'Dette finnes allerede.',

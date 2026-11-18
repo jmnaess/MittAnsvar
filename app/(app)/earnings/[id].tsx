@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useUnlinkDevice } from '../../../src/features/devices/hooks';
+import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
 import { PayoutModal } from '../../../src/features/rewards/components/PayoutModal';
@@ -17,7 +18,6 @@ import { formatBalance } from '../../../src/features/rewards/format';
 import { formatKroner } from '../../../src/features/tasks/reward';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import {
-  Avatar,
   Button,
   Message,
   ModalFormScreen,
@@ -84,7 +84,7 @@ export default function EarningsScreen() {
     <ModalFormScreen closeTitle="Lukk">
       {/* Saldoen i barnets egen farge, som seksjonen i «I dag». */}
       <View style={[styles.header, { backgroundColor: color.tint }]}>
-        <Avatar avatar={child.avatar} size={48} ring={color.ring} />
+        <MemberAvatar member={child} size={48} ring={color.ring} />
         <View style={styles.headerText}>
           <Text variant="personName" color={color.ink}>{child.display_name}</Text>
           <Text variant="jobAmount" color={color.ink}>{formatBalance(balanceRow)}</Text>

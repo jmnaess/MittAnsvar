@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { ApprovalBanner, Avatar, Button, colors, Message, radius, Sheet, spacing, Text } from '../../../ui';
+import { ApprovalBanner, Button, colors, Message, radius, Sheet, spacing, Text } from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
+import { MemberAvatar } from '../../household/components/MemberAvatar';
+import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
 import { formatKroner } from '../../tasks/reward';
 import type { PendingCompletion } from '../api';
@@ -16,6 +18,7 @@ type Props = { householdId: string; members: Member[] };
  */
 export function PendingApprovalBanner({ householdId, members }: Props) {
   const { data: pending = [] } = usePendingCompletions(householdId);
+  const photoOf = useMemberPhotoLookup(householdId);
   const [open, setOpen] = useState(false);
 
   // Lukk listen når alt er behandlet.
@@ -29,7 +32,7 @@ export function PendingApprovalBanner({ householdId, members }: Props) {
   const waitingIds = [...new Set(pending.map((p) => p.memberId))];
   const people = waitingIds.map((id) => {
     const m = memberOf(id);
-    return { name: m?.display_name ?? 'Barn', avatar: m?.avatar ?? '' };
+    return { name: m?.display_name ?? 'Barn', avatar: m?.avatar ?? '', photo: photoOf(m) };
   });
   const total = pending.reduce((sum, p) => sum + p.amount, 0);
 
@@ -96,7 +99,7 @@ function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
           return (
             <View key={item.id} style={styles.row}>
               <View style={styles.rowTop}>
-                {member && <Avatar avatar={member.avatar} size={32} />}
+                {member && <MemberAvatar member={member} size={32} />}
                 <View style={styles.flex}>
                   <Text variant="rowTitle">{item.title}</Text>
                   <Text variant="meta" color={colors.textMuted}>

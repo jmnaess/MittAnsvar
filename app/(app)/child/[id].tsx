@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { ChildFields, useChildForm } from '../../../src/features/household/components/ChildForm';
+import { MemberPhotoSection } from '../../../src/features/household/components/MemberPhotoSection';
 import {
   useDeleteChild,
   useMembers,
@@ -60,7 +61,7 @@ function EditChildForm({ child, householdId, onDeleted }: FormProps) {
           text: 'Slett',
           style: 'destructive',
           onPress: () =>
-            deleteChild.mutate(child.id, {
+            deleteChild.mutate(child, {
               onSuccess: () => {
                 onDeleted();
                 router.back();
@@ -75,6 +76,7 @@ function EditChildForm({ child, householdId, onDeleted }: FormProps) {
     <ModalFormScreen canSave={!!form.value} saving={busy} onSave={save}>
       {error && <Message>{toNorwegianMessage(error)}</Message>}
       <ChildFields form={form} disabled={busy} />
+      <MemberPhotoSection member={child} />
       <View style={styles.delete}>
         <Button variant="danger" title="Slett barn" onPress={confirmDelete} disabled={busy} />
       </View>

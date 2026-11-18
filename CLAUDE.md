@@ -36,10 +36,13 @@ Utvikling på Ubuntu. Testing på fysisk mobil med Expo Go – ikke emulator.
 - Lønn per oppgave: voksne kan sette et beløp i hele kroner. Bare barn får lønn.
   Beløpet lagres på utføringen. Voksne registrerer utbetalinger manuelt, maks saldoen.
 - Ledige jobber: oppgaver uten dato (engangs eller gjentakende) som barna kan ta.
+- Profilbilder: en voksen kan legge inn bilde for alle i husstanden. Barnet velger selv figur
+  eller bilde, men kan ikke laste opp eller slette. Privat bøtte, bare husstanden leser,
+  signerte URL-er. Bildet slettes med personen, kontoen og husstanden (docs/DATABASE.md §6).
 
 ## Ikke i MVP
 Poeng, streaks, Vipps eller annen betaling i appen, felles mål,
-AI, chat, bilder, kalenderintegrasjoner, widgets.
+AI, chat, bilder på oppgaver, kalenderintegrasjoner, widgets.
 
 ## Arbeidsmåte
 - Analyse og plan før kode. Spør hvis noe er uklart.

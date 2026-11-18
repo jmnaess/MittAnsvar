@@ -1,8 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Avatar, colors, Message, personColor, radius, Section, spacing, Text } from '../../../src/ui';
+import { colors, Message, personColor, radius, Section, spacing, Text } from '../../../src/ui';
+import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
+import type { Member } from '../../../src/features/household/types';
 import { RewardEventRow } from '../../../src/features/rewards/components/RewardEventRow';
 import { useBalances, useRewardHistory } from '../../../src/features/rewards/hooks';
 import { formatBalance } from '../../../src/features/rewards/format';
@@ -14,12 +16,13 @@ export default function MyEarningsScreen() {
   const householdId = household!.id;
   const me = useMyMember(householdId);
   if (!me) return null;
-  return <Earnings householdId={householdId} memberId={me.id} name={me.display_name} avatar={me.avatar} />;
+  return <Earnings householdId={householdId} me={me} />;
 }
 
-type Props = { householdId: string; memberId: string; name: string; avatar: string };
+type Props = { householdId: string; me: Member };
 
-function Earnings({ householdId, memberId, name, avatar }: Props) {
+function Earnings({ householdId, me }: Props) {
+  const { id: memberId, display_name: name, avatar } = me;
   const balances = useBalances(householdId);
   const balance = balances.data?.find((b) => b.member_id === memberId);
   const { data: history, error, isPending, refetch } = useRewardHistory(householdId, memberId);
@@ -34,7 +37,7 @@ function Earnings({ householdId, memberId, name, avatar }: Props) {
     <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
       {/* Saldoen i barnets egen farge, som seksjonen i «I dag». */}
       <View style={[styles.header, { backgroundColor: color.tint }]}>
-        <Avatar avatar={avatar} size={48} ring={color.ring} />
+        <MemberAvatar member={me} size={48} ring={color.ring} />
         <View style={styles.headerText}>
           <Text variant="personName" color={color.ink}>{name}</Text>
           <Text variant="jobAmount" color={color.ink}>{formatBalance(balance)}</Text>

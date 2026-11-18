@@ -1,6 +1,7 @@
 import { ApiError, unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
 import { normalizeInviteCode } from './inviteCode';
+import { deletePhotoFolder } from './photoApi';
 import type {
   ChildInput,
   FeedbackTone,
@@ -73,8 +74,14 @@ export async function setMyAvatar(avatar: string): Promise<void> {
   unwrap(await supabase.rpc('set_my_avatar', { p_avatar: avatar }));
 }
 
-export async function deleteChild(memberId: string): Promise<void> {
-  unwrap(await supabase.from('members').delete().eq('id', memberId));
+/**
+ * Sletter barneprofilen. Bildemappen slettes først: databasen kan ikke slette filer selv
+ * (Supabase stopper DELETE på storage.objects med SQL). Feiler det, slettes ikke profilen,
+ * så man kan prøve igjen uten at et bilde av barnet blir liggende.
+ */
+export async function deleteChild(member: Pick<Member, 'id' | 'household_id'>): Promise<void> {
+  await deletePhotoFolder(member.household_id, member.id);
+  unwrap(await supabase.from('members').delete().eq('id', member.id));
 }
 
 // ---------------------------------------------------------------------------

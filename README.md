@@ -15,6 +15,20 @@ A family responsibility and household task management app for parents and childr
   Voksne kan trykke på en kommende oppgave for å endre den. Barnet ser det samme for seg selv
   på egen enhet, men «Kommende» viser bare 2 uker og ikke de hyppige oppgavene.
 
+## Profilbilder (20. november 2026)
+
+- **Bilde i stedet for figur:** en voksen kan ta eller velge et bilde for alle i husstanden,
+  også barna. Bildet beskjæres kvadratisk og vises overalt der figuren vises, med samme ring
+  og farger. Barn: «Endre barn». Voksne: trykk på personen under «Husstand».
+- **Barnet velger:** på egen enhet kan barnet velge «Figur» eller «Bilde» under Innstillinger,
+  men ikke laste opp eller slette.
+- **Fjerne:** en voksen kan fjerne bildet, og figuren kommer tilbake.
+- **Personvern:** bildet krympes til 512×512 og lagres uten posisjon (EXIF) i en privat bøtte
+  i EU som bare husstanden kan lese. Det slettes når personen fjernes, og når kontoen eller
+  husstanden slettes. Se `docs/DATABASE.md` §6.
+- **Expo Go:** alt virker der. Egen tekst i dialogen for kamera- og bildetilgang kommer først i
+  et ekte bygg.
+
 ## Sesongoppgaver (19. november 2026)
 
 - **Bare deler av året:** gjentakende oppgaver (fast dag eller etter sist utført) kan begrenses

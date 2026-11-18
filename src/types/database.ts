@@ -169,14 +169,14 @@ isOneToOne: false
                   ]
                 },"members": {
                   Row: {
-                    "auth_user_id": string | null,"avatar": string,"birth_year": number | null,"created_at": string,"display_name": string,"household_id": string,"id": string,"role": Database["public"]['Enums']["member_role"]
+                    "auth_user_id": string | null,"avatar": string,"avatar_mode": Database["public"]['Enums']["avatar_mode"],"birth_year": number | null,"created_at": string,"display_name": string,"household_id": string,"id": string,"photo_path": string | null,"role": Database["public"]['Enums']["member_role"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "auth_user_id"?: string | null,"avatar": string,"birth_year"?: number | null,"created_at"?: string,"display_name": string,"household_id": string,"id"?: string,"role": Database["public"]['Enums']["member_role"]
+                    "auth_user_id"?: string | null,"avatar": string,"avatar_mode"?: Database["public"]['Enums']["avatar_mode"],"birth_year"?: number | null,"created_at"?: string,"display_name": string,"household_id": string,"id"?: string,"photo_path"?: string | null,"role": Database["public"]['Enums']["member_role"]
                   }
                   Update: {
-                    "auth_user_id"?: string | null,"avatar"?: string,"birth_year"?: number | null,"created_at"?: string,"display_name"?: string,"household_id"?: string,"id"?: string,"role"?: Database["public"]['Enums']["member_role"]
+                    "auth_user_id"?: string | null,"avatar"?: string,"avatar_mode"?: Database["public"]['Enums']["avatar_mode"],"birth_year"?: number | null,"created_at"?: string,"display_name"?: string,"household_id"?: string,"id"?: string,"photo_path"?: string | null,"role"?: Database["public"]['Enums']["member_role"]
                   }
                   Relationships: [
                     {
@@ -526,6 +526,9 @@ isOneToOne: false
               "due_on": string,"task_id": string
             }[]
                            },
+"my_photo_folders_to_delete":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
 "postpone_task":
 { Args: { "p_task_id": string,"p_to": string }; Returns: string
                            },
@@ -550,6 +553,9 @@ isOneToOne: false
 "set_my_avatar":
 { Args: { "p_avatar": string }; Returns: undefined
                            },
+"set_my_avatar_mode":
+{ Args: { "p_mode": Database["public"]['Enums']["avatar_mode"] }; Returns: undefined
+                           },
 "undo_completion":
 { Args: { "p_completion_id": string }; Returns: undefined
                            },
@@ -564,7 +570,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "audience": "adult"|"child"|"any","completion_status": "pending"|"approved"|"rejected","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year","sewage_type": "municipal"|"septic_tank"|"mini_treatment_plant"
+            "audience": "adult"|"child"|"any","avatar_mode": "figure"|"photo","completion_status": "pending"|"approved"|"rejected","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year","sewage_type": "municipal"|"septic_tank"|"mini_treatment_plant"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -684,7 +690,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "audience": ["adult", "child", "any"],"completion_status": ["pending", "approved", "rejected"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"],"sewage_type": ["municipal", "septic_tank", "mini_treatment_plant"]
+            "audience": ["adult", "child", "any"],"avatar_mode": ["figure", "photo"],"completion_status": ["pending", "approved", "rejected"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"],"sewage_type": ["municipal", "septic_tank", "mini_treatment_plant"]
           }
         }
 } as const

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { Avatar, Button, colors, minTouch, personColor, radius, Sheet, Text } from '../../../ui';
+import { Button, colors, minTouch, personColor, radius, Sheet, Text } from '../../../ui';
+import { MemberAvatar } from '../../household/components/MemberAvatar';
 import type { Member } from '../../household/types';
 
 type Props = {
@@ -52,7 +53,7 @@ export function MemberPickerModal({
             accessibilityRole={confirm ? 'radio' : 'button'}
             accessibilityState={confirm ? { selected: isSelected } : undefined}
           >
-            <Avatar avatar={member.avatar} size={32} />
+            <MemberAvatar member={member} size={32} />
             <Text variant="rowTitle" color={isSelected ? color.ink : colors.text}>
               {member.display_name}
               {member.id === meId ? ' (meg)' : ''}

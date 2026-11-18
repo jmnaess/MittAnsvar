@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import type { AvatarPhotoSource } from './Avatar';
 import { AvatarStack } from './AvatarStack';
 import { Button } from './Button';
 import { Text } from './Text';
@@ -7,7 +8,7 @@ import { waitingText } from './waitingText';
 
 type Props = {
   /** Én per barn som venter (unike), i rekkefølge. */
-  people: { name: string; avatar: string }[];
+  people: { name: string; avatar: string; photo?: AvatarPhotoSource }[];
   /** Antall avkrysninger som venter. */
   count: number;
   /** Ferdig formatert sum, f.eks. «35 kr». */
@@ -19,7 +20,7 @@ type Props = {
 export function ApprovalBanner({ people, count, total, onOpen }: Props) {
   return (
     <View style={styles.banner}>
-      <AvatarStack avatars={people.map((p) => p.avatar)} size={32} />
+      <AvatarStack people={people} size={32} />
       <View style={styles.text}>
         <Text variant="rowTitle">{waitingText(people.map((p) => p.name))}</Text>
         <Text variant="meta" color={colors.textWarm}>

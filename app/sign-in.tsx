@@ -65,7 +65,7 @@ export default function SignInScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.brand}>
-          <AvatarStack avatars={['fox', 'cat', 'bear', 'frog']} size={48} />
+          <AvatarStack people={['fox', 'cat', 'bear', 'frog'].map((avatar) => ({ avatar }))} size={48} />
           <Text variant="pageTitle" style={styles.center}>MittAnsvar</Text>
         </View>
 

@@ -20,7 +20,7 @@ import {
   useUndoCompletion,
 } from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
-import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
+import { useMemberPhotoLookup, useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
 import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
 import { earnedLabel } from '../../../src/features/rewards/format';
@@ -115,6 +115,7 @@ export default function TodayScreen() {
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
   const { data: members = [] } = useMembers(householdId);
+  const photoOf = useMemberPhotoLookup(householdId);
   const { data: balances = [] } = useBalances(householdId);
   const complete = useCompleteTask(householdId);
   const undo = useUndoCompletion(householdId);
@@ -353,7 +354,7 @@ export default function TodayScreen() {
       [progressText(section.data.length, section.done.length), earned].filter(Boolean).join(' · ') ||
       undefined;
     return (
-      <SectionCard key={section.key} title={section.title} color={color} avatar={member?.avatar} right={right}>
+      <SectionCard key={section.key} title={section.title} color={color} avatar={member?.avatar} photo={photoOf(member)} right={right}>
         {renderRows(section, color.ring)}
       </SectionCard>
     );
@@ -377,7 +378,7 @@ export default function TodayScreen() {
 
         {members.length > 1 && (
           <FamilyStrip
-            people={members.map((m) => ({ id: m.id, name: m.display_name, avatar: m.avatar }))}
+            people={members.map((m) => ({ id: m.id, name: m.display_name, avatar: m.avatar, photo: photoOf(m) }))}
             selectedId={focusedId}
             onSelect={setFocusedId}
           />

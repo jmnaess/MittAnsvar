@@ -1,5 +1,12 @@
 import type { Member } from '../../household/types';
-import { allAdults, nextAssignees, SHARED, toTaskInputs } from '../assignees';
+import {
+  allAdults,
+  initialAssignees,
+  newTaskForLabel,
+  nextAssignees,
+  SHARED,
+  toTaskInputs,
+} from '../assignees';
 
 const member = (id: string, role: 'adult' | 'child') => ({ id, role }) as Member;
 const members = [member('mor', 'adult'), member('far', 'adult'), member('leah', 'child'), member('ola', 'child')];
@@ -62,5 +69,27 @@ describe('toTaskInputs', () => {
 
   it('Felles gir én oppgave uten ansvarlig', () => {
     expect(toTaskInputs(base, [SHARED], members)).toEqual([{ ...base, assigned_member_id: null }]);
+  });
+});
+
+describe('newTaskForLabel', () => {
+  it('bruker navnet til personen, også voksne', () => {
+    expect(newTaskForLabel('Leah')).toBe('+ Ny oppgave til Leah');
+    expect(newTaskForLabel('John M.')).toBe('+ Ny oppgave til John M.');
+  });
+});
+
+describe('initialAssignees', () => {
+  it('forhåndsvelger personen fra personvisningen', () => {
+    expect(initialAssignees('leah')).toEqual(['leah']);
+  });
+
+  it('uten person starter skjemaet på Felles', () => {
+    expect(initialAssignees(undefined)).toEqual([SHARED]);
+    expect(initialAssignees('')).toEqual([SHARED]);
+  });
+
+  it('tar den første når ruteparameteren er en liste', () => {
+    expect(initialAssignees(['leah', 'ola'])).toEqual(['leah']);
   });
 });

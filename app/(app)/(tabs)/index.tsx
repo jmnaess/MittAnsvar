@@ -37,6 +37,7 @@ import {
   useTodayTasks,
   useUndoPostpone,
 } from '../../../src/features/tasks/hooks';
+import { newTaskForLabel } from '../../../src/features/tasks/assignees';
 import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
 import type { Task, TodayTask } from '../../../src/features/tasks/types';
@@ -46,6 +47,7 @@ import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
+  Button,
   Card,
   EmptyState,
   FamilyStrip,
@@ -407,6 +409,19 @@ export default function TodayScreen() {
           {sections.map(renderSection)}
           {focused && (
             <>
+              {/* Rett under personens kort: ny oppgave i dag med personen forhåndsvalgt. */}
+              {isAdult && (
+                <View style={styles.newTaskFor}>
+                  <Button
+                    variant="secondary"
+                    small
+                    title={newTaskForLabel(focused.display_name)}
+                    onPress={() =>
+                      router.push({ pathname: '/task/today', params: { memberId: focused.id } })
+                    }
+                  />
+                </View>
+              )}
               <UpcomingCard
                 upcoming={upcoming}
                 showReward={focused.role === 'child'}
@@ -505,5 +520,7 @@ const useStyles = makeStyles(({ colors }) =>
     // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
     container: { paddingBottom: 120, gap: spacing.section },
     body: { paddingHorizontal: spacing.page, gap: spacing.section },
+    // Ikke full bredde: tydelig, men skal ikke dominere over kortene.
+    newTaskFor: { alignSelf: 'flex-start' },
   }),
 );

@@ -16,6 +16,20 @@ export function nextAssignees(prev: string[], next: string[]): string[] {
   return people.length > 0 ? people : [SHARED];
 }
 
+/** Knappen i personvisningen i «I dag», f.eks. «+ Ny oppgave til Leah». */
+export function newTaskForLabel(name: string): string {
+  return `+ Ny oppgave til ${name}`;
+}
+
+/**
+ * Forhåndsvalget i «Oppgave i dag». memberId kommer fra ruteparameteren, som expo-router kan gi
+ * som liste. Uten person starter skjemaet på «Felles».
+ */
+export function initialAssignees(memberId: string | string[] | undefined): string[] {
+  const id = Array.isArray(memberId) ? memberId[0] : memberId;
+  return id ? [id] : [SHARED];
+}
+
 /** Er alle valgte voksne? Da skjules lønn (voksne får aldri lønn). «Felles» kan gjøres av barn. */
 export function allAdults(assignees: string[], members: Member[]): boolean {
   return (

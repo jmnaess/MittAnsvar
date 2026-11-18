@@ -20,14 +20,21 @@ type Initial = TaskInput & { next_due_on: string | null };
  * «Felles»). Endre oppgave: bare én person, den oppgaven gjelder, og value er den ene.
  * values og value er null så lenge skjemaet ikke er gyldig.
  */
-export function useTaskForm(members: Member[], initial?: Initial) {
+export function useTaskForm(
+  members: Member[],
+  initial?: Initial,
+  /** Ny oppgave: hvem som er forhåndsvalgt (f.eks. fra personvisningen). Standard er «Felles». */
+  options?: { assignees?: string[] },
+) {
   // Enhetens dato når skjemaet åpnes. I dag og I morgen regnes fra den.
   const [today] = useState(() => toIsoDate(new Date()));
   const [initialWhen] = useState(() =>
     initial ? fromRecurrence(initial, today) : defaultRecurrenceForm(today),
   );
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [assignees, setAssignees] = useState<string[]>([initial?.assigned_member_id ?? SHARED]);
+  const [assignees, setAssignees] = useState<string[]>(() =>
+    initial ? [initial.assigned_member_id ?? SHARED] : (options?.assignees ?? [SHARED]),
+  );
   const [recurrenceForm, setRecurrenceForm] = useState(initialWhen);
   // Tekst, fordi det skrives i et felt. Tom = ingen lønn.
   const [reward, setReward] = useState(initial?.reward_nok ? String(initial.reward_nok) : '');

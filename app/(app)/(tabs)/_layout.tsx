@@ -4,6 +4,7 @@ import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { ReminderPrompt } from '../../../src/features/notifications/components/ReminderPrompt';
 import { useOpenTodayOnTap, useReminderSync } from '../../../src/features/notifications/hooks';
+import { tabScreenOptions } from '../../../src/ui/tabOptions';
 
 export default function TabsLayout() {
   // Fanene vises bare med husstand og innlogget bruker (se app/(app)/_layout.tsx).
@@ -19,8 +20,12 @@ export default function TabsLayout() {
 
   return (
     <>
-      <Tabs>
-        <Tabs.Screen name="index" options={{ title: 'I dag', tabBarIcon: tabIcon('sunny') }} />
+      <Tabs screenOptions={tabScreenOptions}>
+        {/* «I dag» tegner sin egen topp med dato og stor tittel. */}
+        <Tabs.Screen
+          name="index"
+          options={{ title: 'I dag', tabBarIcon: tabIcon('sunny'), headerShown: false }}
+        />
         <Tabs.Screen name="tasks" options={{ title: 'Oppgaver', tabBarIcon: tabIcon('list') }} />
         <Tabs.Screen name="year" options={{ title: 'Årshjul', tabBarIcon: tabIcon('calendar') }} />
         <Tabs.Screen name="household" options={{ title: 'Husstand', tabBarIcon: tabIcon('home') }} />

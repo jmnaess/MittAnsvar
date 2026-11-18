@@ -1,21 +1,14 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { avatarEmoji } from '../features/household/avatars';
+// Midlertidig bro til den tegnede avataren i src/ui (designsteg del 1). Skjermene som ikke er
+// gått over ennå, sender vilkårlige størrelser. De rundes til nærmeste størrelse i designsystemet.
+// Slettes i del 2.
+import { Avatar as UiAvatar, type AvatarSize } from '../ui/Avatar';
 
-type Props = { avatar: string; size?: number };
+const SIZES: AvatarSize[] = [22, 32, 44, 48, 100];
 
-/** Viser en innebygd avatar. Foreløpig emoji; nøkkelen i databasen er den samme når vi får illustrasjoner. */
-export function Avatar({ avatar, size = 40 }: Props) {
-  return (
-    <View
-      style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }]}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      <Text style={{ fontSize: size * 0.6 }}>{avatarEmoji(avatar)}</Text>
-    </View>
-  );
+function nearest(size: number): AvatarSize {
+  return SIZES.reduce((best, s) => (Math.abs(s - size) < Math.abs(best - size) ? s : best));
 }
 
-const styles = StyleSheet.create({
-  circle: { backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
-});
+export function Avatar({ avatar, size = 44 }: { avatar: string; size?: number }) {
+  return <UiAvatar avatar={avatar} size={nearest(size)} />;
+}

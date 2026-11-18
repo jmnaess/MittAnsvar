@@ -1,4 +1,12 @@
+import { Fredoka_600SemiBold } from '@expo-google-fonts/fredoka';
+import {
+  Nunito_400Regular,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
@@ -7,12 +15,24 @@ import { SessionProvider, useSession } from '../src/features/auth/SessionProvide
 import { queryClient } from '../src/lib/queryClient';
 
 export default function RootLayout() {
+  // Fontene lastes før noe vises, ellers blinker teksten fra systemfont til Fredoka/Nunito.
+  // Ved feil (fontError) vises appen likevel, med systemfont.
+  const [fontsLoaded, fontError] = useFonts({
+    Fredoka_600SemiBold,
+    Nunito_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
+  if (!fontsLoaded && !fontError) return null;
+
   // GestureHandlerRootView: kreves av react-native-gesture-handler (sveip for å slette i «Oppgaver»).
   return (
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
-          <StatusBar style="auto" />
+          {/* Appen er bare i lys modus, så statuslinjen har alltid mørk tekst. */}
+          <StatusBar style="dark" />
           <RootStack />
         </SessionProvider>
       </QueryClientProvider>

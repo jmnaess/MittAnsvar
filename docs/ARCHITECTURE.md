@@ -92,7 +92,7 @@ src/
                   groupToday.ts, childToday.ts (barnets «I dag»), components/
     completions/  api.ts, hooks.ts, chooseDoer.ts (hvem gjorde det, testes), components/MemberPickerModal.tsx
     rewards/      api.ts, hooks.ts, format.ts (saldo med «venter»), components/ (PayoutModal, RewardEventRow,
-                  PendingApprovalSection)
+                  PendingApprovalBanner)
     templates/    api.ts, hooks.ts, suggest.ts (filter, egne årlige oppgaver, månedsgruppering),
                   components/ (TemplateRow, OwnYearTaskRow)
     feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
@@ -102,7 +102,10 @@ src/
     notifications/ plan.ts + text.ts (rene, testes), schedule.ts (expo-notifications), settings.ts,
                   permissions.ts, hooks.ts, components/ (ReminderPrompt, ReminderSettingsSection)
                   __tests__/ (Jest: npm test)
-  components/     generiske UI-komponenter (Button, Avatar, SwipeToDelete, UndoToast …)
+  ui/             designsystemet: theme.ts (tokens) og felles komponenter (Text, Card, TaskRow,
+                  Avatar …). Se docs/DESIGN.md
+  components/     eldre generiske komponenter (SwipeToDelete, UndoToast, skjemafelt …). Flyttes til
+                  ui/ i del 2 av designsteget
   types/database.ts               # generert, ikke rediger
 supabase/
   migrations/                     # SQL, én fil per endring

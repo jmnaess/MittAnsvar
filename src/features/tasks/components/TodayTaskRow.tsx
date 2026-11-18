@@ -1,6 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../../components/theme';
-import { formatDate, monthName } from '../../../lib/dates';
+import { Chip, JobCard, TaskRow } from '../../../ui';
+import { monthName } from '../../../lib/dates';
 import { describeRecurrence } from '../recurrence';
 import { formatKroner } from '../reward';
 import type { TodayTask } from '../types';
@@ -9,6 +8,10 @@ type Props = {
   task: TodayTask;
   /** Vises i «Denne måneden» og «Ledige jobber», der oppgavene ikke er gruppert per person. */
   assigneeName?: string;
+  /** Fyllfarge på sjekkboksen: personens ring-farge. */
+  checkColor?: string;
+  /** Raden ligger i et hvitt kort («Denne måneden»). */
+  muted?: boolean;
   busy?: boolean;
   onPress: () => void;
   /** Utelatt = langt trykk gjør ingenting (barnets enhet). */
@@ -17,65 +20,66 @@ type Props = {
   longPressHint?: string;
 };
 
-/** Linjen under tittelen: forfalt, «i løpet av november», hvem jobben er for, eller gjentakelsen. */
-function detailText(task: TodayTask, assigneeName?: string): { text: string; overdue: boolean } {
-  const due = task.next_due_on;
-  if (task.recurrence_type === 'job') {
-    const who = assigneeName ?? 'Alle barna';
-    return { text: task.job_repeats ? `${who} · kan gjøres flere ganger` : who, overdue: false };
+const DEFAULT_HINT = 'Hold inne for å velge hvem som gjorde det';
+
+/**
+ * Linjen under tittelen: «I løpet av november» for månedsoppgaver, ellers gjentakelsen.
+ * Forfalt vises som merkelapp til høyre, aldri med dato.
+ */
+function metaText(task: TodayTask, assigneeName?: string): string {
+  if (task.is_month_task && task.next_due_on) {
+    const text = `I løpet av ${monthName(task.next_due_on)}`;
+    return assigneeName ? `${text} · ${assigneeName}` : text;
   }
-  if (task.is_month_task && due) {
-    const month = monthName(due);
-    if (task.is_overdue) return { text: `Forfalt – skulle vært gjort i ${month}`, overdue: true };
-    const text = `I løpet av ${month}`;
-    return { text: assigneeName ? `${text} · ${assigneeName}` : text, overdue: false };
-  }
-  if (task.is_overdue && due) return { text: `Forfalt fra ${formatDate(due)}`, overdue: true };
-  return { text: describeRecurrence(task), overdue: false };
+  return describeRecurrence(task);
 }
 
 /**
- * Én oppgave i «I dag». Trykk = utført, langt trykk = velg hvem som gjorde det
- * (for voksne på ledige jobber: endre jobben). Lønn til høyre.
+ * Én oppgave i «I dag». Trykk = utført, langt trykk = velg hvem som gjorde det.
+ * Mens avkrysningen pågår, vises raden som utført.
  */
 export function TodayTaskRow({
-  task,
-  assigneeName,
-  busy,
-  onPress,
-  onLongPress,
-  longPressHint = 'Hold inne for å velge hvem som gjorde det',
+  task, assigneeName, checkColor, muted, busy, onPress, onLongPress, longPressHint = DEFAULT_HINT,
 }: Props) {
-  const detail = detailText(task, assigneeName);
-
+  const hasChips = task.reward_nok !== null || !!task.is_overdue;
   return (
-    <Pressable
+    <TaskRow
+      title={task.title}
+      meta={metaText(task, assigneeName)}
+      done={busy}
+      disabled={busy}
+      checkColor={checkColor}
+      muted={muted}
       onPress={onPress}
       onLongPress={onLongPress}
-      disabled={busy}
-      accessibilityRole="button"
-      accessibilityLabel={`${task.title}. Marker som utført`}
+      accessibilityLabel={`${task.title}${task.is_overdue ? ', forfalt' : ''}. Marker som utført`}
       accessibilityHint={onLongPress ? longPressHint : undefined}
-      style={({ pressed }) => [styles.row, (pressed || busy) && styles.pressed]}
-    >
-      <View style={[styles.circle, busy && styles.circleBusy]} />
-      <View style={styles.text}>
-        <Text style={styles.title}>{task.title}</Text>
-        <Text style={detail.overdue ? styles.overdue : styles.detail}>{detail.text}</Text>
-      </View>
-      {task.reward_nok !== null && <Text style={styles.reward}>{formatKroner(task.reward_nok)}</Text>}
-    </Pressable>
+      right={
+        hasChips ? (
+          <>
+            {task.is_overdue && <Chip label="Forfalt" tone="overdue" />}
+            {task.reward_nok !== null && <Chip label={formatKroner(task.reward_nok)} tone="money" />}
+          </>
+        ) : undefined
+      }
+    />
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
-  pressed: { opacity: 0.5 },
-  circle: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: colors.primary },
-  circleBusy: { backgroundColor: colors.selected },
-  text: { flex: 1, gap: 2 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 14, color: colors.muted },
-  overdue: { fontSize: 14, color: colors.danger },
-  reward: { fontSize: 15, fontWeight: '600', color: colors.primary },
-});
+/** En ledig jobb som kort i rutenettet. Trykk = utført, som en vanlig oppgave. */
+export function TodayJobCard({
+  task, assigneeName, busy, onPress, onLongPress, longPressHint = DEFAULT_HINT,
+}: Omit<Props, 'checkColor' | 'muted'>) {
+  const who = assigneeName ?? 'Alle barna';
+  return (
+    <JobCard
+      amount={task.reward_nok !== null ? formatKroner(task.reward_nok) : undefined}
+      title={task.title}
+      who={task.job_repeats ? `${who} · kan gjøres flere ganger` : who}
+      busy={busy}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      accessibilityHint={onLongPress ? longPressHint : undefined}
+    />
+  );
+}

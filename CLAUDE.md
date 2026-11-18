@@ -45,4 +45,6 @@ AI, chat, bilder, kalenderintegrasjoner, widgets.
 - Analyse og plan før kode. Spør hvis noe er uklart.
 - Små, tydelige komponenter og funksjoner.
 - Norsk i brukergrensesnittet, engelsk i kode og databasenavn.
+- All ny UI skal bruke komponentene i src/ui og tokens i src/ui/theme.ts. Ingen hardkodede
+  farger eller fontstørrelser i skjermfiler. Se docs/DESIGN.md.
 - Forklar kort hva du gjør og hvorfor – utvikleren lærer underveis.

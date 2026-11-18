@@ -1,11 +1,14 @@
-// Felles farger. Holdes små og enkle til vi har et ordentlig designsystem.
+// Midlertidig bro: de gamle fargenavnene peker til tokenene i src/ui/theme.ts, så skjermer som
+// ikke er gått over til designsystemet ennå, får de nye fargene. Slettes i del 2 av designsteget.
+import { colors as tokens } from '../ui/theme';
+
 export const colors = {
-  primary: '#2563eb',
-  danger: '#b91c1c',
-  success: '#15803d',
-  text: '#111',
-  muted: '#666',
-  border: '#ccc',
-  selected: '#dbeafe',
-  background: '#fff',
+  primary: tokens.primary,
+  danger: tokens.danger,
+  success: tokens.primary,
+  text: tokens.text,
+  muted: tokens.textMuted,
+  border: tokens.borderStrong,
+  selected: tokens.jobBg,
+  background: tokens.background,
 };

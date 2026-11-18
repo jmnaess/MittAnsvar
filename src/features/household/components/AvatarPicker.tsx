@@ -1,6 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Avatar } from '../../../components/Avatar';
-import { colors } from '../../../components/theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Avatar, colors, radius, Text } from '../../../ui';
 import { AVATAR_KEYS, avatarLabel } from '../avatars';
 
 type Props = {
@@ -9,10 +8,11 @@ type Props = {
   disabled?: boolean;
 };
 
+/** Velg avatar i et rutenett med tre kolonner. Valgt figur får en 3 px primary-kant. */
 export function AvatarPicker({ value, onChange, disabled }: Props) {
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>Avatar</Text>
+      <Text variant="label">Avatar</Text>
       <View style={styles.grid} accessibilityRole="radiogroup">
         {AVATAR_KEYS.map((key) => {
           const selected = key === value;
@@ -26,7 +26,7 @@ export function AvatarPicker({ value, onChange, disabled }: Props) {
               accessibilityLabel={avatarLabel(key)}
               accessibilityState={{ selected }}
             >
-              <Avatar avatar={key} size={44} />
+              <Avatar avatar={key} size={48} />
             </Pressable>
           );
         })}
@@ -36,9 +36,16 @@ export function AvatarPicker({ value, onChange, disabled }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { gap: 6 },
-  label: { fontSize: 15, color: colors.text, fontWeight: '500' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  item: { padding: 3, borderRadius: 30, borderWidth: 2, borderColor: 'transparent' },
-  selected: { borderColor: colors.primary },
+  wrapper: { gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
+  // Tre kolonner: hver celle er en tredjedel av bredden, avataren sentrert.
+  item: {
+    width: '33.33%',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: radius.card,
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  selected: { borderColor: colors.primary, backgroundColor: colors.surface },
 });

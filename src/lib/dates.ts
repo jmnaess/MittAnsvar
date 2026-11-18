@@ -85,3 +85,10 @@ export function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);
   return `${WEEKDAY_SHORT[isoWeekday(year, month, day) - 1]} ${day}. ${MONTH_SHORT[month - 1]}`;
 }
+
+/** '2026-11-18' → 'Onsdag 18. november' (overskriften i «I dag»). */
+export function formatWeekdayDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const weekday = WEEKDAY_NAMES[isoWeekday(year, month, day) - 1];
+  return `${weekday[0].toUpperCase()}${weekday.slice(1)} ${day}. ${MONTH_NAMES[month - 1]}`;
+}

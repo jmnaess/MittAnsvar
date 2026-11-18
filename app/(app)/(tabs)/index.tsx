@@ -1,24 +1,40 @@
-import { router, useFocusEffect, useNavigation } from 'expo-router';
-import { useCallback, useLayoutEffect, useState } from 'react';
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
-import { Avatar } from '../../../src/components/Avatar';
-import { colors } from '../../../src/components/theme';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { chooseCompletionAction } from '../../../src/features/completions/chooseDoer';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
 import { useCompleteTask, useUndoCompletion } from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
-import { PendingApprovalSection } from '../../../src/features/rewards/components/PendingApprovalSection';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
+import type { Member } from '../../../src/features/household/types';
+import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
+import { earnedLabel } from '../../../src/features/rewards/format';
+import { useBalances } from '../../../src/features/rewards/hooks';
+import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
-import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../../../src/features/tasks/groupToday';
+import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY, type TodaySection } from '../../../src/features/tasks/groupToday';
+import { useTodayTasks } from '../../../src/features/tasks/hooks';
 import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
-import { useTodayTasks } from '../../../src/features/tasks/hooks';
-import type { Member } from '../../../src/features/household/types';
 import type { TodayTask } from '../../../src/features/tasks/types';
+import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
+import {
+  Card,
+  colors,
+  EmptyState,
+  FamilyStrip,
+  IconButton,
+  PageHeader,
+  personColor,
+  SectionCard,
+  sharedColors,
+  spacing,
+  Text,
+} from '../../../src/ui';
 
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
 
@@ -26,11 +42,9 @@ type Toast = { completionId: string; title: string; message: string | null; rewa
 type Picking = { task: TodayTask; members: Member[]; preselectedId: string | null };
 
 /**
- * «I dag»: forfalte oppgaver og dagens oppgaver, gruppert per medlem og felles.
- * Øverst «Til godkjenning» for voksne når et barn har krysset av med lønn på egen enhet.
- * Månedsoppgaver (f.eks. fra årshjulet) som ikke er forfalt, ligger under «Denne måneden», og
- * ledige jobber nederst under «Ledige jobber». Voksne legger ut jobber med «+» i headeren og
- * endrer dem med langt trykk.
+ * «I dag»: dato og tittel, alle i husstanden (trykk for å vise bare én), godkjenningsbanner for
+ * voksne, én seksjon per person i personens farge, «Felles», «Denne måneden» og «Ledige jobber».
+ * Voksne legger ut jobber med «+» og endrer dem med langt trykk.
  */
 export default function TodayScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
@@ -40,12 +54,16 @@ export default function TodayScreen() {
   const { data: tasks, error, isPending, refetch } = useTodayTasks(householdId);
   const pullToRefresh = usePullToRefresh(refetch);
   const { data: members = [] } = useMembers(householdId);
+  const { data: balances = [] } = useBalances(householdId);
   const complete = useCompleteTask(householdId);
   const undo = useUndoCompletion(householdId);
+  const insets = useSafeAreaInsets();
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
+  const [focusedId, setFocusedId] = useState<string | null>(null);
 
   // Hent på nytt når fanen vises igjen: datoen kan ha skiftet, eller en annen voksen har krysset av.
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -53,29 +71,13 @@ export default function TodayScreen() {
   const me = members.find((m) => m.auth_user_id === session?.user.id);
   const isAdult = me?.role === 'adult';
   // Voksne ser alltid «Ledige jobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
-  const sections = groupTodayByMember(tasks ?? [], members, { showEmptyJobs: isAdult && !isPending });
+  const allSections = groupTodayByMember(tasks ?? [], members, { showEmptyJobs: isAdult && !isPending });
+  const focused = members.find((m) => m.id === focusedId);
+  const sections = focused ? allSections.filter((s) => s.key === focused.id) : allSections;
   const nothingToDo = !isPending && sections.every((s) => s.data.length === 0);
 
-  // «+» øverst til høyre åpner «Ny ledig jobb». Bare for voksne.
-  const navigation = useNavigation();
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: isAdult
-        ? () => (
-            <Pressable
-              onPress={() => router.push('/job/new')}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Ny ledig jobb"
-              style={styles.addButton}
-            >
-              <Text style={styles.addText}>+</Text>
-            </Pressable>
-          )
-        : undefined,
-    });
-  }, [navigation, isAdult]);
   const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
+  const busyId = complete.isPending ? complete.variables?.taskId : undefined;
 
   function markDone(task: TodayTask, memberId: string) {
     setActionError(null);
@@ -105,6 +107,8 @@ export default function TodayScreen() {
     }
   }
 
+  const pickDoer = (task: TodayTask) => setPicking({ task, members, preselectedId: null });
+
   function handleUndo() {
     if (!toast) return;
     undo.mutate(toast.completionId, {
@@ -116,63 +120,97 @@ export default function TodayScreen() {
     });
   }
 
+  function renderRows(section: TodaySection, checkColor: string, muted = false) {
+    return section.data.map((task) => (
+      <TodayTaskRow
+        key={task.id}
+        task={task}
+        assigneeName={section.key === THIS_MONTH_KEY ? (nameOf(task.assigned_member_id) ?? 'Felles') : undefined}
+        checkColor={checkColor}
+        muted={muted}
+        busy={busyId === task.id}
+        onPress={() => handlePress(task)}
+        onLongPress={() => pickDoer(task)}
+      />
+    ));
+  }
+
+  function renderSection(section: TodaySection) {
+    if (section.key === JOBS_KEY) {
+      return (
+        <TodayJobsSection
+          key={section.key}
+          jobs={section.data}
+          whoOf={(job) => describeJobMembers(job.job_member_ids ?? [], members)}
+          busyId={busyId}
+          onPress={handlePress}
+          onLongPress={
+            isAdult ? (job) => router.push({ pathname: '/job/[id]', params: { id: job.id } }) : undefined
+          }
+          emptyText={isAdult ? 'Ingen ledige jobber. Trykk + for å legge ut en.' : undefined}
+        />
+      );
+    }
+    if (section.key === THIS_MONTH_KEY) {
+      return (
+        <Card key={section.key}>
+          <Text variant="sectionTitle" accessibilityRole="header">{section.title}</Text>
+          {renderRows(section, colors.primary, true)}
+        </Card>
+      );
+    }
+    const member = section.member;
+    const color = member ? personColor(member.avatar) : sharedColors;
+    const right =
+      member?.role === 'child'
+        ? earnedLabel(balances.find((b) => b.member_id === member.id))
+        : undefined;
+    return (
+      <SectionCard key={section.key} title={section.title} color={color} avatar={member?.avatar} right={right}>
+        {renderRows(section, color.ring)}
+      </SectionCard>
+    );
+  }
+
   return (
-    <View style={styles.flex}>
-      <SectionList
+    <View style={[styles.flex, { paddingTop: insets.top }]}>
+      <ScrollView
         contentContainerStyle={styles.container}
-        sections={sections}
-        keyExtractor={(task) => task.id}
-        {...pullToRefresh}
-        stickySectionHeadersEnabled={false}
-        ListHeaderComponent={
-          <>
-            {(error || actionError) && (
-              <Text style={styles.error}>{actionError ?? toNorwegianMessage(error)}</Text>
-            )}
-            {/* Steg 10b: barnas avkrysninger med lønn som venter. Vises bare når noe venter. */}
-            {isAdult && <PendingApprovalSection householdId={householdId} members={members} />}
-            {/* I headeren, ikke ListEmptyComponent: for voksne er «Ledige jobber» alltid med. */}
-            {nothingToDo && (
-              <View style={styles.empty}>
-                <Text style={styles.emptyTitle}>Ingenting å gjøre i dag 🎉</Text>
-                <Text style={styles.emptyText}>Nye oppgaver lager du under «Oppgaver».</Text>
-              </View>
-            )}
-          </>
-        }
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            {section.member && <Avatar avatar={section.member.avatar} size={28} />}
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-          </View>
-        )}
-        renderSectionFooter={({ section }) =>
-          section.key === JOBS_KEY && section.data.length === 0 ? (
-            <Text style={styles.emptyJobs}>Ingen ledige jobber. Trykk + for å legge ut en.</Text>
-          ) : null
-        }
-        renderItem={({ item, section }) => (
-          <TodayTaskRow
-            task={item}
-            assigneeName={
-              section.key === THIS_MONTH_KEY
-                ? (nameOf(item.assigned_member_id) ?? 'Felles')
-                : section.key === JOBS_KEY
-                  ? describeJobMembers(item.job_member_ids ?? [], members)
-                  : undefined
-            }
-            busy={complete.isPending && complete.variables?.taskId === item.id}
-            onPress={() => handlePress(item)}
-            {...(isAdult && section.key === JOBS_KEY
-              ? {
-                  onLongPress: () =>
-                    router.push({ pathname: '/job/[id]', params: { id: item.id } }),
-                  longPressHint: 'Hold inne for å endre jobben',
-                }
-              : { onLongPress: () => setPicking({ task: item, members, preselectedId: null }) })}
+        refreshControl={<RefreshControl {...pullToRefresh} tintColor={colors.primary} />}
+      >
+        <PageHeader
+          overline={formatWeekdayDate(toIsoDate(new Date()))}
+          title="I dag"
+          right={
+            isAdult ? (
+              <IconButton icon="add" accessibilityLabel="Ny ledig jobb" onPress={() => router.push('/job/new')} />
+            ) : undefined
+          }
+        />
+
+        {members.length > 1 && (
+          <FamilyStrip
+            people={members.map((m) => ({ id: m.id, name: m.display_name, avatar: m.avatar }))}
+            selectedId={focusedId}
+            onSelect={setFocusedId}
           />
         )}
-      />
+
+        <View style={styles.body}>
+          {(error || actionError) && (
+            <Text variant="metaStrong" color={colors.danger}>{actionError ?? toNorwegianMessage(error)}</Text>
+          )}
+          {/* Steg 10b: barnas avkrysninger med lønn som venter. Vises bare når noe venter. */}
+          {isAdult && <PendingApprovalBanner householdId={householdId} members={members} />}
+          {nothingToDo && (
+            <EmptyState
+              title={focused ? `Ingenting på ${focused.display_name} i dag 🎉` : 'Ingenting å gjøre i dag 🎉'}
+              text={focused ? 'Trykk på navnet igjen for å se alle.' : 'Nye oppgaver lager du under «Oppgaver».'}
+            />
+          )}
+          {sections.map(renderSection)}
+        </View>
+      </ScrollView>
 
       <MemberPickerModal
         taskTitle={picking?.task.title ?? null}
@@ -204,14 +242,6 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-  container: { padding: 24, paddingBottom: 120 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  error: { color: colors.danger, fontSize: 15, marginBottom: 8 },
-  empty: { alignItems: 'center', marginTop: 48, gap: 8 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
-  emptyText: { fontSize: 15, color: colors.muted },
-  emptyJobs: { fontSize: 15, color: colors.muted, paddingVertical: 8 },
-  addButton: { paddingHorizontal: 16 },
-  addText: { fontSize: 28, lineHeight: 32, color: colors.primary },
+  container: { paddingBottom: 120, gap: spacing.section },
+  body: { paddingHorizontal: spacing.page, gap: spacing.section },
 });

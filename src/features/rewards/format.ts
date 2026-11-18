@@ -19,3 +19,12 @@ export function formatBalance(b: BalanceAmounts | undefined): string {
   const total = formatKroner(payable + pending);
   return pending > 0 ? `${total} (${formatKroner(pending)} venter)` : total;
 }
+
+/**
+ * Teksten i overskriften til et barn i «I dag»: «35 kr tjent». Samme tall som formatBalance
+ * (godkjent + venter). undefined når barnet ikke har noe til gode, så ingenting vises.
+ */
+export function earnedLabel(b: BalanceAmounts | undefined): string | undefined {
+  const total = (b?.balance_nok ?? 0) + (b?.pending_nok ?? 0);
+  return total > 0 ? `${formatKroner(total)} tjent` : undefined;
+}

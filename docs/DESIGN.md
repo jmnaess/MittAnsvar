@@ -1,7 +1,8 @@
 # Designsystem: «Varm og leken» (A4)
 
 Ett visuelt uttrykk for hele appen: varme, lyse flater, en rolig petrol som hovedfarge, en
-egen farge per person og tegnede dyreavatarer. Appen er bare i lys modus.
+egen farge per person og tegnede dyreavatarer. Finnes i lyst og mørkt tema med samme uttrykk:
+i mørkt er bakgrunnen varm mørkebrun (ikke kald grå/svart) og teksten lyse pasteller.
 
 Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importeres fra
 `src/ui` (`import { Card, Text } from '../src/ui'`).
@@ -10,43 +11,74 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 
 - All ny UI bruker komponentene i `src/ui` og tokenene i `theme.ts`. Ingen hardkodede farger,
   fontstørrelser eller `fontWeight` i skjermfiler. Tegningene i `avatarArt.tsx` er unntaket.
-- All tekst har minst **4.5:1** kontrast mot bakgrunnen. Testen `src/ui/__tests__/ui.test.ts`
-  sjekker alle tekstpar. Legger du til en farge, legg paret til i testen.
+- Farger hentes **alltid** fra temaet som vises, aldri direkte fra `theme.ts`:
+  - i komponenten: `const { colors, shadow, personColor, sharedColors, scheme } = useTheme();`
+  - stiler med farger: `const useStyles = makeStyles(({ colors }) => StyleSheet.create({ … }));`
+    og `const styles = useStyles();` i komponenten. Stiler uten farger kan være vanlig
+    `StyleSheet.create`.
+- Ny farge: legg den i **både** `lightColors` og `darkColors` (TypeScript krever det).
+- All tekst har minst **4.5:1** kontrast mot bakgrunnen, i begge temaer. Testen
+  `src/ui/__tests__/ui.test.ts` sjekker alle tekstpar for lyst og mørkt. Legger du til en farge,
+  legg paret til i testen. For mørkt tema sjekkes også ikke-tekst (tom sjekkboks og ringer, 3:1)
+  og haken på ringene (4.5:1).
 - Trykkflater er minst **44 × 44**.
 - **Forfalt** vises som merkelapp (`Chip tone="overdue"`) til høyre på raden, **aldri med dato**.
 - Utført rad: tittelen gjennomstreket i `textMuted`, sjekkboksen fylt med personens ring-farge.
   I «I dag» står dagens utførte nederst i kortet, med «Gjort av …» når en annen enn den ansvarlige
   gjorde det. Trykk angrer innen 10 minutter. Har kortet ingenting igjen: «Alt er gjort i dag!».
-- Personfarger styres av avatarnøkkelen (`personColor(member.avatar)`), aldri av navn eller rolle.
-- Bare lys modus. `app.json` har `userInterfaceStyle: "light"`.
+- Personfarger styres av avatarnøkkelen (`personColor(member.avatar)` fra `useTheme()`), aldri av
+  navn eller rolle.
+- QR-koden er alltid mørk på lys (`qrInk`/`qrBg`) med lys kant, også i mørkt tema: mange skannere
+  leser ikke invertert QR.
+
+## Lyst og mørkt tema
+
+- Standard: appen følger telefonen. Under Innstillinger → **Utseende** kan man velge
+  System / Lys / Mørk. Valget lagres på enheten (`secureStorage`, nøkkel `appearance`), ikke i
+  databasen, og finnes også på barnets enhet.
+- `ThemeProvider` (`src/ui/ThemeProvider.tsx`) ligger ytterst i `app/_layout.tsx`. Den viser
+  ingenting før valget er lest, så appen ikke blinker fra lys til mørk.
+- `Appearance.setColorScheme` gjør at det native følger valget: tastatur, `Alert` og
+  Android-datovelgeren. iOS-datovelgerne får `themeVariant`, `TextField` får `keyboardAppearance`.
+- Statuslinjen (`expo-status-bar`), navigasjonstemaet (`navigationTheme`), headerne og
+  fanelinjen (`tabOptions.tsx`) følger temaet. `app.json` har `userInterfaceStyle: "automatic"`.
 
 ## Tokens
 
 ### Farger
 
-| Token | Verdi | Bruk |
-|---|---|---|
-| background | `#FFFDF7` | sidebakgrunn |
-| surface | `#FFFFFF` | kort, rader på farget bakgrunn |
-| surfaceMuted | `#FAF6EF` | rader inne i hvite kort |
-| border / borderStrong | `#F1EBE1` / `#E4DCCF` | skiller, kant på sekundærknapp |
-| checkboxBorder | `#C9BDAC` | tom sjekkboks |
-| text / textMuted / textWarm | `#2B2118` / `#6B5E52` / `#5C4A2A` | tekst |
-| primary / primaryPressed / onPrimary | `#0E6E6E` / `#0A5252` / `#FFFFFF` | knapper, valgt fane |
-| sun / sunSoft | `#F2B705` / `#FFF4D1` | godkjenningsbanner, framheving |
-| moneyBg / moneyText | `#FFF1C2` / `#6E4D00` | lønn |
-| overdueBg / overdueText | `#FDE4E1` / `#A3271A` | forfalt |
-| jobBg / jobAmount / jobSub | `#E3F3F1` / `#0E4F4F` / `#33504D` | ledige jobber |
-| danger | `#A3271A` | feilmeldinger, «Slett»-knapper |
-| backdrop | `rgba(43,33,24,0.4)` | bak modaler |
-| toastBg / toastText / toastMuted / toastAction | `#2B2118` / `#FFFFFF` / `#D9CFC4` / `#F2B705` | banneret med «Angre» |
-| cameraBg | `#000000` | bak kameraet |
+| Token | Lys | Mørk | Bruk |
+|---|---|---|---|
+| background | `#FFFDF7` | `#1C1712` | sidebakgrunn |
+| surface | `#FFFFFF` | `#28211A` | kort, rader på farget bakgrunn |
+| surfaceMuted | `#FAF6EF` | `#322A21` | rader inne i kort |
+| border / borderStrong | `#F1EBE1` / `#E4DCCF` | `#3A3128` / `#4D4236` | skiller, kant på sekundærknapp |
+| checkboxBorder | `#C9BDAC` | `#857563` | tom sjekkboks |
+| text / textMuted / textWarm | `#2B2118` / `#6B5E52` / `#5C4A2A` | `#F5EDE1` / `#BFB1A0` / `#E8D3AC` | tekst |
+| primary / primaryPressed / onPrimary | `#0E6E6E` / `#0A5252` / `#FFFFFF` | `#5CBDB6` / `#4AA59F` / `#14201F` | knapper, valgt fane |
+| sun / sunSoft | `#F2B705` / `#FFF4D1` | `#F2B705` / `#3A2F14` | godkjenningsbanner, framheving |
+| moneyBg / moneyText | `#FFF1C2` / `#6E4D00` | `#3D3112` / `#F4C95D` | lønn |
+| overdueBg / overdueText | `#FDE4E1` / `#A3271A` | `#43201A` / `#FFA294` | forfalt |
+| jobBg / jobAmount / jobSub | `#E3F3F1` / `#0E4F4F` / `#33504D` | `#173230` / `#93DCD5` / `#B8D4CF` | ledige jobber |
+| danger | `#A3271A` | `#FF9585` | feilmeldinger, «Slett»-knapper |
+| backdrop | `rgba(43,33,24,0.4)` | `rgba(0,0,0,0.6)` | bak modaler |
+| toastBg / toastText / toastMuted / toastAction | `#2B2118` / `#FFFFFF` / `#D9CFC4` / `#F2B705` | `#463B30` / `#FFF8EE` / `#D6C9B8` / `#F7C843` | banneret med «Angre» (i mørkt lysere enn flaten) |
+| onRing | `#FFFFFF` | `#14201F` | haken i avkrysset sjekkboks |
+| qrInk / qrBg | `#2B2118` / `#FFFFFF` | samme | QR-koden, alltid mørk på lys |
+| cameraBg | `#000000` | `#000000` | bak kameraet |
 
-Skygge (`shadow`): 0 2 10 `rgba(43,33,24,0.07)`, `elevation: 2` på Android.
+I mørkt tema blir hovedknappene lys petrol med mørk tekst: mørk petrol har bare ~3:1 mot mørk
+bakgrunn, og ett primary-token brukes både som fyll og som tekst.
+
+Skygge (`shadow`): lys 0 2 10 `rgba(43,33,24,0.07)`, mørk samme med `#000000` og 0.35.
+`elevation: 2` på Android. I mørkt gjør flatenes lyshet mesteparten av jobben.
 
 ### Farge per person
 
 `tint` = seksjonsbakgrunn, `ink` = overskrift på tint, `ring` = ring rundt avatar og avkrysset sjekkboks.
+Ringen følger figuren i tegningen (derfor er ugla brun på lilla tint).
+
+Lyst tema (`lightPersonColors`):
 
 | Avatar | tint | ink | ring |
 |---|---|---|---|
@@ -61,6 +93,22 @@ Skygge (`shadow`): 0 2 10 `rgba(43,33,24,0.07)`, `elevation: 2` på Android.
 | dog | `#E4EEF6` | `#24435E` | `#5B8DB8` |
 | unicorn | `#FBE6F6` | `#6A2C5E` | `#C064A8` |
 | Felles (og ukjent) | `#F4EFE6` | `#5C4A2A` | primary |
+
+Mørkt tema (`darkPersonColors`): dyp, mettet tint, lys pastell som ink og en lysnet ring.
+
+| Avatar | tint | ink | ring |
+|---|---|---|---|
+| bear | `#36281B` | `#EDCDA9` | `#C99A70` |
+| cat | `#3D2129` | `#F6B9CB` | `#E57A98` |
+| fox | `#3E2616` | `#F9BF96` | `#F0844A` |
+| frog | `#1F301B` | `#BCE3B0` | `#6CBF5F` |
+| rabbit | `#222840` | `#C3CBF4` | `#929CDA` |
+| owl | `#2D2538` | `#D7C9F0` | `#B9946B` |
+| panda | `#27292E` | `#DADDE2` | `#9AA1AB` |
+| lion | `#382C0E` | `#F7D681` | `#E6AE34` |
+| dog | `#1C2B38` | `#B5D2EC` | `#74A6D2` |
+| unicorn | `#3A2132` | `#F0BCE2` | `#D682C0` |
+| Felles (og ukjent) | `#2E261D` | `#E8D3AC` | primary |
 
 ### Avrunding og avstand
 
@@ -96,7 +144,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | Komponent | Hva |
 |---|---|
 | `Text` | tekst med variant fra skalaen og valgfri `color` |
-| `Card` | hvitt kort med skygge (radius 20) |
+| `Card` | kort i `surface` med skygge (radius 20) |
 | `SectionCard` | seksjon i personens `tint`, navn i `ink`, valgfri tekst til høyre («3 av 7 · 35 kr tjent») |
 | `ShowMoreRow` | liten tekstrad med chevron som folder en liste ut og inn («4 til gjort i dag» / «Vis færre») |
 | `TaskRow` | sjekkboks, tittel, metalinje, merkelapper til høyre. `done`, `muted` (i hvite kort) |
@@ -124,9 +172,10 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
 | `Toast` / `UndoToast` | mørkt banner nederst med «Angre» |
 | `tabIcon` | Ionicons-ikon til fanene, fylt når valgt |
-| `tabScreenOptions`, `modalScreenOptions` | utseendet på fanelinjen og headerne (`tabOptions.tsx`) |
+| `tabScreenOptions(colors)`, `modalScreenOptions(colors)`, `navigationTheme(scheme, colors)` | utseendet på fanelinjen, headerne og navigasjonen (`tabOptions.tsx`) |
+| `ThemeProvider`, `useTheme`, `useAppearance`, `makeStyles` | temaet som vises, valget under «Utseende», temaavhengige stiler |
 
-Hjelpefunksjoner: `personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
+Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.
 
 ## Avatarer
@@ -134,9 +183,11 @@ Hjelpefunksjoner: `personColor(avatar)`, `waitingText(names)` («Leah, Jesper og
 Nøklene i `members.avatar` er uendret (`features/household/avatars.ts`). Tegningene ligger i
 `src/ui/avatarArt.tsx` (viewBox 0 0 48 48): sirkelbakgrunn, enkle flate former, to prikkøyne,
 ingen omriss. En ny avatar trenger en tegning der, en farge i `personColors` og en `label`.
-Ukjente nøkler vises som et nøytralt fjes. `AvatarPicker` viser dem i tre kolonner, valgt med
+Ukjente nøkler vises som et nøytralt fjes. Tegningene er like i begge temaer: de er
+«klistremerker» med lys pastellsirkel, som synes godt mot mørk flate (mørkere sirkler ville gjort
+bjørn, hund og pandaørene nesten usynlige). `AvatarPicker` viser dem i tre kolonner, valgt med
 3 px primary-kant.
 
 ## Ikke ennå
 
-Mørk modus, profilbilder, utsett-knapp, hjemprofil.
+Utsett-knapp.

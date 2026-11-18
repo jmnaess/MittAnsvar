@@ -1,5 +1,13 @@
 // Designsystemet. Importer komponentene herfra: import { Card, Text } from '../src/ui';
 export * from './theme';
+export { makeStyles } from './makeStyles';
+export {
+  ThemeProvider,
+  useAppearance,
+  useTheme,
+  type AppearancePreference,
+  type ThemeValue,
+} from './ThemeProvider';
 export { ApprovalBanner } from './ApprovalBanner';
 export { Avatar, type AvatarPhotoSource, type AvatarSize } from './Avatar';
 export { AvatarStack, type AvatarStackPerson } from './AvatarStack';

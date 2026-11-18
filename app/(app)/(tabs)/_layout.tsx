@@ -3,13 +3,14 @@ import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { ReminderPrompt } from '../../../src/features/notifications/components/ReminderPrompt';
 import { useOpenTodayOnTap, useReminderSync } from '../../../src/features/notifications/hooks';
-import { tabIcon } from '../../../src/ui';
+import { tabIcon, useTheme } from '../../../src/ui';
 import { tabScreenOptions } from '../../../src/ui/tabOptions';
 
 export default function TabsLayout() {
   // Fanene vises bare med husstand og innlogget bruker (se app/(app)/_layout.tsx).
   const { data: household } = useMyHousehold();
   const { session } = useSession();
+  const { colors } = useTheme();
   const { data: members = [] } = useMembers(household!.id);
   const userId = session!.user.id;
   const me = members.find((m) => m.auth_user_id === userId);
@@ -20,7 +21,7 @@ export default function TabsLayout() {
 
   return (
     <>
-      <Tabs screenOptions={tabScreenOptions}>
+      <Tabs screenOptions={tabScreenOptions(colors)}>
         {/* «I dag» tegner sin egen topp med dato og stor tittel. */}
         <Tabs.Screen
           name="index"

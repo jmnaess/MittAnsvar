@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { tabIcon } from '../../../src/ui';
+import { tabIcon, useTheme } from '../../../src/ui';
 import { tabScreenOptions } from '../../../src/ui/tabOptions';
 
 /**
@@ -8,8 +8,9 @@ import { tabScreenOptions } from '../../../src/ui/tabOptions';
  * i de voksnes faner).
  */
 export default function ChildTabsLayout() {
+  const { colors } = useTheme();
   return (
-    <Tabs screenOptions={tabScreenOptions}>
+    <Tabs screenOptions={tabScreenOptions(colors)}>
       {/* «I dag» tegner sin egen topp med dato og stor tittel. */}
       <Tabs.Screen
         name="index"

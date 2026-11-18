@@ -5,7 +5,7 @@ import { signOutLocal } from '../../src/features/auth/api';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useMyHousehold } from '../../src/features/household/hooks';
 import { toNorwegianMessage } from '../../src/lib/errors';
-import { Button, colors, spacing, Text } from '../../src/ui';
+import { Button, makeStyles, spacing, Text, useTheme } from '../../src/ui';
 // Modalene (Ny oppgave, Opptjent …) får samme header som fanene.
 import { modalScreenOptions } from '../../src/ui/tabOptions';
 
@@ -19,6 +19,8 @@ export default function AppLayout() {
   const { session } = useSession();
   const { data: household, isPending, error, refetch, isRefetching } = useMyHousehold();
   const isChildDevice = !!session?.user.is_anonymous;
+  const { colors } = useTheme();
+  const styles = useStyles();
   useSignOutWhenUnlinked(isChildDevice, !!household, isPending);
 
   if (isPending) return null;
@@ -37,7 +39,7 @@ export default function AppLayout() {
   const isAdultHome = !!household && !isChildDevice;
 
   return (
-    <Stack screenOptions={modalScreenOptions}>
+    <Stack screenOptions={modalScreenOptions(colors)}>
       <Stack.Protected guard={isAdultHome}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
@@ -119,7 +121,9 @@ function useSignOutWhenUnlinked(isChildDevice: boolean, hasHousehold: boolean, i
   }, [isChildDevice, hasHousehold, isPending]);
 }
 
-const styles = StyleSheet.create({
-  error: { flex: 1, justifyContent: 'center', padding: spacing.page, gap: 16, backgroundColor: colors.background },
-  errorText: { textAlign: 'center' },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    error: { flex: 1, justifyContent: 'center', padding: spacing.page, gap: 16, backgroundColor: colors.background },
+    errorText: { textAlign: 'center' },
+  }),
+);

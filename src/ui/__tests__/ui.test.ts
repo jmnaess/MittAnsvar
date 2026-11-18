@@ -1,7 +1,8 @@
 import { contrastRatio } from '../contrast';
 import { familyStripLayout, RING_MAX, SCROLL_RING, shortName } from '../familyStripLayout';
 import { jobColumns } from '../jobGrid';
-import { colors, personColors, sharedColors } from '../theme';
+import { parsePreference, resolveScheme } from '../appearance';
+import { darkColors, lightColors, themes, type Theme } from '../theme';
 import { waitingText } from '../waitingText';
 
 describe('waitingText', () => {
@@ -60,8 +61,8 @@ describe('shortName', () => {
   });
 });
 
-describe('kontrast', () => {
-  // Hver tekstfarge mot bakgrunnene den brukes på. Kravet er 4.5:1 (WCAG AA for vanlig tekst).
+/** Hver tekstfarge mot bakgrunnene den brukes på. Kravet er 4.5:1 (WCAG AA for vanlig tekst). */
+function textPairs({ colors, personColors, sharedColors }: Theme): [string, string, string][] {
   const pairs: [string, string, string][] = [];
   for (const text of ['text', 'textMuted', 'textWarm', 'primary', 'danger'] as const) {
     for (const bg of ['background', 'surface', 'surfaceMuted'] as const) {
@@ -93,8 +94,74 @@ describe('kontrast', () => {
     pairs.push([`${key} ink på tint`, c.ink, c.tint]);
     pairs.push([`textMuted på ${key} tint`, colors.textMuted, c.tint]);
   }
+  return pairs;
+}
 
-  it.each(pairs)('%s har minst 4.5:1', (_name, fg, bg) => {
+/**
+ * Ting som ikke er tekst, men som må synes: tom sjekkboks og personens ring.
+ * Kravet er 3:1 (WCAG 1.4.11). Haken i en avkrysset sjekkboks er et ikon, men vi krever 4.5:1.
+ */
+function nonTextPairs({ colors, personColors, sharedColors }: Theme): [string, string, string][] {
+  const pairs: [string, string, string][] = [
+    ['checkboxBorder på surface', colors.checkboxBorder, colors.surface],
+    ['checkboxBorder på surfaceMuted', colors.checkboxBorder, colors.surfaceMuted],
+  ];
+  for (const [key, c] of Object.entries({ ...personColors, Felles: sharedColors })) {
+    pairs.push([`${key} ring på tint`, c.ring, c.tint]);
+    pairs.push([`${key} ring på surface`, c.ring, colors.surface]);
+  }
+  return pairs;
+}
+
+function checkPairs({ colors, personColors, sharedColors }: Theme): [string, string, string][] {
+  return Object.entries({ ...personColors, Felles: sharedColors }).map(([key, c]) => [
+    `onRing på ${key} ring`,
+    colors.onRing,
+    c.ring,
+  ]);
+}
+
+describe.each([
+  ['lyst', themes.light],
+  ['mørkt', themes.dark],
+])('kontrast, %s tema', (_name, theme) => {
+  it.each(textPairs(theme))('%s har minst 4.5:1', (_pair, fg, bg) => {
     expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+// Bare mørkt foreløpig: den lyse paletten er eldre og når ikke 3:1 for alle ringer, tom sjekkboks
+// og hvit hake på lyse ringer (f.eks. lion). Utvid til begge når lyst tema er justert.
+describe('kontrast, ikke-tekst, mørkt tema', () => {
+  it.each(checkPairs(themes.dark))('%s har minst 4.5:1', (_pair, fg, bg) => {
+    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+  it.each(nonTextPairs(themes.dark))('%s har minst 3:1', (_pair, fg, bg) => {
+    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('temaene', () => {
+  it('lyst og mørkt har de samme fargetokenene og de samme personene', () => {
+    expect(Object.keys(darkColors).sort()).toEqual(Object.keys(lightColors).sort());
+    expect(Object.keys(themes.dark.personColors).sort()).toEqual(Object.keys(themes.light.personColors).sort());
+  });
+});
+
+describe('utseende', () => {
+  it('lagret verdi: lys og mørk som de er, alt annet følger telefonen', () => {
+    expect(parsePreference('light')).toBe('light');
+    expect(parsePreference('dark')).toBe('dark');
+    expect(parsePreference('system')).toBe('system');
+    expect(parsePreference(null)).toBe('system');
+    expect(parsePreference('tull')).toBe('system');
+  });
+
+  it('eget valg vinner, ellers telefonens innstilling, ellers lyst', () => {
+    expect(resolveScheme('dark', 'light')).toBe('dark');
+    expect(resolveScheme('light', 'dark')).toBe('light');
+    expect(resolveScheme('system', 'dark')).toBe('dark');
+    expect(resolveScheme('system', 'light')).toBe('light');
+    expect(resolveScheme('system', null)).toBe('light');
   });
 });

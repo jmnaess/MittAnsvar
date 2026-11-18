@@ -7,12 +7,14 @@ import {
 } from '@expo-google-fonts/nunito';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SessionProvider, useSession } from '../src/features/auth/SessionProvider';
 import { queryClient } from '../src/lib/queryClient';
+import { ThemeProvider, useTheme } from '../src/ui/ThemeProvider';
+import { navigationTheme } from '../src/ui/tabOptions';
 
 export default function RootLayout() {
   // Fontene lastes før noe vises, ellers blinker teksten fra systemfont til Fredoka/Nunito.
@@ -27,16 +29,28 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   // GestureHandlerRootView: kreves av react-native-gesture-handler (sveip for å slette i «Oppgaver»).
+  // ThemeProvider ytterst: alt under kan bruke useTheme(). Den viser ingenting før «Utseende» er lest.
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          {/* Appen er bare i lys modus, så statuslinjen har alltid mørk tekst. */}
-          <StatusBar style="dark" />
-          <RootStack />
-        </SessionProvider>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <ThemeProvider>
+      <GestureHandlerRootView style={styles.root}>
+        <QueryClientProvider client={queryClient}>
+          <SessionProvider>
+            <ThemedRoot />
+          </SessionProvider>
+        </QueryClientProvider>
+      </GestureHandlerRootView>
+    </ThemeProvider>
+  );
+}
+
+/** Statuslinjen og navigasjonen følger temaet: lys tekst i statuslinjen på mørk bakgrunn. */
+function ThemedRoot() {
+  const { scheme, colors } = useTheme();
+  return (
+    <NavigationThemeProvider value={navigationTheme(scheme, colors)}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <RootStack />
+    </NavigationThemeProvider>
   );
 }
 

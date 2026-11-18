@@ -1,8 +1,12 @@
 // Designsystemet «Varm og leken» (A4). Den eneste kilden til farger, fonter, avrunding og avstand.
-// Skjermfiler skal ikke ha egne fargekoder: bruk disse tokenene. Se docs/DESIGN.md.
+// Fargene finnes i et lyst og et mørkt sett. Komponenter henter riktig sett med useTheme() eller
+// makeStyles(), aldri direkte herfra. Se docs/DESIGN.md.
 import type { TextStyle, ViewStyle } from 'react-native';
 
-export const colors = {
+/** Lyst eller mørkt tema. */
+export type Scheme = 'light' | 'dark';
+
+export const lightColors = {
   background: '#FFFDF7',
   surface: '#FFFFFF',
   /** Rader inne i kort. */
@@ -35,18 +39,63 @@ export const colors = {
   toastText: '#FFFFFF',
   toastMuted: '#D9CFC4',
   toastAction: '#F2B705',
+  /** Haken i en avkrysset sjekkboks (på personens ring-farge). */
+  onRing: '#FFFFFF',
+  /** QR-koden er alltid mørk på lys, også i mørkt tema: mange skannere leser ikke invertert QR. */
+  qrInk: '#2B2118',
+  qrBg: '#FFFFFF',
   /** Bak kameraet før bildet kommer. */
   cameraBg: '#000000',
-} as const;
+};
 
-/** Myk skygge under kort (0 2 10 rgba(43,33,24,0.07)). elevation er Android. */
-export const shadow: ViewStyle = {
+export type ThemeColors = typeof lightColors;
+
+/** Samme A4-uttrykk i mørkt: varm mørkebrun, lyse pasteller som tekst. */
+export const darkColors: ThemeColors = {
+  background: '#1C1712',
+  surface: '#28211A',
+  surfaceMuted: '#322A21',
+  border: '#3A3128',
+  borderStrong: '#4D4236',
+  checkboxBorder: '#857563',
+  text: '#F5EDE1',
+  textMuted: '#BFB1A0',
+  textWarm: '#E8D3AC',
+  primary: '#5CBDB6',
+  primaryPressed: '#4AA59F',
+  onPrimary: '#14201F',
+  sun: '#F2B705',
+  sunSoft: '#3A2F14',
+  moneyBg: '#3D3112',
+  moneyText: '#F4C95D',
+  overdueBg: '#43201A',
+  overdueText: '#FFA294',
+  jobBg: '#173230',
+  jobAmount: '#93DCD5',
+  jobSub: '#B8D4CF',
+  danger: '#FF9585',
+  backdrop: 'rgba(0,0,0,0.6)',
+  /** I mørkt løftes banneret lysere enn flaten under. */
+  toastBg: '#463B30',
+  toastText: '#FFF8EE',
+  toastMuted: '#D6C9B8',
+  toastAction: '#F7C843',
+  onRing: '#14201F',
+  qrInk: '#2B2118',
+  qrBg: '#FFFFFF',
+  cameraBg: '#000000',
+};
+
+/** Myk skygge under kort. elevation er Android. I mørkt gjør flatenes lyshet mesteparten av jobben. */
+export const lightShadow: ViewStyle = {
   shadowColor: '#2B2118',
   shadowOpacity: 0.07,
   shadowRadius: 10,
   shadowOffset: { width: 0, height: 2 },
   elevation: 2,
 };
+
+export const darkShadow: ViewStyle = { ...lightShadow, shadowColor: '#000000', shadowOpacity: 0.35 };
 
 export const radius = {
   section: 24,
@@ -113,12 +162,13 @@ export type TypographyVariant = keyof typeof typography;
  */
 export type PersonColor = { tint: string; ink: string; ring: string };
 
-export const personColors: Record<string, PersonColor> = {
+export const lightPersonColors: Record<string, PersonColor> = {
   bear: { tint: '#F6E9DA', ink: '#5A3A1E', ring: '#B07D52' },
   cat: { tint: '#FCE3EA', ink: '#7A2E45', ring: '#D2557A' },
   fox: { tint: '#FFE9D6', ink: '#7A3410', ring: '#E36B2C' },
   frog: { tint: '#E6F4DD', ink: '#2F5E28', ring: '#58A84C' },
   rabbit: { tint: '#E9EDFB', ink: '#2E3A6E', ring: '#7C86C2' },
+  // Ringen er brun som ugla i tegningen, ikke lilla som tinten.
   owl: { tint: '#EFE9F8', ink: '#4B3A6E', ring: '#9A7752' },
   panda: { tint: '#EEEFF2', ink: '#2F3338', ring: '#4A4F57' },
   lion: { tint: '#FFF0CC', ink: '#6B4A00', ring: '#D99A1E' },
@@ -126,9 +176,65 @@ export const personColors: Record<string, PersonColor> = {
   unicorn: { tint: '#FBE6F6', ink: '#6A2C5E', ring: '#C064A8' },
 };
 
-/** «Felles»-seksjonen, og reserve for ukjente avatarnøkler. */
-export const sharedColors: PersonColor = { tint: '#F4EFE6', ink: '#5C4A2A', ring: colors.primary };
+/** Mørk variant: dyp, mettet tint, lys pastell som ink og en lysnet ring. */
+export const darkPersonColors: Record<string, PersonColor> = {
+  bear: { tint: '#36281B', ink: '#EDCDA9', ring: '#C99A70' },
+  cat: { tint: '#3D2129', ink: '#F6B9CB', ring: '#E57A98' },
+  fox: { tint: '#3E2616', ink: '#F9BF96', ring: '#F0844A' },
+  frog: { tint: '#1F301B', ink: '#BCE3B0', ring: '#6CBF5F' },
+  rabbit: { tint: '#222840', ink: '#C3CBF4', ring: '#929CDA' },
+  owl: { tint: '#2D2538', ink: '#D7C9F0', ring: '#B9946B' },
+  panda: { tint: '#27292E', ink: '#DADDE2', ring: '#9AA1AB' },
+  lion: { tint: '#382C0E', ink: '#F7D681', ring: '#E6AE34' },
+  dog: { tint: '#1C2B38', ink: '#B5D2EC', ring: '#74A6D2' },
+  unicorn: { tint: '#3A2132', ink: '#F0BCE2', ring: '#D682C0' },
+};
 
+/** «Felles»-seksjonen, og reserve for ukjente avatarnøkler. */
+export const lightSharedColors: PersonColor = { tint: '#F4EFE6', ink: '#5C4A2A', ring: lightColors.primary };
+export const darkSharedColors: PersonColor = { tint: '#2E261D', ink: '#E8D3AC', ring: darkColors.primary };
+
+/** Alt som skifter mellom lyst og mørkt. Hentes med useTheme() i src/ui/ThemeProvider.tsx. */
+export type Theme = {
+  scheme: Scheme;
+  colors: ThemeColors;
+  shadow: ViewStyle;
+  personColors: Record<string, PersonColor>;
+  sharedColors: PersonColor;
+};
+
+export const themes: Record<Scheme, Theme> = {
+  light: {
+    scheme: 'light',
+    colors: lightColors,
+    shadow: lightShadow,
+    personColors: lightPersonColors,
+    sharedColors: lightSharedColors,
+  },
+  dark: {
+    scheme: 'dark',
+    colors: darkColors,
+    shadow: darkShadow,
+    personColors: darkPersonColors,
+    sharedColors: darkSharedColors,
+  },
+};
+
+/** Personens farger i et tema. Ukjent eller manglende avatar gir «Felles»-fargene. */
+export function personColorIn(theme: Theme, avatarKey: string | null | undefined): PersonColor {
+  return (avatarKey && theme.personColors[avatarKey]) || theme.sharedColors;
+}
+
+// --- Midlertidig, under ombyggingen til useTheme(). Fjernes i siste steg. ---
+/** @deprecated Bruk useTheme().colors. */
+export const colors = lightColors;
+/** @deprecated Bruk useTheme().shadow. */
+export const shadow = lightShadow;
+/** @deprecated Bruk useTheme().personColor(). */
+export const personColors = lightPersonColors;
+/** @deprecated Bruk useTheme().sharedColors. */
+export const sharedColors = lightSharedColors;
+/** @deprecated Bruk useTheme().personColor(). */
 export function personColor(avatarKey: string | null | undefined): PersonColor {
-  return (avatarKey && personColors[avatarKey]) || sharedColors;
+  return personColorIn(themes.light, avatarKey);
 }

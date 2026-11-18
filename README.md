@@ -67,6 +67,27 @@ npx expo start
 
 Skann QR-koden med Expo Go på mobilen (Android: i Expo Go, iOS: med kameraet).
 
+## Ekte bygg (EAS)
+
+Konfigurasjonen ligger i `eas.json` (profilene `development`, `preview`, `production`).
+Bundle identifier / package er `no.mittansvar.app` (bekreftes før første opplasting – kan ikke
+endres etterpå). Byggnummer styres av EAS (`appVersionSource: remote`).
+
+- `development`: egen utviklingsklient (`expo-dev-client`) i stedet for Expo Go.
+- `preview`: internt testbygg (APK på Android).
+- `production`: til App Store / Google Play, byggnummer økes automatisk.
+
+`.env` lastes ikke opp til EAS. Supabase-nøklene legges inn som EAS-miljøvariabler, én gang:
+
+```bash
+npx eas-cli login
+npx eas-cli init                      # legger inn owner og projectId i app.json
+npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_URL --value <url> \
+  --environment development --environment preview --environment production --visibility plaintext
+npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_KEY --value <anon-nøkkel> \
+  --environment development --environment preview --environment production --visibility plaintext
+```
+
 ## Tester
 
 ```bash

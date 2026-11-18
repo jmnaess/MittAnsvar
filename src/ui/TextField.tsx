@@ -1,6 +1,5 @@
-import { useId } from 'react';
+import { useState } from 'react';
 import {
-  InputAccessoryView,
   Keyboard,
   Platform,
   Pressable,
@@ -20,7 +19,7 @@ type Props = TextInputProps & {
   code?: boolean;
 };
 
-// iOS' talltastatur har ingen returknapp. Da legger vi en «Ferdig»-linje over tastaturet.
+// iOS' talltastatur har ingen returknapp. Da viser vi en «Ferdig»-knapp inne i feltet mens det har fokus.
 const KEYPADS_WITHOUT_RETURN = ['number-pad', 'numeric', 'decimal-pad', 'phone-pad'];
 
 /**
@@ -28,39 +27,53 @@ const KEYPADS_WITHOUT_RETURN = ['number-pad', 'numeric', 'decimal-pad', 'phone-p
  * «Ferdig» på tastaturet lukker det (returnKeyType done; enlinjefelt blurer da av seg selv).
  * Farger og tastaturets utseende (iOS) følger temaet.
  */
-export function TextField({ label, code, style, ...inputProps }: Props) {
-  const accessoryId = useId();
+export function TextField({ label, code, style, onFocus, onBlur, ...inputProps }: Props) {
+  const [focused, setFocused] = useState(false);
   const { scheme, colors } = useTheme();
   const styles = useStyles();
-  const needsAccessory =
-    Platform.OS === 'ios' && KEYPADS_WITHOUT_RETURN.includes(inputProps.keyboardType ?? '');
+  const showDone =
+    focused &&
+    Platform.OS === 'ios' &&
+    KEYPADS_WITHOUT_RETURN.includes(inputProps.keyboardType ?? '');
 
   return (
     <View style={styles.wrapper}>
       {label && <Text variant="label">{label}</Text>}
-      <TextInput
-        style={[styles.input, code && styles.code, style]}
-        placeholderTextColor={colors.textMuted}
-        selectionColor={colors.primary}
-        cursorColor={colors.primary}
-        keyboardAppearance={scheme}
-        returnKeyType="done"
-        inputAccessoryViewID={needsAccessory ? accessoryId : undefined}
-        accessibilityLabel={label}
-        {...inputProps}
-      />
-      {needsAccessory && (
-        <InputAccessoryView nativeID={accessoryId}>
-          <View style={styles.accessory}>
-            <Pressable onPress={Keyboard.dismiss} accessibilityRole="button" hitSlop={8}>
-              <Text variant="bodyStrong" color={colors.primary}>Ferdig</Text>
-            </Pressable>
-          </View>
-        </InputAccessoryView>
-      )}
+      <View>
+        <TextInput
+          style={[styles.input, code && styles.code, showDone && styles.withDone, showDone && code && styles.withDoneCentered, style]}
+          placeholderTextColor={colors.textMuted}
+          selectionColor={colors.primary}
+          cursorColor={colors.primary}
+          keyboardAppearance={scheme}
+          returnKeyType="done"
+          accessibilityLabel={label}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          {...inputProps}
+        />
+        {showDone && (
+          <Pressable
+            onPress={Keyboard.dismiss}
+            accessibilityRole="button"
+            accessibilityLabel="Ferdig"
+            style={styles.done}
+          >
+            <Text variant="bodyStrong" color={colors.primary}>Ferdig</Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
+
+const DONE_WIDTH = 76;
 
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
@@ -78,13 +91,18 @@ const useStyles = makeStyles(({ colors }) =>
       color: colors.text,
     },
     code: { fontFamily: fonts.heading, fontSize: 24, letterSpacing: 4, textAlign: 'center' },
-    accessory: {
-      alignItems: 'flex-end',
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      backgroundColor: colors.surfaceMuted,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.borderStrong,
+    withDone: { paddingRight: DONE_WIDTH },
+    // Sentrert kode holder seg midt i feltet når knappen tar plass til høyre.
+    withDoneCentered: { paddingLeft: DONE_WIDTH },
+    done: {
+      position: 'absolute',
+      right: 0,
+      top: 0,
+      bottom: 0,
+      width: DONE_WIDTH,
+      minHeight: minTouch,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
   }),
 );

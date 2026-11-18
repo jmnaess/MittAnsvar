@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { formatDateTime } from '../../../lib/dates';
-import { Chip, colors, ListRow, Text } from '../../../ui';
+import { Chip, ListRow, Text, useTheme } from '../../../ui';
 import { formatKroner } from '../../tasks/reward';
 import type { RewardEvent } from '../api';
 
@@ -10,6 +10,7 @@ import type { RewardEvent } from '../api';
  * onPress: en voksen kan trykke for å endre godkjenning (utelatt = bare visning).
  */
 export function RewardEventRow({ event, onPress }: { event: RewardEvent; onPress?: () => void }) {
+  const { colors } = useTheme();
   const earned = event.kind === 'earned';
   const pending = earned && event.status === 'pending';
   const rejected = earned && event.status === 'rejected';

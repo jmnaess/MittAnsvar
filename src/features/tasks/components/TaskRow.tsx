@@ -1,5 +1,5 @@
 import { formatDate, formatMonthYear } from '../../../lib/dates';
-import { colors, ListRow, Text } from '../../../ui';
+import { ListRow, Text, useTheme } from '../../../ui';
 import { describeRecurrence, isJob, isMonthTask } from '../recurrence';
 import { formatKroner } from '../reward';
 import type { Task } from '../types';
@@ -13,6 +13,7 @@ type Props = {
 
 /** Én oppgave i oversikten: tittel, ansvarlig, gjentakelse, lønn og neste frist. */
 export function TaskRow({ task, assigneeName, onPress }: Props) {
+  const { colors } = useTheme();
   // Månedsoppgaver har hele måneden som frist, så en dato (den 1.) ville vært misvisende.
   // Jobber har ingen frist. «Ledig jobb» står allerede i beskrivelsen.
   const due = isJob(task)

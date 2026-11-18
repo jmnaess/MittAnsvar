@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { toNorwegianMessage } from '../../../lib/errors';
-import { Button, ChoiceChips, Message, personColor, Section, spacing } from '../../../ui';
+import { Button, ChoiceChips, Message, Section, spacing, useTheme } from '../../../ui';
 import {
   useRemoveMemberPhoto,
   useSetMemberAvatarMode,
@@ -19,6 +19,7 @@ type Props = { member: Member };
  * og bilde, eller fjern bildet. Bildet krympes til 512×512 og lagres uten posisjon (EXIF).
  */
 export function MemberPhotoSection({ member }: Props) {
+  const { personColor } = useTheme();
   const upload = useUploadMemberPhoto(member.household_id);
   const remove = useRemoveMemberPhoto(member.household_id);
   const setMode = useSetMemberAvatarMode(member.household_id);

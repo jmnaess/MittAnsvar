@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { ApprovalBanner, Button, colors, Message, radius, Sheet, spacing, Text } from '../../../ui';
+import {
+  ApprovalBanner,
+  Button,
+  makeStyles,
+  Message,
+  radius,
+  Sheet,
+  spacing,
+  Text,
+  useTheme,
+} from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
 import { MemberAvatar } from '../../household/components/MemberAvatar';
 import { useMemberPhotoLookup } from '../../household/hooks';
@@ -59,6 +69,8 @@ type ListProps = {
 };
 
 function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const approve = useApproveCompletions(householdId);
   const reject = useRejectCompletion(householdId);
   const busy = approve.isPending || reject.isPending;
@@ -127,13 +139,15 @@ function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  list: { gap: 12, flexShrink: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  flex: { flex: 1 },
-  scroll: { flexGrow: 0 },
-  rows: { gap: spacing.row },
-  row: { backgroundColor: colors.surfaceMuted, borderRadius: radius.row, padding: 12, gap: 10 },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    list: { gap: 12, flexShrink: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    flex: { flex: 1 },
+    scroll: { flexGrow: 0 },
+    rows: { gap: spacing.row },
+    row: { backgroundColor: colors.surfaceMuted, borderRadius: radius.row, padding: 12, gap: 10 },
+    rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  }),
+);

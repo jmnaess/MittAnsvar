@@ -1,4 +1,4 @@
-import { colors, Text, Toast } from '../../../ui';
+import { Text, Toast, useTheme } from '../../../ui';
 
 type Props = {
   /** Hva som ble gjort, f.eks. «Søppel». */
@@ -16,6 +16,7 @@ type Props = {
 
 /** Banner nederst etter avkrysning: tilbakemelding og «Angre» i 6 sekunder. Serveren tillater angring i 10 minutter. */
 export function FeedbackToast({ title, message, reward, ...rest }: Props) {
+  const { colors } = useTheme();
   return (
     <Toast {...rest} visibleMs={6000}>
       <Text variant="meta" color={colors.toastMuted}>✓ {title}</Text>

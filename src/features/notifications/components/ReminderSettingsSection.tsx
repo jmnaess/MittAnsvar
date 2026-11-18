@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { ChoiceChips, colors, minTouch, radius, Switch, Text } from '../../../ui';
+import { ChoiceChips, makeStyles, minTouch, radius, Switch, Text, useTheme } from '../../../ui';
 import {
   useEnableReminders,
   usePermission,
@@ -19,6 +19,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Påminnelser i Innstillinger. Gjelder bare denne brukeren på denne telefonen. */
 export function ReminderSettingsSection({ userId }: { userId: string }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { data: settings } = useReminderSettings(userId);
   const save = useSaveReminderSettings(userId);
   const enable = useEnableReminders(userId);
@@ -79,6 +81,8 @@ type TimePickerProps = { hour: number; minute: number; onChange: (hour: number, 
 
 /** iOS: kompakt velger rett i raden. Android: en knapp som åpner klokkedialogen. */
 function TimePicker({ hour, minute, onChange }: TimePickerProps) {
+  const { scheme, colors } = useTheme();
+  const styles = useStyles();
   const value = new Date();
   value.setHours(hour, minute, 0, 0);
 
@@ -89,6 +93,8 @@ function TimePicker({ hour, minute, onChange }: TimePickerProps) {
         mode="time"
         display="compact"
         locale="nb-NO"
+        themeVariant={scheme}
+        accentColor={colors.primary}
         onChange={(_, date) => date && onChange(date.getHours(), date.getMinutes())}
       />
     );
@@ -117,16 +123,18 @@ function TimePicker({ hour, minute, onChange }: TimePickerProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  section: { gap: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: minTouch },
-  time: {
-    minHeight: minTouch,
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    paddingHorizontal: 16,
-  },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    section: { gap: 10 },
+    row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: minTouch },
+    time: {
+      minHeight: minTouch,
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: colors.borderStrong,
+      backgroundColor: colors.surface,
+      borderRadius: radius.button,
+      paddingHorizontal: 16,
+    },
+  }),
+);

@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Avatar, colors, radius, Text } from '../../../ui';
+import { Avatar, makeStyles, radius, Text, useTheme } from '../../../ui';
 import { AVATAR_KEYS, avatarLabel } from '../avatars';
 
 type Props = {
@@ -10,6 +10,7 @@ type Props = {
 
 /** Velg avatar i et rutenett med tre kolonner. Valgt figur får en 3 px primary-kant. */
 export function AvatarPicker({ value, onChange, disabled }: Props) {
+  const styles = useStyles();
   return (
     <View style={styles.wrapper}>
       <Text variant="label">Avatar</Text>
@@ -35,17 +36,19 @@ export function AvatarPicker({ value, onChange, disabled }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { gap: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
-  // Tre kolonner: hver celle er en tredjedel av bredden, avataren sentrert.
-  item: {
-    width: '33.33%',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: radius.card,
-    borderWidth: 3,
-    borderColor: 'transparent',
-  },
-  selected: { borderColor: colors.primary, backgroundColor: colors.surface },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    wrapper: { gap: 8 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
+    // Tre kolonner: hver celle er en tredjedel av bredden, avataren sentrert.
+    item: {
+      width: '33.33%',
+      alignItems: 'center',
+      paddingVertical: 8,
+      borderRadius: radius.card,
+      borderWidth: 3,
+      borderColor: 'transparent',
+    },
+    selected: { borderColor: colors.primary, backgroundColor: colors.surface },
+  }),
+);

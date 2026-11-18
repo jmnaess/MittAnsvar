@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Card, Chip, colors, spacing, TaskRow, Text } from '../../../ui';
+import { Card, Chip, spacing, TaskRow, Text, useTheme } from '../../../ui';
 import { formatKroner } from '../../tasks/reward';
 import type { RecentDay } from '../recent';
 
@@ -14,6 +14,7 @@ type Props = {
  * og dempet som det som er gjort i dag. Bare visning. Vises ikke når ingenting er gjort.
  */
 export function RecentDoneCard({ days, checkColor }: Props) {
+  const { colors } = useTheme();
   if (days.length === 0) return null;
   return (
     <Card>

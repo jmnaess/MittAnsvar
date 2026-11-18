@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, radius, shadow, Text } from '../../../ui';
+import { makeStyles, radius, Text, useTheme } from '../../../ui';
 import { formatInviteCode } from '../../household/inviteCode';
 import { formatTimeLeft, linkCodeUrl } from '../linkCode';
 
@@ -9,6 +9,8 @@ type Props = { code: string; expiresAt: string; onExpired: () => void };
 
 /** QR-kode, koden i tekst og hvor lenge den gjelder. */
 export function LinkCodeCard({ code, expiresAt, onExpired }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const now = useNow();
   const expired = new Date(expiresAt).getTime() <= now;
 
@@ -18,7 +20,15 @@ export function LinkCodeCard({ code, expiresAt, onExpired }: Props) {
 
   return (
     <View style={styles.card}>
-      <QRCode value={linkCodeUrl(code)} size={220} color={colors.text} backgroundColor={colors.surface} />
+      {/* Alltid mørk på lys, også i mørkt tema: mange skannere leser ikke invertert QR. quietZone gir
+          den lyse kanten skannere trenger rundt koden. */}
+      <QRCode
+        value={linkCodeUrl(code)}
+        size={220}
+        color={colors.qrInk}
+        backgroundColor={colors.qrBg}
+        quietZone={12}
+      />
       <Text variant="meta" color={colors.textMuted} style={styles.or}>eller tast inn</Text>
       <Text variant="code" selectable accessibilityLabel={`Kode ${code.split('').join(' ')}`}>
         {formatInviteCode(code)}
@@ -38,7 +48,9 @@ function useNow(): number {
   return now;
 }
 
-const styles = StyleSheet.create({
-  card: { alignItems: 'center', gap: 8, padding: 24, borderRadius: radius.card, backgroundColor: colors.surface, ...shadow },
-  or: { marginTop: 8 },
-});
+const useStyles = makeStyles(({ colors, shadow }) =>
+  StyleSheet.create({
+    card: { alignItems: 'center', gap: 8, padding: 24, borderRadius: radius.card, backgroundColor: colors.surface, ...shadow },
+    or: { marginTop: 8 },
+  }),
+);

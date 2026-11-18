@@ -1,5 +1,13 @@
 import { StyleSheet, View } from 'react-native';
-import { ChoiceChips, colors, DateField, MultiChoiceChips, Switch, Text, TextField } from '../../../ui';
+import {
+  ChoiceChips,
+  DateField,
+  MultiChoiceChips,
+  Switch,
+  Text,
+  TextField,
+  useTheme,
+} from '../../../ui';
 import { MONTH_NAMES } from '../../../lib/dates';
 import {
   canBeSeasonal,
@@ -64,6 +72,7 @@ const INTERVAL_UNIT_OPTIONS: { value: IntervalUnit; label: string }[] = [
  * året (ikke årlige oppgaver). Ledige jobber har sitt eget skjema.
  */
 export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
+  const { colors } = useTheme();
   const set = (changes: Partial<RecurrenceForm>) => onChange({ ...value, ...changes });
   const digitsOnly = (text: string) => text.replace(/\D/g, '');
   const schedule = toRecurrence(value, today);

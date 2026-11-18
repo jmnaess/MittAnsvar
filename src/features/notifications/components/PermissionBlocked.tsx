@@ -1,9 +1,11 @@
 import { StyleSheet, View } from 'react-native';
-import { Button, colors, radius, spacing, Text } from '../../../ui';
+import { Button, makeStyles, radius, spacing, Text, useTheme } from '../../../ui';
 import { openSystemSettings } from '../permissions';
 
 /** Brukeren har sagt nei til varsler. Bare telefonens innstillinger kan endre det. */
 export function PermissionBlocked() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.box}>
       <Text variant="meta" color={colors.textWarm}>
@@ -15,6 +17,8 @@ export function PermissionBlocked() {
   );
 }
 
-const styles = StyleSheet.create({
-  box: { gap: 10, padding: spacing.card, borderRadius: radius.row, backgroundColor: colors.sunSoft },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    box: { gap: 10, padding: spacing.card, borderRadius: radius.row, backgroundColor: colors.sunSoft },
+  }),
+);

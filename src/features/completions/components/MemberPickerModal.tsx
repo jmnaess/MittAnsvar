@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { Button, colors, minTouch, personColor, radius, Sheet, Text } from '../../../ui';
+import { Button, makeStyles, minTouch, radius, Sheet, Text, useTheme } from '../../../ui';
 import { MemberAvatar } from '../../household/components/MemberAvatar';
 import type { Member } from '../../household/types';
 
@@ -28,6 +28,8 @@ type Props = {
 export function MemberPickerModal({
   taskTitle, members, preselectedId, meId, confirmLabel = 'Kryss av', onPick, onClose,
 }: Props) {
+  const { colors, personColor } = useTheme();
+  const styles = useStyles();
   const confirm = !!preselectedId;
   const [selectedId, setSelectedId] = useState(preselectedId ?? null);
 
@@ -69,17 +71,19 @@ export function MemberPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: minTouch + 8,
-    paddingHorizontal: 12,
-    borderRadius: radius.row,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: colors.surface,
-  },
-  pressed: { opacity: 0.7 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: minTouch + 8,
+      paddingHorizontal: 12,
+      borderRadius: radius.row,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      backgroundColor: colors.surface,
+    },
+    pressed: { opacity: 0.7 },
+  }),
+);

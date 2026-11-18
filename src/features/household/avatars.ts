@@ -1,5 +1,6 @@
 // Innebygde avatarer. Nøkkelen lagres i members.avatar, aldri et bilde.
-// Tegningene ligger i src/ui/avatarArt.tsx og fargene per person i src/ui/theme.ts (personColors).
+// Tegningene ligger i src/ui/avatarArt.tsx og fargene per person i src/ui/theme.ts
+// (lightPersonColors og darkPersonColors).
 // label leses opp av skjermleser.
 export const AVATARS = {
   fox: { label: 'Rev' },

@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { ChoiceChips, colors, spacing, Text } from '../../../ui';
+import { ChoiceChips, spacing, Text, useTheme } from '../../../ui';
 import { HOME_PROFILE_QUESTIONS, HOUSING_TYPE_OPTIONS, SEWAGE_TYPE_OPTIONS } from '../labels';
 import type { HomeProfile } from '../types';
 
@@ -22,6 +22,7 @@ type Props = {
  * (ubesvart). Boligtype er alltid valgt (påkrevd fra oppstarten).
  */
 export function HomeProfileFields({ value, onChange, disabled }: Props) {
+  const { colors } = useTheme();
   const set = (changes: Partial<HomeProfile>) => onChange({ ...value, ...changes });
 
   return (

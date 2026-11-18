@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Card, Chip, colors, ListRow, Message, spacing, Text } from '../../../ui';
+import { Card, Chip, ListRow, Message, spacing, Text, useTheme } from '../../../ui';
 import { formatDate } from '../../../lib/dates';
 import { describeRecurrence } from '../recurrence';
 import { formatKroner } from '../reward';
@@ -22,6 +22,7 @@ type Props = {
  * deretter én gruppe per uke med dato på hver rad. Bare visning, unntatt at voksne kan åpne.
  */
 export function UpcomingCard({ upcoming, showReward, onOpen, loading, emptyText }: Props) {
+  const { colors } = useTheme();
   const { repeating, groups } = upcoming;
   const empty = repeating.length === 0 && groups.length === 0;
 

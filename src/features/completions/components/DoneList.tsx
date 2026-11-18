@@ -1,4 +1,4 @@
-import { Chip, colors, ShowMoreRow, TaskRow, Text } from '../../../ui';
+import { Chip, ShowMoreRow, TaskRow, Text, useTheme } from '../../../ui';
 import { formatKroner } from '../../tasks/reward';
 import type { TodayCompletion } from '../api';
 import { canUndo, DONE_PREVIEW, doneByText, moreDoneA11yLabel, moreDoneText, visibleDone } from '../doneToday';
@@ -43,6 +43,7 @@ export function DoneList({
   done, sectionKey, allDone, nameOf, checkColor, isAdult, userId, busyId, onUndo, adultActions,
   expanded, onToggleExpanded,
 }: Props) {
+  const { colors } = useTheme();
   if (done.length === 0) return null;
   const { shown } = visibleDone(done, expanded);
   const more = done.length - DONE_PREVIEW;

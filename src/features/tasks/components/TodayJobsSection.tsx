@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { colors, JobGrid, Text } from '../../../ui';
+import { JobGrid, Text, useTheme } from '../../../ui';
 import type { TodayTask } from '../types';
 import { TodayJobCard } from './TodayTaskRow';
 
@@ -17,6 +17,7 @@ type Props = {
 
 /** «Ledige jobber» nederst i «I dag»: overskrift og jobbkort i rutenett. */
 export function TodayJobsSection({ jobs, whoOf, busyId, onPress, onLongPress, emptyText }: Props) {
+  const { colors } = useTheme();
   if (jobs.length === 0 && !emptyText) return null;
   return (
     <View style={styles.section}>

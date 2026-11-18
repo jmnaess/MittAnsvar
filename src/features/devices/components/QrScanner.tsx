@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { Button, colors, radius, spacing, Text } from '../../../ui';
+import { Button, makeStyles, radius, spacing, Text, useTheme } from '../../../ui';
 import { parseLinkCode } from '../linkCode';
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
  * Spør om tillatelse først når barnet trykker, ikke med en gang skjermen åpnes.
  */
 export function QrScanner({ onCode, paused }: Props) {
+  const styles = useStyles();
   const [permission, requestPermission] = useCameraPermissions();
   // Kameraet melder samme kode mange ganger i sekundet. Vi sender bare en ny kode videre.
   const lastCode = useRef<string | null>(null);
@@ -60,8 +61,10 @@ export function QrScanner({ onCode, paused }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  box: { gap: 12, padding: spacing.card, borderRadius: radius.card, backgroundColor: colors.jobBg },
-  cameraFrame: { aspectRatio: 1, borderRadius: radius.card, overflow: 'hidden', backgroundColor: colors.cameraBg },
-  camera: { flex: 1 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    box: { gap: 12, padding: spacing.card, borderRadius: radius.card, backgroundColor: colors.jobBg },
+    cameraFrame: { aspectRatio: 1, borderRadius: radius.card, overflow: 'hidden', backgroundColor: colors.cameraBg },
+    camera: { flex: 1 },
+  }),
+);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, CheckRow, colors, Message, spacing, Text } from '../../../ui';
+import { Button, CheckRow, Message, spacing, Text, useTheme } from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
 import { HomeProfileFields } from '../../household/components/HomeProfileFields';
 import { homeProfileChanges, suggestionBaseline } from '../../household/homeProfile';
@@ -106,6 +106,7 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
 type SuggestionsStepProps = { householdId: string; groups: SuggestionGroup[]; onDone: () => void };
 
 function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) {
+  const { colors } = useTheme();
   const activate = useActivateTemplates(householdId);
   // Alle forslag er valgt fra start.
   const [selected, setSelected] = useState(() => new Set(groups.map((g) => g.key)));

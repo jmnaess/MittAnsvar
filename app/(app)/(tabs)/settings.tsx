@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import {
   Button,
   ChoiceChips,
@@ -12,8 +12,8 @@ import {
   Text,
   TextField,
 } from '../../../src/ui';
-import { deleteAccount, signOut } from '../../../src/features/auth/api';
 import { useSession } from '../../../src/features/auth/SessionProvider';
+import { useAccountActions } from '../../../src/features/auth/useAccountActions';
 import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
 import { useMyHousehold, useMyMember, useUpdateHousehold } from '../../../src/features/household/hooks';
 import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
@@ -115,42 +115,7 @@ function HomeSection({ household }: { household: Household }) {
 
 function AccountSection() {
   const { session } = useSession();
-  const [busy, setBusy] = useState(false);
-
-  // Etter utlogging eller sletting bytter rotlayouten til innloggingsskjermen av seg selv.
-  async function run(action: () => Promise<void>, errorTitle: string) {
-    setBusy(true);
-    try {
-      await action();
-    } catch (e) {
-      Alert.alert(errorTitle, toNorwegianMessage(e));
-      setBusy(false);
-    }
-  }
-
-  function confirmSignOut() {
-    Alert.alert('Logg ut?', 'Du må skrive inn en ny kode fra e-post for å logge inn igjen.', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Logg ut', style: 'destructive', onPress: () => run(signOut, 'Kunne ikke logge ut') },
-    ]);
-  }
-
-  function confirmDeleteAccount() {
-    Alert.alert(
-      'Slette kontoen?',
-      'Kontoen og e-postadressen din slettes. Er du den eneste voksne i husstanden, ' +
-        'slettes også hele husstanden med barneprofiler, oppgaver og historikk.\n\n' +
-        'Dette kan ikke angres.',
-      [
-        { text: 'Avbryt', style: 'cancel' },
-        {
-          text: 'Slett konto',
-          style: 'destructive',
-          onPress: () => run(deleteAccount, 'Kunne ikke slette kontoen'),
-        },
-      ],
-    );
-  }
+  const { busy, confirmSignOut, confirmDeleteAccount } = useAccountActions();
 
   return (
     <Section title="Konto">

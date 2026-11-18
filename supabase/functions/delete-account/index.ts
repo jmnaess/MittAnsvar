@@ -28,12 +28,25 @@ export default {
       return Response.json({ error: "delete_data_failed" }, { status: 500 });
     }
 
-    const { error: authError } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId);
-    if (authError) {
-      console.error("auth.admin.deleteUser failed:", authError.message);
-      return Response.json({ error: "delete_user_failed" }, { status: 500 });
+    // Ett nytt forsøk ved serverfeil eller nettverksfeil. Gatewayen kan gi opp etter 10 s med
+    // en ren tekstfeil (status 555), som supabase-js ikke klarer å lese som JSON.
+    // Ingen status = nettverksfeil eller et svar som ikke var JSON.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { error } = await ctx.supabaseAdmin.auth.admin.deleteUser(userId);
+      if (!error) return Response.json({ ok: true });
+      // 404 på andre forsøk: det første slettet brukeren, men svaret kom ikke frem.
+      if (attempt > 1 && error.status === 404) return Response.json({ ok: true });
+
+      console.error(
+        `auth.admin.deleteUser failed (attempt ${attempt}):`,
+        error.name,
+        error.status,
+        error.message,
+      );
+      const retryable = error.status === undefined || error.status >= 500;
+      if (!retryable) break;
     }
 
-    return Response.json({ ok: true });
+    return Response.json({ error: "delete_user_failed" }, { status: 500 });
   }),
 };

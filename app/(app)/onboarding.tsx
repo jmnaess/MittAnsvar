@@ -19,6 +19,7 @@ import {
 } from '../../src/features/household/hooks';
 import type { ChildInput } from '../../src/features/household/types';
 import { useSession } from '../../src/features/auth/SessionProvider';
+import { useAccountActions } from '../../src/features/auth/useAccountActions';
 import { setReminderPromptPending } from '../../src/features/notifications/settings';
 import { toNorwegianMessage } from '../../src/lib/errors';
 
@@ -60,7 +61,23 @@ function ChooseStep({ onChoose }: { onChoose: (mode: Mode) => void }) {
       </Text>
       <Button title="Opprett husstand" onPress={() => onChoose('create')} />
       <Button variant="secondary" title="Bli med i en husstand" onPress={() => onChoose('join')} />
+      <AccountFooter />
     </>
+  );
+}
+
+// Utlogging og sletting også her: en bruker uten husstand (f.eks. etter en sletting som
+// stoppet halvveis) skal kunne komme seg ut eller fullføre slettingen.
+function AccountFooter() {
+  const { session } = useSession();
+  const { busy, confirmSignOut, confirmDeleteAccount } = useAccountActions();
+
+  return (
+    <View style={styles.account}>
+      <Text variant="meta" color={colors.textMuted}>Innlogget som {session?.user.email}</Text>
+      <Button variant="text" title="Logg ut" onPress={confirmSignOut} disabled={busy} />
+      <Button variant="text" title="Slett konto" onPress={confirmDeleteAccount} disabled={busy} />
+    </View>
   );
 }
 
@@ -214,4 +231,5 @@ const styles = StyleSheet.create({
   container: { padding: spacing.page, gap: 16, paddingBottom: 48 },
   children: { gap: spacing.row },
   done: { marginTop: 8 },
+  account: { marginTop: spacing.section, alignItems: 'center' },
 });

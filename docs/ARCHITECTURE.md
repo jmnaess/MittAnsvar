@@ -210,7 +210,7 @@ Ikke ennå: fjerne en annen voksen, lenker inn i appen.
 - **Behandlingsgrunnlag:** avtale med den voksne kontoeieren (art. 6(1)(b)).
 - **Databehandleravtaler:** Supabase (EU-region). RevenueCat er amerikansk og krever SCC/DPF, men de får bare UUID. Apple og Google er selvstendige behandlingsansvarlige for betaling.
 - **Personvernerklæring** på norsk før lansering. Den må også nevne barnedata.
-- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk), og barnas anonyme brukere slettes, så enhetene deres logges ut. Sletting av en barneprofil sletter også barnets fullføringer og utbetalinger.
+- **Sletting:** «Slett konto» i appen kaller Edge Function `delete-account`. Den fjerner medlemskapet og brukeren i `auth.users`. Er det den siste voksne, slettes hele husstanden med `on delete cascade` (barneprofiler, oppgaver og historikk), og barnas anonyme brukere slettes, så enhetene deres logges ut. Sletting av en barneprofil sletter også barnets fullføringer og utbetalinger. Når en voksen sletter seg og andre voksne er igjen, beholdes barnas historikk: `recorded_by`, `created_by` og `recorded_by_member_id` settes til null. Feiler slettingen av auth-brukeren med en serverfeil, prøver funksjonen én gang til. En bruker som da står uten husstand, finner «Slett konto» også på oppstartsskjermen.
 - **Innsyn og dataportabilitet:** i MVP manuelt på e-post. Eksport i appen kommer senere.
 - **Logger:** ikke logg navn eller oppgavetekster i Edge Functions.
 

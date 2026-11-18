@@ -6,6 +6,7 @@ import {
   EmptyState,
   makeStyles,
   Message,
+  pageWidth,
   spacing,
   SwipeToDelete,
   UndoToast,
@@ -126,7 +127,7 @@ const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
     // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-    container: { padding: spacing.page, paddingBottom: 120 },
+    container: { ...pageWidth, padding: spacing.page, paddingBottom: 120 },
     header: { gap: 12, marginBottom: spacing.section },
     separator: { height: spacing.row },
   }),

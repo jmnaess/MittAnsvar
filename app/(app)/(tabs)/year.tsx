@@ -1,7 +1,7 @@
 import { router, useNavigation } from 'expo-router';
 import { useCallback, useLayoutEffect, useState } from 'react';
 import { Alert, SectionList, StyleSheet, View } from 'react-native';
-import { Button, IconButton, makeStyles, Message, spacing, Text, useTheme } from '../../../src/ui';
+import { Button, IconButton, makeStyles, Message, pageWidth, spacing, Text, useTheme } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
@@ -211,7 +211,7 @@ function Separator() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    container: { padding: spacing.page, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, paddingBottom: 48 },
     header: { gap: 12 },
     month: { marginTop: spacing.section + 6, marginBottom: spacing.row },
     separator: { height: spacing.row },

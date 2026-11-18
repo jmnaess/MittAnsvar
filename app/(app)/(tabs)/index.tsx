@@ -55,6 +55,7 @@ import {
   makeStyles,
   PageHeader,
   SectionCard,
+  pageWidth,
   spacing,
   Text,
   UndoToast,
@@ -518,7 +519,7 @@ const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
     // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-    container: { paddingBottom: 120, gap: spacing.section },
+    container: { ...pageWidth, paddingBottom: 120, gap: spacing.section },
     body: { paddingHorizontal: spacing.page, gap: spacing.section },
     // Ikke full bredde: tydelig, men skal ikke dominere over kortene.
     newTaskFor: { alignSelf: 'flex-start' },

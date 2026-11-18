@@ -117,6 +117,15 @@ export const spacing = {
   row: 10,
 } as const;
 
+/** Største bredde på innholdet. Mobil er smalere og merker ingenting; på iPad blir det en midtstilt spalte. */
+export const contentMaxWidth = 640;
+
+/**
+ * Legg på sidens innholdsbeholder (også contentContainerStyle i ScrollView og lister):
+ * full bredde opp til contentMaxWidth, deretter sentrert.
+ */
+export const pageWidth: ViewStyle = { width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' };
+
 /** Minste trykkflate (bredde og høyde). */
 export const minTouch = 44;
 

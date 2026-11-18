@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
-import { radius, spacing } from './theme';
+import { pageWidth, radius, spacing } from './theme';
 
 type Props = {
   visible: boolean;
@@ -38,6 +38,7 @@ const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'center', padding: spacing.page },
     sheet: {
+      ...pageWidth,
       backgroundColor: colors.background,
       borderRadius: radius.section,
       padding: spacing.page,

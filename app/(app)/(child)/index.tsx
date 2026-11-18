@@ -37,6 +37,7 @@ import {
   makeStyles,
   PageHeader,
   SectionCard,
+  pageWidth,
   spacing,
   Text,
   useTheme,
@@ -233,7 +234,7 @@ export default function ChildTodayScreen() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    container: { paddingBottom: 120, gap: spacing.section },
+    container: { ...pageWidth, paddingBottom: 120, gap: spacing.section },
     body: { paddingHorizontal: spacing.page, gap: spacing.section },
   }),
 );

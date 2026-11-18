@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AvatarStack, Button, makeStyles, Message, spacing, Text, useTheme } from '../../src/ui';
+import { AvatarStack, Button, makeStyles, Message, pageWidth, spacing, Text, useTheme } from '../../src/ui';
 import type { CreateHouseholdInput } from '../../src/features/household/api';
 import { ChildForm } from '../../src/features/household/components/ChildForm';
 import { HouseholdForm } from '../../src/features/household/components/HouseholdForm';
@@ -233,7 +233,7 @@ const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     flex: { flex: 1 },
-    container: { padding: spacing.page, gap: 16, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, gap: 16, paddingBottom: 48 },
     children: { gap: spacing.row },
     done: { marginTop: 8 },
     account: { marginTop: spacing.section, alignItems: 'center' },

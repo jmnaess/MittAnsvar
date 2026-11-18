@@ -1,7 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { makeStyles, Message, radius, Section, spacing, Text, useTheme } from '../../../src/ui';
+import { makeStyles, Message, radius, Section, pageWidth, spacing, Text, useTheme } from '../../../src/ui';
 import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
@@ -61,7 +61,7 @@ function Earnings({ householdId, me }: Props) {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    container: { padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
     header: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: spacing.card, borderRadius: radius.section },
     headerText: { flex: 1 },
   }),

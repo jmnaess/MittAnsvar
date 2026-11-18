@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
-import { radius } from './theme';
+import { contentMaxWidth, radius, spacing } from './theme';
 import { useTheme } from './ThemeProvider';
 
 type Props = {
@@ -31,28 +31,37 @@ export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs }
   }, [resetKey, visibleMs]);
 
   return (
-    <View style={styles.toast} accessibilityLiveRegion="polite" accessibilityRole="alert">
-      <View style={styles.content}>{children}</View>
-      <Pressable
-        onPress={onUndo}
-        disabled={undoing}
-        hitSlop={10}
-        accessibilityRole="button"
-        style={[styles.undo, undoing && styles.disabled]}
-      >
-        <Text variant="bodyStrong" color={colors.toastAction}>Angre</Text>
-      </Pressable>
+    // Ytterste lag sentrerer banneret på brede skjermer og slipper trykk gjennom ved siden av det.
+    <View style={styles.position} pointerEvents="box-none">
+      <View style={styles.toast} accessibilityLiveRegion="polite" accessibilityRole="alert">
+        <View style={styles.content}>{children}</View>
+        <Pressable
+          onPress={onUndo}
+          disabled={undoing}
+          hitSlop={10}
+          accessibilityRole="button"
+          style={[styles.undo, undoing && styles.disabled]}
+        >
+          <Text variant="bodyStrong" color={colors.toastAction}>Angre</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const useStyles = makeStyles(({ colors, shadow }) =>
   StyleSheet.create({
-    toast: {
+    position: {
       position: 'absolute',
       left: 16,
       right: 16,
       bottom: 16,
+      alignItems: 'center',
+    },
+    toast: {
+      width: '100%',
+      // Samme bredde som kortene i innholdet over.
+      maxWidth: contentMaxWidth - 2 * spacing.page,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,

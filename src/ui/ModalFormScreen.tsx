@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
-import { spacing } from './theme';
+import { pageWidth, spacing } from './theme';
 import { useTheme } from './ThemeProvider';
 
 type Props = {
@@ -91,7 +91,7 @@ function HeaderButton({ title, onPress, disabled, bold }: HeaderButtonProps) {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     scroll: { backgroundColor: colors.background },
-    container: { padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
     headerButton: { paddingHorizontal: 8 },
     disabled: { opacity: 0.6 },
   }),

@@ -6,6 +6,7 @@ import {
   ChoiceChips,
   makeStyles,
   Message,
+  pageWidth,
   spacing,
   Text,
   TextField,
@@ -103,7 +104,7 @@ export default function LinkDeviceScreen() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    container: { padding: spacing.page, gap: 16 },
+    container: { ...pageWidth, padding: spacing.page, gap: 16 },
     manual: { gap: 12 },
   }),
 );

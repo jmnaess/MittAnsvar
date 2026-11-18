@@ -8,6 +8,7 @@ import {
   makeStyles,
   Message,
   Section,
+  pageWidth,
   spacing,
   Text,
   TextField,
@@ -136,7 +137,7 @@ function AccountSection() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
     email: { marginTop: -8, marginBottom: 4 },
   }),
 );

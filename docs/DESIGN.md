@@ -115,6 +115,9 @@ Mørkt tema (`darkPersonColors`): dyp, mettet tint, lys pastell som ink og en ly
 - Avrunding: seksjonskort 24, kort 20, rader i kort 16, knapper 22 (pille), merkelapper 12,
   ikonknapper sirkel.
 - Avstand: sidepadding 20, mellom seksjoner 18, i kort 14, mellom rader 10.
+- Bredde: innholdet er maks 640 bredt og sentrert på iPad (`contentMaxWidth`). Hver skjerm legger
+  `...pageWidth` på innholdsbeholderen (`contentContainerStyle` i ScrollView og lister).
+  `ModalFormScreen`, `Sheet` og `Toast` har det innebygd.
 
 ## Fonter
 

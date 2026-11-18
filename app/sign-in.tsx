@@ -6,6 +6,7 @@ import {
   Button,
   makeStyles,
   Message,
+  pageWidth,
   spacing,
   Text,
   TextField,
@@ -150,7 +151,7 @@ export default function SignInScreen() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    container: { flex: 1, justifyContent: 'center', padding: spacing.page, gap: 14 },
+    container: { ...pageWidth, flex: 1, justifyContent: 'center', padding: spacing.page, gap: 14 },
     brand: { alignItems: 'center', gap: 12, marginBottom: 16 },
     center: { textAlign: 'center' },
     child: { gap: 8, marginTop: 32 },

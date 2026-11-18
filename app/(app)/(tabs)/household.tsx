@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Alert, ScrollView, Share, StyleSheet, View } from 'react-native';
-import { Button, makeStyles, Message, Section, spacing, Text, useTheme } from '../../../src/ui';
+import { Button, makeStyles, Message, Section, pageWidth, spacing, Text, useTheme } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { InviteRow } from '../../../src/features/household/components/InviteRow';
 import { MemberRow } from '../../../src/features/household/components/MemberRow';
@@ -131,7 +131,7 @@ function InviteSection({ household, members }: { household: Household; members: 
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
     invites: { gap: spacing.row, marginTop: 8 },
   }),
 );

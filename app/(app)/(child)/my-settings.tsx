@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, ChoiceChips, makeStyles, Message, spacing, Text, useTheme } from '../../../src/ui';
+import { Button, ChoiceChips, makeStyles, Message, pageWidth, spacing, Text, useTheme } from '../../../src/ui';
 import { AppearanceSection } from '../../../src/features/appearance/AppearanceSection';
 import { signOutChildDevice } from '../../../src/features/devices/api';
 import { AvatarPicker } from '../../../src/features/household/components/AvatarPicker';
@@ -99,7 +99,7 @@ export default function ChildSettingsScreen() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    container: { padding: spacing.page, gap: spacing.section + 2, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, gap: spacing.section + 2, paddingBottom: 48 },
     header: { alignItems: 'center', gap: 6 },
     signOut: { gap: 8, marginTop: 24 },
   }),

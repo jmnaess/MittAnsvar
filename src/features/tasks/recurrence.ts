@@ -1,4 +1,5 @@
 import { addDays, formatDate, formatLongDate, formatMonthYear, MONTH_NAMES, WEEKDAY_NAMES } from '../../lib/dates';
+import { isPostponed } from './postpone';
 import type { Recurrence } from './types';
 
 /**
@@ -14,11 +15,19 @@ export function isJob(r: Pick<Recurrence, 'recurrence_type'>): boolean {
   return r.recurrence_type === 'job';
 }
 
-/** Neste frist med år: «november 2027» for månedsoppgaver, ellers «1. desember 2026». */
-export function formatNextDue(task: Recurrence & { next_due_on: string | null }): string {
+/**
+ * Neste frist med år: «november 2027» for månedsoppgaver, ellers «1. desember 2026».
+ * En utsatt månedsoppgave har en fast dato.
+ */
+export function formatNextDue(
+  task: Recurrence & { next_due_on: string | null; postponed_to?: string | null },
+): string {
   if (isJob(task)) return 'Ledig jobb';
   if (!task.next_due_on) return 'Ferdig';
-  return isMonthTask(task) ? formatMonthYear(task.next_due_on) : formatLongDate(task.next_due_on);
+  const postponed = isPostponed({ next_due_on: task.next_due_on, postponed_to: task.postponed_to ?? null });
+  return isMonthTask(task) && !postponed
+    ? formatMonthYear(task.next_due_on)
+    : formatLongDate(task.next_due_on);
 }
 
 // Skjematilstand ↔ gjentakelseskolonnene i databasen, og en norsk beskrivelse.

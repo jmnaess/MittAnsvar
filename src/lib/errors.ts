@@ -70,6 +70,10 @@ const KNOWN: Record<string, string> = {
   undo_not_allowed: 'Bare den siste avkrysningen kan angres.',
   undo_expired: 'Det er for lenge siden til å angre.',
   not_today: 'Bare det som er gjort i dag, kan endres her.',
+  // Utsett til
+  not_postponable: 'Denne oppgaven kan ikke utsettes. Last inn på nytt og prøv igjen.',
+  invalid_date: 'Velg en dato fra i morgen og inntil ett år fram.',
+  undo_postpone_expired: 'Oppgaven er endret siden, så utsettelsen kan ikke angres.',
   // Utbetaling og godkjenning
   amount_exceeds_balance: 'Beløpet kan ikke være større enn det som er godkjent.',
   not_pending: 'Denne er allerede godkjent eller avvist.',

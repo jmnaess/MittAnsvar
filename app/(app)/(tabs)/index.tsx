@@ -23,14 +23,15 @@ import { PendingApprovalBanner } from '../../../src/features/rewards/components/
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
 import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
+import { TaskActionsSheet } from '../../../src/features/tasks/components/TaskActionsSheet';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY, type TodaySection } from '../../../src/features/tasks/groupToday';
-import { useTodayTasks } from '../../../src/features/tasks/hooks';
+import { usePostponeTask, useTodayTasks, useUndoPostpone } from '../../../src/features/tasks/hooks';
 import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
 import type { TodayTask } from '../../../src/features/tasks/types';
-import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
+import { formatDate, formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
@@ -45,6 +46,7 @@ import {
   sharedColors,
   spacing,
   Text,
+  UndoToast,
 } from '../../../src/ui';
 
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
@@ -54,6 +56,9 @@ type Picking = { task: TodayTask; members: Member[]; preselectedId: string | nul
 
 /** En voksen retter en utført rad: valgene først, så personvelgeren ved «Endre hvem». */
 type Fixing = { completion: TodayCompletion; step: 'menu' | 'pick' };
+
+/** «Utsatt til …» med «Angre». */
+type PostponedToast = { taskId: string; message: string };
 
 /**
  * «I dag»: dato og tittel, alle i husstanden (trykk for å vise bare én), godkjenningsbanner for
@@ -78,11 +83,16 @@ export default function TodayScreen() {
   const undo = useUndoCompletion(householdId);
   const remove = useRemoveCompletion(householdId);
   const reassign = useReassignCompletion(householdId);
+  const postpone = usePostponeTask(householdId);
+  const undoPostpone = useUndoPostpone(householdId);
   const insets = useSafeAreaInsets();
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
   const [fixing, setFixing] = useState<Fixing | null>(null);
+  /** Voksen har trykket på raden til en åpen oppgave. */
+  const [opened, setOpened] = useState<TodayTask | null>(null);
+  const [postponed, setPostponed] = useState<PostponedToast | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   // Pluss: velg «Oppgave i dag» eller «Ledig jobb».
   const [creating, setCreating] = useState(false);
@@ -104,14 +114,17 @@ export default function TodayScreen() {
   const nothingToDo = !isPending && sections.every((s) => s.data.length === 0 && s.done.length === 0);
 
   const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
+  // Bare avkrysning: en rad som utsettes, skal ikke se utført ut.
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
+  const today = toIsoDate(new Date());
 
   function markDone(task: TodayTask, memberId: string) {
     setActionError(null);
     complete.mutate(
       { taskId: task.id, memberId },
       {
-        onSuccess: (result) =>
+        onSuccess: (result) => {
+          setPostponed(null);
           setToast({
             completionId: result.completionId,
             title: task.title,
@@ -119,7 +132,8 @@ export default function TodayScreen() {
             reward: result.rewardNok
               ? `+${formatKroner(result.rewardNok)} til ${nameOf(memberId) ?? 'barnet'}`
               : undefined,
-          }),
+          });
+        },
         onError: (e) => setActionError(toNorwegianMessage(e)),
       },
     );
@@ -135,6 +149,33 @@ export default function TodayScreen() {
   }
 
   const pickDoer = (task: TodayTask) => setPicking({ task, members, preselectedId: null });
+
+  // «Utsett til»: oppgaven forsvinner fra i dag og kommer tilbake på den nye datoen.
+  function postponeTo(task: TodayTask, to: string) {
+    setOpened(null);
+    setActionError(null);
+    postpone.mutate(
+      { taskId: task.id, to },
+      {
+        onSuccess: () => {
+          setToast(null);
+          setPostponed({ taskId: task.id, message: `Utsatt til ${formatDate(to)}: ${task.title}` });
+        },
+        onError: (e) => setActionError(toNorwegianMessage(e)),
+      },
+    );
+  }
+
+  function handleUndoPostpone() {
+    if (!postponed) return;
+    undoPostpone.mutate(postponed.taskId, {
+      onSuccess: () => setPostponed(null),
+      onError: (e) => {
+        setPostponed(null);
+        setActionError(toNorwegianMessage(e));
+      },
+    });
+  }
 
   // Trykk på en utført rad (innen 10 minutter, se DoneList): angre den.
   function undoDone(completion: TodayCompletion) {
@@ -202,6 +243,7 @@ export default function TodayScreen() {
         muted={muted}
         busy={busyId === task.id}
         onPress={() => handlePress(task)}
+        onOpen={isAdult ? () => setOpened(task) : undefined}
         onLongPress={() => pickDoer(task)}
       />
     ));
@@ -271,7 +313,7 @@ export default function TodayScreen() {
         refreshControl={<RefreshControl {...pullToRefresh} tintColor={colors.primary} />}
       >
         <PageHeader
-          overline={formatWeekdayDate(toIsoDate(new Date()))}
+          overline={formatWeekdayDate(today)}
           title="I dag"
           right={
             isAdult ? (
@@ -333,6 +375,17 @@ export default function TodayScreen() {
         onPick={(member) => fixing && reassignDone(fixing.completion, member)}
       />
 
+      <TaskActionsSheet
+        taskTitle={opened?.title ?? null}
+        today={today}
+        onClose={() => setOpened(null)}
+        onPostpone={(to) => opened && postponeTo(opened, to)}
+        onPickDoer={() => {
+          if (opened) pickDoer(opened);
+          setOpened(null);
+        }}
+      />
+
       <NewTaskSheet
         visible={creating}
         onClose={() => setCreating(false)}
@@ -349,6 +402,16 @@ export default function TodayScreen() {
           undoing={undo.isPending}
           onUndo={handleUndo}
           onHide={() => setToast(null)}
+        />
+      )}
+
+      {postponed && (
+        <UndoToast
+          resetKey={postponed.taskId}
+          message={postponed.message}
+          undoing={undoPostpone.isPending}
+          onUndo={handleUndoPostpone}
+          onHide={() => setPostponed(null)}
         />
       )}
     </View>

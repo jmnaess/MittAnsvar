@@ -74,6 +74,16 @@ export async function restoreTask(taskId: string): Promise<void> {
   unwrap(await supabase.from('tasks').update({ archived_at: null }).eq('id', taskId));
 }
 
+/** «Utsett til»: bare denne forekomsten flyttes, gjentakelsen er uendret. Bare voksne. */
+export async function postponeTask(taskId: string, to: string): Promise<void> {
+  unwrap(await supabase.rpc('postpone_task', { p_task_id: taskId, p_to: to }));
+}
+
+/** «Angre» etter utsettelse: forrige frist kommer tilbake, også om den var forfalt. */
+export async function undoPostpone(taskId: string): Promise<void> {
+  unwrap(await supabase.rpc('undo_postpone', { p_task_id: taskId }));
+}
+
 /** «Slett» arkiverer, slik at historikken beholdes. */
 export async function archiveTask(taskId: string): Promise<void> {
   unwrap(

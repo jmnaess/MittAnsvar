@@ -13,7 +13,13 @@ type Props = {
   /** Raden ligger i et hvitt kort («Denne måneden»). */
   muted?: boolean;
   busy?: boolean;
+  /** Utført. */
   onPress: () => void;
+  /**
+   * Satt (bare voksne): sirkelen krysser av, og trykk på resten av raden åpner valgene
+   * («Utsett til» m.fl.). Utelatt: hele raden krysser av.
+   */
+  onOpen?: () => void;
   /** Utelatt = langt trykk gjør ingenting (barnets enhet). */
   onLongPress?: () => void;
   /** Hva langt trykk gjør, for skjermlesere. Standard: velg hvem som gjorde det. */
@@ -36,11 +42,13 @@ function metaText(task: TodayTask, assigneeName?: string): string {
 
 /**
  * Én oppgave i «I dag». Trykk = utført, langt trykk = velg hvem som gjorde det.
+ * Med onOpen: sirkelen = utført, raden = valg.
  * Mens avkrysningen pågår, vises raden som utført.
  */
 export function TodayTaskRow({
-  task, assigneeName, checkColor, muted, busy, onPress, onLongPress, longPressHint = DEFAULT_HINT,
+  task, assigneeName, checkColor, muted, busy, onPress, onOpen, onLongPress, longPressHint = DEFAULT_HINT,
 }: Props) {
+  const label = `${task.title}${task.is_overdue ? ', forfalt' : ''}`;
   const hasChips = task.reward_nok !== null || !!task.is_overdue;
   return (
     <TaskRow
@@ -50,9 +58,11 @@ export function TodayTaskRow({
       disabled={busy}
       checkColor={checkColor}
       muted={muted}
-      onPress={onPress}
+      onPress={onOpen ?? onPress}
+      onCheckPress={onOpen ? onPress : undefined}
+      checkAccessibilityLabel={onOpen ? `Marker ${task.title} som utført` : undefined}
       onLongPress={onLongPress}
-      accessibilityLabel={`${task.title}${task.is_overdue ? ', forfalt' : ''}. Marker som utført`}
+      accessibilityLabel={onOpen ? `${label}. Åpne valg` : `${label}. Marker som utført`}
       accessibilityHint={onLongPress ? longPressHint : undefined}
       right={
         hasChips ? (

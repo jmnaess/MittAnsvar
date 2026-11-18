@@ -297,14 +297,14 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"household_id": string,"id": string,"job_member_ids": (string)[],"job_repeats": boolean,"month": number | null,"month_day": number | null,"next_due_on": string | null,"once_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok": number | null,"template_id": string | null,"title": string,"weekdays": (number)[] | null
+                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"household_id": string,"id": string,"job_member_ids": (string)[],"job_repeats": boolean,"month": number | null,"month_day": number | null,"next_due_on": string | null,"once_on": string | null,"postponed_from": string | null,"postponed_to": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok": number | null,"template_id": string | null,"title": string,"weekdays": (number)[] | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "anchor_on": string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id": string,"id"?: string,"job_member_ids"?: (string)[],"job_repeats"?: boolean,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"once_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title": string,"weekdays"?: (number)[] | null
+                    "anchor_on": string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id": string,"id"?: string,"job_member_ids"?: (string)[],"job_repeats"?: boolean,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"once_on"?: string | null,"postponed_from"?: string | null,"postponed_to"?: string | null,"recurrence_every"?: number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title": string,"weekdays"?: (number)[] | null
                   }
                   Update: {
-                    "anchor_on"?: string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id"?: string,"id"?: string,"job_member_ids"?: (string)[],"job_repeats"?: boolean,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"once_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title"?: string,"weekdays"?: (number)[] | null
+                    "anchor_on"?: string,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"household_id"?: string,"id"?: string,"job_member_ids"?: (string)[],"job_repeats"?: boolean,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"once_on"?: string | null,"postponed_from"?: string | null,"postponed_to"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"],"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title"?: string,"weekdays"?: (number)[] | null
                   }
                   Relationships: [
                     {
@@ -402,14 +402,14 @@ isOneToOne: false
                   ]
                 },"today_tasks": {
                   Row: {
-                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"due_by": string | null,"household_id": string,"id": string,"is_month_task": boolean | null,"is_overdue": boolean | null,"job_member_ids": (string)[],"job_repeats": boolean,"month": number | null,"month_day": number | null,"next_due_on": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok": number | null,"template_id": string | null,"title": string,"weekdays": (number)[] | null
+                    "anchor_on": string,"archived_at": string | null,"assigned_member_id": string | null,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"due_by": string | null,"household_id": string,"id": string,"is_month_task": boolean | null,"is_overdue": boolean | null,"job_member_ids": (string)[],"job_repeats": boolean,"month": number | null,"month_day": number | null,"next_due_on": string | null,"once_on": string | null,"postponed_from": string | null,"postponed_to": string | null,"recurrence_every": number | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"recurrence_unit": Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok": number | null,"template_id": string | null,"title": string,"weekdays": (number)[] | null
                   }
                   ComputedFields: never
                   Insert: {
-                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"due_by"?: never,"household_id"?: string | null,"id"?: string | null,"is_month_task"?: never,"is_overdue"?: never,"job_member_ids"?: (string)[] | null,"job_repeats"?: boolean | null,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title"?: string | null,"weekdays"?: (number)[] | null
+                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"due_by"?: never,"household_id"?: string | null,"id"?: string | null,"is_month_task"?: never,"is_overdue"?: never,"job_member_ids"?: (string)[] | null,"job_repeats"?: boolean | null,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"once_on"?: string | null,"postponed_from"?: string | null,"postponed_to"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title"?: string | null,"weekdays"?: (number)[] | null
                          }
                         Update: {
-                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"due_by"?: never,"household_id"?: string | null,"id"?: string | null,"is_month_task"?: never,"is_overdue"?: never,"job_member_ids"?: (string)[] | null,"job_repeats"?: boolean | null,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title"?: string | null,"weekdays"?: (number)[] | null
+                           "anchor_on"?: string | null,"archived_at"?: string | null,"assigned_member_id"?: string | null,"category"?: string | null,"created_at"?: string | null,"created_by"?: string | null,"description"?: string | null,"due_by"?: never,"household_id"?: string | null,"id"?: string | null,"is_month_task"?: never,"is_overdue"?: never,"job_member_ids"?: (string)[] | null,"job_repeats"?: boolean | null,"month"?: number | null,"month_day"?: number | null,"next_due_on"?: string | null,"once_on"?: string | null,"postponed_from"?: string | null,"postponed_to"?: string | null,"recurrence_every"?: number | null,"recurrence_type"?: Database["public"]['Enums']["recurrence_type"] | null,"recurrence_unit"?: Database["public"]['Enums']["recurrence_unit"] | null,"reward_nok"?: number | null,"template_id"?: string | null,"title"?: string | null,"weekdays"?: (number)[] | null
                          }
                         Relationships: [
                     {
@@ -488,6 +488,9 @@ isOneToOne: false
               "due_on": string,"task_id": string
             }[]
                            },
+"postpone_task":
+{ Args: { "p_task_id": string,"p_to": string }; Returns: string
+                           },
 "reassign_completion":
 { Args: { "p_completion_id": string,"p_member_id": string }; Returns: undefined
                            },
@@ -511,6 +514,9 @@ isOneToOne: false
                            },
 "undo_completion":
 { Args: { "p_completion_id": string }; Returns: undefined
+                           },
+"undo_postpone":
+{ Args: { "p_task_id": string }; Returns: undefined
                            },
 "unlink_member_device":
 { Args: { "p_member_id": string }; Returns: undefined

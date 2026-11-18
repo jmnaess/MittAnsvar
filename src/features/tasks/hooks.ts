@@ -6,7 +6,9 @@ import {
   listTasks,
   listTodayTasks,
   listUpcomingOccurrences,
+  postponeTask,
   restoreTask,
+  undoPostpone,
   updateTask,
 } from './api';
 import type { TaskInput } from './types';
@@ -75,4 +77,18 @@ export function useArchiveTask(householdId: string) {
 export function useRestoreTask(householdId: string) {
   const onSuccess = useInvalidateTasks(householdId);
   return useMutation({ mutationFn: restoreTask, onSuccess });
+}
+
+/** «Utsett til». onSettled: også ved feil, i tilfelle en annen voksen har endret oppgaven. */
+export function usePostponeTask(householdId: string) {
+  const onSettled = useInvalidateTasks(householdId);
+  return useMutation({
+    mutationFn: ({ taskId, to }: { taskId: string; to: string }) => postponeTask(taskId, to),
+    onSettled,
+  });
+}
+
+export function useUndoPostpone(householdId: string) {
+  const onSettled = useInvalidateTasks(householdId);
+  return useMutation({ mutationFn: undoPostpone, onSettled });
 }

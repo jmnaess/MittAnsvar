@@ -1,5 +1,6 @@
 import { MONTH_NAMES } from '../../lib/dates';
 import type { Household, HomeProfile } from '../household/types';
+import { describeRecurrence } from '../tasks/recurrence';
 import type { Task } from '../tasks/types';
 import { meetsRequires } from './requires';
 import type { TaskTemplate } from './types';
@@ -7,21 +8,37 @@ import type { TaskTemplate } from './types';
 /** Det utvalget trenger om husstanden: husstandstype og hjemprofilen (med boligtype). */
 export type SuggestionHousehold = Pick<Household, 'type'> & HomeProfile;
 
-/**
- * Maler som passer husstanden: riktig husstandstype og boligtype (null = alle), og
- * betingelsene på hjemprofilen (requires). Bare årlige maler hører til årshjulet.
- */
+/** Riktig husstandstype og boligtype (null = alle), og betingelsene på hjemprofilen (requires). */
+function fitsHousehold(t: TaskTemplate, household: SuggestionHousehold): boolean {
+  return (
+    (t.household_types === null || t.household_types.includes(household.type)) &&
+    (t.housing_types === null || t.housing_types.includes(household.housing_type)) &&
+    meetsRequires(t.requires, household)
+  );
+}
+
+/** Årshjulet: årlige maler med måned. */
+function isYearWheelTemplate(t: TaskTemplate): boolean {
+  return t.recurrence_unit === 'year' && t.month !== null;
+}
+
+/** Intervallmal («hver 8. uke etter sist utført»). Foreslås fra hjemprofilen, men er ikke i årshjulet. */
+export function isIntervalTemplate(t: Pick<TaskTemplate, 'recurrence_type'>): boolean {
+  return t.recurrence_type === 'interval';
+}
+
+/** Maler i årshjulet som passer husstanden. */
 export function suggestForHousehold(
   templates: TaskTemplate[],
   household: SuggestionHousehold,
 ): TaskTemplate[] {
+  return templates.filter((t) => isYearWheelTemplate(t) && fitsHousehold(t, household));
+}
+
+/** Maler hjemprofilen kan foreslå: årshjulet og intervallmalene. */
+function suggestForHomeProfile(templates: TaskTemplate[], household: SuggestionHousehold): TaskTemplate[] {
   return templates.filter(
-    (t) =>
-      t.recurrence_unit === 'year' &&
-      t.month !== null &&
-      (t.household_types === null || t.household_types.includes(household.type)) &&
-      (t.housing_types === null || t.housing_types.includes(household.housing_type)) &&
-      meetsRequires(t.requires, household),
+    (t) => (isYearWheelTemplate(t) || isIntervalTemplate(t)) && fitsHousehold(t, household),
   );
 }
 
@@ -37,6 +54,7 @@ export function activeTemplateIds(tasks: Pick<Task, 'template_id'>[]): Set<strin
  *                                bort forrige gang, kommer dermed ikke tilbake fordi man endret et
  *                                annet svar, bare hvis et svar gjør at den passer på nytt.
  * Maler som allerede er aktive, er aldri med. Eksisterende oppgaver røres ikke.
+ * Både årshjulsmaler og intervallmaler er med.
  */
 export function suggestAfterProfileChange(
   templates: TaskTemplate[],
@@ -44,34 +62,46 @@ export function suggestAfterProfileChange(
   after: SuggestionHousehold,
   active: Set<string>,
 ): TaskTemplate[] {
-  const matchedBefore = new Set(before ? suggestForHousehold(templates, before).map((t) => t.id) : []);
+  const matchedBefore = new Set(before ? suggestForHomeProfile(templates, before).map((t) => t.id) : []);
   const seen = new Set<string>();
-  return suggestForHousehold(templates, after).filter((t) => {
+  return suggestForHomeProfile(templates, after).filter((t) => {
     if (matchedBefore.has(t.id) || active.has(t.id) || seen.has(t.id)) return false;
     seen.add(t.id);
     return true;
   });
 }
 
-/** Én rad i forslagslisten: maler med samme tittel (f.eks. filter vår og høst) slått sammen. */
+/** Én rad i forslagslisten: maler med samme tittel (f.eks. utedelen nov og jan) slått sammen. */
 export type SuggestionGroup = {
   key: string;
   title: string;
-  /** 1–12, sortert */
-  months: number[];
+  /** «Mars og september · 2 ganger i året» eller «8 uker etter sist» */
+  when: string;
   templateIds: string[];
 };
 
-/** Slår sammen maler med samme tittel, i rekkefølgen den første av dem har. */
+/**
+ * Slår sammen årsmaler med samme tittel, i rekkefølgen den første av dem har.
+ * Intervallmaler får alltid sin egen rad (de har ingen måned).
+ */
 export function groupSuggestions(templates: TaskTemplate[]): SuggestionGroup[] {
-  const groups = new Map<string, SuggestionGroup>();
+  // Map beholder rekkefølgen nøklene ble lagt inn i.
+  const groups = new Map<string, { first: TaskTemplate; months: number[]; templateIds: string[] }>();
   for (const t of templates) {
-    const group = groups.get(t.title) ?? { key: t.id, title: t.title, months: [], templateIds: [] };
+    const groupKey = isIntervalTemplate(t) ? `interval:${t.id}` : `title:${t.title}`;
+    const group = groups.get(groupKey) ?? { first: t, months: [], templateIds: [] };
     if (t.month !== null && !group.months.includes(t.month)) group.months.push(t.month);
     group.templateIds.push(t.id);
-    groups.set(t.title, group);
+    groups.set(groupKey, group);
   }
-  return [...groups.values()].map((g) => ({ ...g, months: [...g.months].sort((a, b) => a - b) }));
+  return [...groups.values()].map(({ first, months, templateIds }) => ({
+    key: first.id,
+    title: first.title,
+    when: isIntervalTemplate(first)
+      ? describeRecurrence({ ...first, job_repeats: false })
+      : formatSuggestionWhen([...months].sort((a, b) => a - b)),
+    templateIds,
+  }));
 }
 
 /** «Mars og september · 2 ganger i året», «Oktober · hvert år». */

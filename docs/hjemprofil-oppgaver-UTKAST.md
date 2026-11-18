@@ -193,7 +193,7 @@ vært årshjulet. En intervallmal ville aldri blitt foreslått.
 
 **Første frist (vedtatt):** en intervalloppgave som lages fra en mal (`activate_templates`), får første frist
 **ett intervall frem** (filteret: om 8 uker). Den dukker altså ikke opp i «I dag» med en gang.
-Egne intervalloppgaver er uendret: første frist er datoen brukeren velger. Krever en liten endring i
-`activate_templates`, med pgTAP-test for begge.
+Egne intervalloppgaver er uendret: første frist er i dag (dagen de lages). Løst i triggeren
+`tasks_set_defaults` (`*_interval_templates.sql`), med pgTAP-test for begge.
 
 **Anslag:** liten jobb, omtrent like stor som steg 2. Ingen ny UI, ingen endring i årshjulet.

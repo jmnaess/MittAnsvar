@@ -169,6 +169,38 @@ describe('suggestAfterProfileChange', () => {
   });
 });
 
+describe('intervallmaler', () => {
+  const heatPumpFilter = template('heat-pump-filter', {
+    recurrence_type: 'interval',
+    recurrence_unit: 'week',
+    recurrence_every: 8,
+    month: null,
+    requires: { has_air_heat_pump: true },
+  });
+  const withInterval = [...all, heatPumpFilter];
+
+  it('vises ikke i årshjulet', () => {
+    const h = household({ has_air_heat_pump: true });
+    expect(ids(suggestForHousehold(withInterval, h))).toEqual(['fridge', 'heat-pump']);
+  });
+
+  it('foreslås fra hjemprofilen når betingelsen er oppfylt', () => {
+    const after = household({ has_air_heat_pump: true });
+    expect(ids(suggestAfterProfileChange(withInterval, null, after, new Set())))
+      .toEqual(['fridge', 'heat-pump', 'heat-pump-filter']);
+  });
+
+  it('ny runde: bare når svaret er nytt, og ikke når den er aktiv', () => {
+    const before = household({ has_car: true });
+    const after = household({ has_car: true, has_air_heat_pump: true });
+    expect(ids(suggestAfterProfileChange(withInterval, before, after, new Set())))
+      .toEqual(['heat-pump', 'heat-pump-filter']);
+    expect(ids(suggestAfterProfileChange(withInterval, after, after, new Set()))).toEqual([]);
+    expect(ids(suggestAfterProfileChange(withInterval, before, after, new Set(['heat-pump-filter']))))
+      .toEqual(['heat-pump']);
+  });
+});
+
 describe('activeTemplateIds', () => {
   it('tar med maler som har en oppgave, ikke egne oppgaver', () => {
     expect(activeTemplateIds([{ template_id: 'a' }, { template_id: null }, { template_id: 'b' }]))
@@ -179,13 +211,29 @@ describe('activeTemplateIds', () => {
 describe('groupSuggestions og formatSuggestionWhen', () => {
   it('slår sammen maler med samme tittel og sorterer månedene', () => {
     const groups = groupSuggestions([
-      template('filter-autumn', { title: 'Bytt filter', month: 9 }),
+      template('outdoor-nov', { title: 'Sjekk utedelen', month: 11 }),
       template('tyres', { title: 'Bytt dekk', month: 4 }),
-      template('filter-spring', { title: 'Bytt filter', month: 3 }),
+      template('outdoor-jan', { title: 'Sjekk utedelen', month: 1 }),
     ]);
     expect(groups).toEqual([
-      { key: 'filter-autumn', title: 'Bytt filter', months: [3, 9], templateIds: ['filter-autumn', 'filter-spring'] },
-      { key: 'tyres', title: 'Bytt dekk', months: [4], templateIds: ['tyres'] },
+      {
+        key: 'outdoor-nov',
+        title: 'Sjekk utedelen',
+        when: 'Januar og november · 2 ganger i året',
+        templateIds: ['outdoor-nov', 'outdoor-jan'],
+      },
+      { key: 'tyres', title: 'Bytt dekk', when: 'April · hvert år', templateIds: ['tyres'] },
+    ]);
+  });
+
+  it('intervallmaler får egen rad med «etter sist», også med samme tittel som en årsmal', () => {
+    const groups = groupSuggestions([
+      template('filter', { title: 'Rens filteret', recurrence_type: 'interval', recurrence_unit: 'week', recurrence_every: 8, month: null }),
+      template('filter-year', { title: 'Rens filteret', month: 9 }),
+    ]);
+    expect(groups).toEqual([
+      { key: 'filter', title: 'Rens filteret', when: '8 uker etter sist', templateIds: ['filter'] },
+      { key: 'filter-year', title: 'Rens filteret', when: 'September · hvert år', templateIds: ['filter-year'] },
     ]);
   });
 

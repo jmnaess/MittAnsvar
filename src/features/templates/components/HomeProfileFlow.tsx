@@ -10,7 +10,6 @@ import { useTasks } from '../../tasks/hooks';
 import { useActivateTemplates, useTemplates } from '../hooks';
 import {
   activeTemplateIds,
-  formatSuggestionWhen,
   groupSuggestions,
   suggestAfterProfileChange,
   type SuggestionGroup,
@@ -137,7 +136,7 @@ function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) 
           <CheckRow
             key={group.key}
             title={group.title}
-            meta={formatSuggestionWhen(group.months)}
+            meta={group.when}
             checked={selected.has(group.key)}
             onToggle={() => toggle(group.key)}
             disabled={activate.isPending}

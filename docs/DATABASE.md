@@ -386,6 +386,11 @@ Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_b
 - Maler som allerede er aktive, hoppes over (`on conflict do nothing` på den unike indeksen). Samme RPC brukes for én bryter og for «Velg anbefalte».
 - Den kjører som `security invoker`. RLS på `tasks` (voksen og `household_has_access`) og triggeren (`anchor_on` = i dag, `first_due`) gjelder dermed som for andre oppgaver.
 - Husstanden kan endre kopien fritt, og senere endringer i malen påvirker ikke eksisterende oppgaver.
+- **Intervallmaler** (`recurrence_type = 'interval'`, hjemprofil): første frist er **ett intervall frem**
+  (`compute_next_due(oppgaven, i dag)`), ikke i dag. Det settes i INSERT-grenen av `tasks_set_defaults` når
+  `template_id` er satt (`*_interval_templates.sql`). Egne intervalloppgaver får fortsatt første frist i dag.
+  Endres gjentakelsen senere, starter oppgaven fra i dag, som andre oppgaver. Intervallmaler vises ikke i
+  årshjulet, bare i forslagene fra hjemprofilen. Oppgavene havner i Oppgaver.
 - **Deaktivering** = arkivere oppgaven (`archived_at`).
 
 Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, boligtype og hjemprofilen (`requires`, se `templates/requires.ts`), og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 16.

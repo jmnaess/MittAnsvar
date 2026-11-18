@@ -43,6 +43,12 @@ grant execute on all functions in schema tests to anon, authenticated;
 
 -- Husker id-en fra første kall, så senere tester kan slå opp husstanden.
 create table tests.result (household_id uuid);
+
+-- Rader som fantes før testen (f.eks. utviklingsdata i den lokale databasen). Tellingene under
+-- sammenlignes med dette, så testen bare ser på det den selv har laget.
+create table tests.baseline as
+select (select count(*)::int from public.households) as households,
+       (select count(*)::int from public.members)    as members;
 grant all on tests.result to authenticated;
 
 -- ---------------------------------------------------------------------------
@@ -127,7 +133,7 @@ select tests.logout();
 select is((select count(*)::int from public.members
            where auth_user_id = '00000000-0000-0000-0000-0000000000a1'), 1,
   'brukeren er fortsatt bare medlem ett sted');
-select is((select count(*)::int from public.households), 2,
+select is((select count(*)::int from public.households), (select households + 2 from tests.baseline),
   'ingen ny husstand ble opprettet av det avviste kallet');
 
 -- ===========================================================================
@@ -164,7 +170,7 @@ select throws_ok(
   '23514', null, 'tomt visningsnavn avvises');
 select tests.logout();
 
-select is((select count(*)::int from public.households), 2,
+select is((select count(*)::int from public.households), (select households + 2 from tests.baseline),
   'ingen halvferdig husstand ble liggende etter feilene');
 select is((select count(*)::int from public.members
            where auth_user_id = '00000000-0000-0000-0000-0000000000d1'), 0,

@@ -42,6 +42,12 @@ $$;
 
 grant execute on all functions in schema tests to anon, authenticated;
 
+-- Rader som fantes før testen (f.eks. utviklingsdata i den lokale databasen). Tellingene under
+-- sammenlignes med dette, så testen bare ser på det den selv har laget.
+create table tests.baseline as
+select (select count(*)::int from public.households) as households,
+       (select count(*)::int from public.members)    as members;
+
 -- ---------------------------------------------------------------------------
 -- Testdata (som superbruker)
 --   Husstand C: voksen C1, voksen C2, barn C med enhet (anonym bruker)
@@ -99,9 +105,9 @@ select lives_ok($$select public.delete_my_account_data()$$,
   'bruker uten medlemskap kan kalle funksjonen');
 select tests.logout();
 
-select is((select count(*)::int from public.households), 2,
+select is((select count(*)::int from public.households), (select households + 2 from tests.baseline),
   'bruker uten medlemskap: begge husstandene finnes');
-select is((select count(*)::int from public.members), 6,
+select is((select count(*)::int from public.members), (select members + 6 from tests.baseline),
   'bruker uten medlemskap: alle medlemmer finnes');
 
 -- ===========================================================================
@@ -179,7 +185,7 @@ select lives_ok($$select public.delete_my_account_data()$$,
   'voksen C2 kan slette sine data');
 select tests.logout();
 
-select is((select count(*)::int from public.households), 0,
+select is((select count(*)::int from public.households), (select households from tests.baseline),
   'husstand C er slettet når siste voksne (C2) sletter seg');
 select is((select count(*)::int from auth.users
            where id = '00000000-0000-0000-0000-00000000c003'), 0,

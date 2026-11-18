@@ -20,7 +20,7 @@ const SPLASH_SAFE_SHARE = 2 / 3;
 
 // Sirklene som rommer figurene, i kildens koordinater (før transformen i SVG-en).
 const BUST_CIRCLE = { x: 50, y: 50, radius: 40 };
-const HEAD_CIRCLE = { x: 50, y: 38, radius: 31 };
+const HEAD_CIRCLE = { x: 50, y: 38, radius: 32 };
 
 // Figurene i kilden, i tegnerekkefølge. Skriptet finner dem etter plassering.
 const SHAPE_COUNT = 15;
@@ -28,6 +28,10 @@ const LEFT_EAR = 0;
 const RIGHT_EAR = 1;
 const BODY = 4;
 const HEAD = 5;
+const FACE = 6;
+const NOSE = 7;
+const LEFT_EYE = 8;
+const RIGHT_EYE = 9;
 
 // Kroppen går ut av bildet i kilden. Frittstående får den en myk, buet underkant under medaljen.
 const BUST_BODY_PATH = 'M34.4 60.8 L50 62.9 L65.6 60.8 L69.8 71.9 L70.6 82 Q50 96 29.4 82 L30.2 71.9 Z';
@@ -61,10 +65,29 @@ function bustShapes(shapes) {
     .join('');
 }
 
+function inWhite(shape) {
+  return shape.replace(/#[0-9A-F]{6}/g, '#FFFFFF');
+}
+
+/**
+ * Android bruker bare gjennomsiktigheten i dette laget. Ansiktet skjæres derfor ut av hodet,
+ * mens en tynn kant, øynene og nesen beholdes så figuren leses som en rev.
+ */
 function headSilhouette(shapes) {
-  return [LEFT_EAR, RIGHT_EAR, HEAD]
-    .map((index) => shapes[index].replace(/#F0844A/g, '#FFFFFF'))
-    .join('');
+  const head = inWhite(shapes[HEAD]);
+  const face = shapes[FACE].replace(/#[0-9A-F]{6}/g, '#000000');
+  const outline = head.replace('fill="#FFFFFF"', 'fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"');
+  const features = [NOSE, LEFT_EYE, RIGHT_EYE].map((index) => inWhite(shapes[index])).join('');
+
+  return (
+    `<mask id="face-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">` +
+    `<rect width="100" height="100" fill="#FFFFFF"/>${face}</mask>` +
+    inWhite(shapes[LEFT_EAR]) +
+    inWhite(shapes[RIGHT_EAR]) +
+    `<g mask="url(#face-cutout)">${head}</g>` +
+    outline +
+    features
+  );
 }
 
 function render(svg) {

@@ -36,6 +36,7 @@ describe('toJobInput', () => {
       month_day: null,
       month: null,
       job_repeats: false,
+      once_on: null,
     });
   });
 

@@ -1,54 +1,61 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { toIsoDate } from '../../../lib/dates';
 import { ChoiceChips, Hint, TextField } from '../../../ui';
 import type { Member } from '../../household/types';
-import { defaultRecurrenceForm, fromRecurrence, toRecurrence } from '../recurrence';
+import { defaultRecurrenceForm, fromRecurrence, sameWhen, toRecurrence } from '../recurrence';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
 import type { TaskInput } from '../types';
-import { JobMembersPicker } from './JobMembersPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 
 // ChoiceChips trenger en verdi for «felles». null kan ikke brukes som nøkkel.
 const SHARED = 'shared';
 
+/** En oppgave som endres: det som ble lagret, og fristen (for eldre engangsoppgaver uten dato). */
+type Initial = TaskInput & { next_due_on: string | null };
+
 /**
  * Tilstanden i oppgaveskjemaet. Skilt fra feltene, så modalen kan ha Lagre i headeren.
- * value er null så lenge skjemaet ikke er gyldig.
+ * value er null så lenge skjemaet ikke er gyldig. Ledige jobber har eget skjema (JobForm).
  */
-export function useTaskForm(initial?: TaskInput) {
+export function useTaskForm(initial?: Initial) {
+  // Enhetens dato når skjemaet åpnes. I dag og I morgen regnes fra den.
+  const [today] = useState(() => toIsoDate(new Date()));
+  const [initialWhen] = useState(() =>
+    initial ? fromRecurrence(initial, today) : defaultRecurrenceForm(today),
+  );
   const [title, setTitle] = useState(initial?.title ?? '');
   const [assignee, setAssignee] = useState(initial?.assigned_member_id ?? SHARED);
-  // Bare for jobber: barna som kan ta den. Tom = alle barna.
-  const [jobMemberIds, setJobMemberIds] = useState<string[]>(initial?.job_member_ids ?? []);
-  const [recurrenceForm, setRecurrenceForm] = useState(
-    initial ? fromRecurrence(initial) : defaultRecurrenceForm(),
-  );
+  const [recurrenceForm, setRecurrenceForm] = useState(initialWhen);
   // Tekst, fordi det skrives i et felt. Tom = ingen lønn.
   const [reward, setReward] = useState(initial?.reward_nok ? String(initial.reward_nok) : '');
 
   const trimmedTitle = title.trim();
-  const recurrence = toRecurrence(recurrenceForm);
   const rewardNok = parseReward(reward);
+  let schedule = toRecurrence(recurrenceForm, today);
+  // «Når?» er ikke endret: behold datoen som er lagret. Ellers ville en engangsoppgave fra i går
+  // fått ny frist (og en utført blitt åpnet igjen) bare fordi tittelen ble endret.
+  if (schedule && initial?.recurrence_type === 'once' && sameWhen(recurrenceForm, initialWhen)) {
+    schedule = { ...schedule, once_on: initial.once_on };
+  }
+
   const value: TaskInput | null =
-    trimmedTitle.length > 0 && recurrence && rewardNok !== undefined
+    trimmedTitle.length > 0 && schedule && rewardNok !== undefined
       ? {
           title: trimmedTitle,
-          // Jobber bruker listen over barn, alle andre oppgaver én ansvarlig (eller felles).
-          ...(recurrence.recurrence_type === 'job'
-            ? { assigned_member_id: null, job_member_ids: jobMemberIds }
-            : { assigned_member_id: assignee === SHARED ? null : assignee, job_member_ids: [] }),
+          assigned_member_id: assignee === SHARED ? null : assignee,
+          job_member_ids: [],
           reward_nok: rewardNok,
-          ...recurrence,
+          ...schedule,
         }
       : null;
 
   return {
+    today,
     title,
     setTitle,
     assignee,
     setAssignee,
-    jobMemberIds,
-    setJobMemberIds,
     recurrenceForm,
     setRecurrenceForm,
     reward,
@@ -63,21 +70,22 @@ export type TaskFormState = ReturnType<typeof useTaskForm>;
 type Props = {
   form: TaskFormState;
   members: Member[];
-  /** «Lønn (kr)» vises bare for voksne, og bare når ansvarlig er et barn, «Felles» eller jobb. */
+  /** «Lønn (kr)» vises bare for voksne, og bare når ansvarlig er et barn eller «Felles». */
   canSetReward: boolean;
+  /** false = uten «Når?» («Oppgave i dag» fra «I dag»). Skjemaet står da på I dag. */
+  showWhen?: boolean;
   disabled?: boolean;
 };
 
-/** Tittel, hvem som har ansvaret, gjentakelse og lønn. */
-export function TaskFields({ form, members, canSetReward, disabled }: Props) {
-  const isJob = form.recurrenceForm.mode === 'job';
+/** Tittel, hvem som har ansvaret, når og lønn. */
+export function TaskFields({ form, members, canSetReward, showWhen = true, disabled }: Props) {
   const assigneeOptions = [
     { value: SHARED, label: 'Felles' },
     ...members.map((m) => ({ value: m.id, label: m.display_name })),
   ];
 
-  // Voksne får aldri lønn, så feltet skjules når en voksen har ansvaret. Jobber er alltid for barn.
-  const assigneeIsAdult = !isJob && members.some((m) => m.id === form.assignee && m.role === 'adult');
+  // Voksne får aldri lønn, så feltet skjules når en voksen har ansvaret.
+  const assigneeIsAdult = members.some((m) => m.id === form.assignee && m.role === 'adult');
   const showReward = canSetReward && !assigneeIsAdult;
 
   // Tøm beløpet når en voksen blir ansvarlig, så det ikke lagres i det skjulte.
@@ -97,30 +105,23 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
         maxLength={80}
         editable={!disabled}
       />
-      {isJob ? (
-        <>
-          <JobMembersPicker
-            label="Hvem kan ta jobben?"
-            members={members}
-            value={form.jobMemberIds}
-            onChange={form.setJobMemberIds}
-            disabled={disabled}
-          />
-          <Hint>Velg ett eller flere barn, eller alle barna.</Hint>
-        </>
-      ) : (
-        <>
-          <ChoiceChips
-            label="Hvem har ansvaret?"
-            options={assigneeOptions}
-            value={form.assignee}
-            onChange={form.setAssignee}
-            disabled={disabled}
-          />
-          <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
-        </>
+      {/* «Når?» rett under tittelen. I dag er forhåndsvalgt. */}
+      {showWhen && (
+        <RecurrencePicker
+          value={form.recurrenceForm}
+          onChange={form.setRecurrenceForm}
+          today={form.today}
+          disabled={disabled}
+        />
       )}
-      <RecurrencePicker value={form.recurrenceForm} onChange={form.setRecurrenceForm} disabled={disabled} />
+      <ChoiceChips
+        label="Hvem har ansvaret?"
+        options={assigneeOptions}
+        value={form.assignee}
+        onChange={form.setAssignee}
+        disabled={disabled}
+      />
+      <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
       {showReward && (
         <>
           <TextField

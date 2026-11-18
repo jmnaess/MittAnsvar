@@ -118,6 +118,7 @@ Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader
 | template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra (steg 7). Kan settes ved insert, ikke endres |
 | *gjentakelse* | se §2 | `recurrence_type`, `recurrence_unit`, `recurrence_every`, `weekdays`, `month_day`, `month`, `anchor_on` |
 | next_due_on | date null | neste frist. null = engangsoppgave som er utført, eller en jobb (har aldri frist). Skrives bare av databasen (trigger og RPC) |
+| once_on | date null | datoen en engangsoppgave skal gjøres («I dag», «I morgen», «Velg dato»). null = i dag (eldre oppgaver). Bare for `once` (check-constraint). Klienten skriver den; triggeren flytter en passert dato til i dag og gir ny frist bare når den endres |
 | reward_nok | integer null | lønn i hele kroner, 1–10 000 (steg 9). null = ingen lønn. Bare voksne kan sette den (RLS) |
 | job_repeats | boolean not null default false | bare for jobber: false = engangsjobb, true = kan gjøres igjen. Check: `job_repeats ⇒ recurrence_type = 'job'` |
 | job_member_ids | uuid[] not null default `'{}'` | bare for jobber: barna som kan ta jobben. Tom = alle barna. Check: `'{}'` eller `recurrence_type = 'job'`. En liste kan ikke ha FK, så triggeren `tasks_check_job_members` avviser alt som ikke er barn i samme husstand, og duplikater (`invalid_member`). Triggeren `members_remove_from_jobs` fjerner et barn som slettes |
@@ -224,7 +225,7 @@ Hvorfor i databasen? Regelen finnes ett sted, klienten kan ikke sende en feil fr
 Hjelpefunksjoner (alle i `private`):
 - `matches_pattern(t, d)`: er `d` en forekomst?
 - `next_occurrence(t, after)`: første treff etter `after`.
-- `first_due(t)`: første frist for en ny oppgave. Det er `anchor_on` for once/interval, og første treff fra og med `anchor_on` for calendar. Månedsoppgaver regnes fra den 1. i måneden til `anchor_on`.
+- `first_due(t)`: første frist for en ny oppgave. Det er `once_on` (eller `anchor_on` uten dato) for once, `anchor_on` for interval, og første treff fra og med `anchor_on` for calendar. Månedsoppgaver regnes fra den 1. i måneden til `anchor_on`.
 - `is_month_task(t)`, `due_by(t)` og `is_overdue(t, today)`: se under.
 - `local_today(tz, at)` og `household_today(hid)`.
 

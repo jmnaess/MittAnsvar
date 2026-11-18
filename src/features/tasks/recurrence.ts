@@ -1,4 +1,4 @@
-import { formatLongDate, formatMonthYear, MONTH_NAMES, WEEKDAY_NAMES } from '../../lib/dates';
+import { addDays, formatDate, formatLongDate, formatMonthYear, MONTH_NAMES, WEEKDAY_NAMES } from '../../lib/dates';
 import type { Recurrence } from './types';
 
 /**
@@ -22,14 +22,23 @@ export function formatNextDue(task: Recurrence & { next_due_on: string | null })
 }
 
 // Skjematilstand ↔ gjentakelseskolonnene i databasen, og en norsk beskrivelse.
-// Neste frist beregnes IKKE her. Det gjør databasen (private.compute_next_due).
+// Neste frist beregnes IKKE her. Det gjør databasen (private.first_due og compute_next_due).
 
-export type RecurrenceMode = 'calendar' | 'interval' | 'once' | 'job';
+/** «Når?» i oppgaveskjemaet. I dag, I morgen og Velg dato er engangsoppgaver med dato. */
+export type WhenChoice = 'today' | 'tomorrow' | 'date' | 'repeat';
+/** Gjentakelse under «Gjentas». Ledige jobber har sitt eget skjema (JobForm). */
+export type RecurrenceMode = 'calendar' | 'interval';
 export type CalendarUnit = 'week' | 'month' | 'year';
 export type IntervalUnit = 'day' | 'week' | 'month' | 'year';
 
+/** Gjentakelseskolonnene + datoen for en engangsoppgave (tasks.once_on). */
+export type Schedule = Recurrence & { once_on: string | null };
+
 /** Det skjemaet holder på mens brukeren fyller ut. Tall er tekst fordi de skrives i et felt. */
 export type RecurrenceForm = {
+  when: WhenChoice;
+  /** 'YYYY-MM-DD' for «Velg dato». */
+  date: string;
   mode: RecurrenceMode;
   calendarUnit: CalendarUnit;
   weekdays: number[]; // 1 = mandag … 7 = søndag
@@ -38,15 +47,16 @@ export type RecurrenceForm = {
   month: number; // 1–12
   intervalEvery: string;
   intervalUnit: IntervalUnit;
-  /** Bare for ledig jobb: kan gjøres flere ganger (ellers forsvinner den når den er gjort). */
-  jobRepeats: boolean;
 };
 
 /** Høyeste «hver N.» databasen tillater (check-constraint på recurrence_every). */
 const MAX_EVERY = 100;
 
-export function defaultRecurrenceForm(): RecurrenceForm {
+/** today = enhetens dato ('YYYY-MM-DD'). «Velg dato» starter på i overmorgen. */
+export function defaultRecurrenceForm(today: string): RecurrenceForm {
   return {
+    when: 'today',
+    date: addDays(today, 2),
     mode: 'calendar',
     calendarUnit: 'week',
     weekdays: [],
@@ -55,7 +65,6 @@ export function defaultRecurrenceForm(): RecurrenceForm {
     month: 1,
     intervalEvery: '14',
     intervalUnit: 'day',
-    jobRepeats: false,
   };
 }
 
@@ -73,18 +82,28 @@ const NONE = {
   month_day: null,
   month: null,
   job_repeats: false,
+  once_on: null,
 };
 
-/** Skjema → kolonner. Gir null når skjemaet ikke er gyldig ennå. */
-export function toRecurrence(form: RecurrenceForm): Recurrence | null {
-  if (form.mode === 'once') {
-    return { recurrence_type: 'once', ...NONE };
+/**
+ * Skjema → kolonner. Gir null når skjemaet ikke er gyldig ennå.
+ * I dag og I morgen regnes fra enhetens dato. Databasen flytter en dato som er passert i
+ * husstandens tidssone, til i dag.
+ */
+export function toRecurrence(form: RecurrenceForm, today: string): Schedule | null {
+  switch (form.when) {
+    case 'today':
+      return { recurrence_type: 'once', ...NONE, once_on: today };
+    case 'tomorrow':
+      return { recurrence_type: 'once', ...NONE, once_on: addDays(today, 1) };
+    case 'date':
+      return { recurrence_type: 'once', ...NONE, once_on: form.date };
+    case 'repeat':
+      return toRepeat(form);
   }
+}
 
-  if (form.mode === 'job') {
-    return { recurrence_type: 'job', ...NONE, job_repeats: form.jobRepeats };
-  }
-
+function toRepeat(form: RecurrenceForm): Schedule | null {
   if (form.mode === 'interval') {
     const every = parseIntIn(form.intervalEvery, 1, MAX_EVERY);
     if (every === null) return null;
@@ -111,13 +130,25 @@ export function toRecurrence(form: RecurrenceForm): Recurrence | null {
 
 /**
  * Kolonner → skjema, når en oppgave skal endres.
- * Skjemaet viser bare det enkle (hver/annenhver uke, hver måned, hvert år). Har oppgaven noe
- * annet, f.eks. fra en mal senere, vises det nærmeste. Felt som ikke endres, beholder verdien.
+ * En engangsoppgave vises med datoen sin: once_on, eller fristen for eldre oppgaver uten
+ * once_on. Skjemaet viser bare det enkle (hver/annenhver uke, hver måned, hvert år). Har
+ * oppgaven noe annet, vises det nærmeste. Felt som ikke endres, beholder verdien.
  */
-export function fromRecurrence(r: Recurrence): RecurrenceForm {
-  const form = defaultRecurrenceForm();
-  form.mode = r.recurrence_type;
-  form.jobRepeats = r.job_repeats;
+export function fromRecurrence(
+  r: Schedule & { next_due_on: string | null },
+  today: string,
+): RecurrenceForm {
+  const form = defaultRecurrenceForm(today);
+
+  if (r.recurrence_type === 'once') {
+    const date = r.once_on ?? r.next_due_on ?? today;
+    form.when = date === today ? 'today' : date === addDays(today, 1) ? 'tomorrow' : 'date';
+    if (form.when === 'date') form.date = date;
+    return form;
+  }
+
+  form.when = 'repeat';
+  form.mode = r.recurrence_type === 'interval' ? 'interval' : 'calendar';
 
   if (r.recurrence_type === 'interval') {
     form.intervalEvery = String(r.recurrence_every ?? 1);
@@ -133,6 +164,19 @@ export function fromRecurrence(r: Recurrence): RecurrenceForm {
   }
 
   return form;
+}
+
+/** Har brukeren endret «Når?»? Brukes for å ikke røre datoen når bare tittelen endres. */
+export function sameWhen(a: RecurrenceForm, b: RecurrenceForm): boolean {
+  return a.when === b.when && (a.when !== 'date' || a.date === b.date);
+}
+
+/** «I dag», «I morgen» eller «Tor. 20. nov.» for en engangsoppgave, ellers som describeRecurrence. */
+export function describeSchedule(s: Schedule, today: string): string {
+  if (s.recurrence_type !== 'once' || !s.once_on) return describeRecurrence(s);
+  if (s.once_on <= today) return 'I dag';
+  if (s.once_on === addDays(today, 1)) return 'I morgen';
+  return capitalize(formatDate(s.once_on));
 }
 
 // ---------------------------------------------------------------------------

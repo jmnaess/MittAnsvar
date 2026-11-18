@@ -18,6 +18,7 @@ import type { Member } from '../../../src/features/household/types';
 import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
+import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY, type TodaySection } from '../../../src/features/tasks/groupToday';
@@ -73,6 +74,8 @@ export default function TodayScreen() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Pluss: velg «Oppgave i dag» eller «Ledig jobb».
+  const [creating, setCreating] = useState(false);
   /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
@@ -222,7 +225,7 @@ export default function TodayScreen() {
           title="I dag"
           right={
             isAdult ? (
-              <IconButton icon="add" accessibilityLabel="Ny ledig jobb" onPress={() => router.push('/job/new')} />
+              <IconButton icon="add" accessibilityLabel="Ny oppgave eller ledig jobb" onPress={() => setCreating(true)} />
             ) : undefined
           }
         />
@@ -261,6 +264,13 @@ export default function TodayScreen() {
           if (picking) markDone(picking.task, member.id);
           setPicking(null);
         }}
+      />
+
+      <NewTaskSheet
+        visible={creating}
+        onClose={() => setCreating(false)}
+        taskLabel="Oppgave i dag"
+        taskHref="/task/today"
       />
 
       {toast && (

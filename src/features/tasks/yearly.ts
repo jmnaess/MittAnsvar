@@ -35,5 +35,6 @@ export function toYearlyInputs(values: YearlyFormValues): TaskInput[] | null {
     month_day: null,
     month,
     job_repeats: false,
+    once_on: null,
   }));
 }

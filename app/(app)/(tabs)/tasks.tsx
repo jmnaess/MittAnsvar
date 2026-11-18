@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Button, colors, EmptyState, Message, spacing, SwipeToDelete, UndoToast } from '../../../src/ui';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
+import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
 import { TaskRow } from '../../../src/features/tasks/components/TaskRow';
 import { useArchiveTask, useRestoreTask, useTasks } from '../../../src/features/tasks/hooks';
 import { describeJobMembers } from '../../../src/features/tasks/job';
@@ -27,6 +28,8 @@ export default function TasksScreen() {
   const restore = useRestoreTask(household!.id);
   const [deleted, setDeleted] = useState<Task | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // «Ny oppgave»: velg «Oppgave» eller «Ledig jobb».
+  const [creating, setCreating] = useState(false);
 
   function remove(task: Task) {
     setActionError(null);
@@ -62,7 +65,7 @@ export default function TasksScreen() {
         {...pullToRefresh}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Button title="Ny oppgave" onPress={() => router.push('/task/new')} />
+            <Button title="Ny oppgave" onPress={() => setCreating(true)} />
             {(error || actionError) && <Message>{actionError ?? toNorwegianMessage(error)}</Message>}
           </View>
         }
@@ -76,11 +79,20 @@ export default function TasksScreen() {
             <TaskRow
               task={item}
               assigneeName={nameOf(item)}
-              onPress={() => router.push({ pathname: '/task/[id]', params: { id: item.id } })}
+              // Jobber endres i jobbskjemaet, alt annet i oppgaveskjemaet.
+              onPress={() =>
+                router.push({ pathname: isJob(item) ? '/job/[id]' : '/task/[id]', params: { id: item.id } })
+              }
             />
           );
           return isAdult ? <SwipeToDelete onDelete={() => remove(item)}>{row}</SwipeToDelete> : row;
         }}
+      />
+      <NewTaskSheet
+        visible={creating}
+        onClose={() => setCreating(false)}
+        taskLabel="Oppgave"
+        taskHref="/task/new"
       />
       {deleted && (
         <UndoToast

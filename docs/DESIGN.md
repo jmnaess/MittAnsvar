@@ -114,6 +114,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `Section` | seksjon på en side: tittel, forklaring og innhold |
 | `Message` / `Hint` | feil, bekreftelse eller nøytral tekst / hjelpetekst under et felt |
 | `TextField` | tekstfelt med etikett. `code` gir stor, sentrert tekst |
+| `DateField` | datovelger med etikett. iOS: kompakt velger i raden, Android: knapp som åpner kalenderen. `minimumDate` stopper datoer bakover |
 | `ChoiceChip`, `ChoiceChips`, `MultiChoiceChips` | valgknapper (ett eller flere valg). Valgt = fylt primary |
 | `Switch` | bryter i primary, med valgfri etikett |
 | `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |

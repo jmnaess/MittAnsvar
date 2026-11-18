@@ -80,6 +80,12 @@ export function toIsoDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Millisekunder til neste midnatt i enhetens lokale tid (for å hente «I dag» på nytt). */
+export function msUntilNextMidnight(now: Date): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
 /** '2026-11-17' → 'tir. 17. nov.' */
 export function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);

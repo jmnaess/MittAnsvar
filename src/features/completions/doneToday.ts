@@ -44,6 +44,41 @@ export function reassignCandidates(
   return c.recurrence_type === 'job' ? jobMembers(c.job_member_ids, members) : members;
 }
 
+/** Hvor mange utførte som vises i et kort før resten foldes inn. */
+export const DONE_PREVIEW = 2;
+
+/**
+ * De utførte som skal vises i et kort: nyeste først. Sammenfoldet bare de DONE_PREVIEW siste,
+ * utfoldet alle. hiddenCount er hvor mange som er foldet inn.
+ */
+export function visibleDone<T extends Pick<TodayCompletion, 'completed_at'>>(
+  done: T[],
+  expanded: boolean,
+): { shown: T[]; hiddenCount: number } {
+  const newestFirst = [...done].sort(
+    (a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime(),
+  );
+  if (expanded) return { shown: newestFirst, hiddenCount: 0 };
+  const shown = newestFirst.slice(0, DONE_PREVIEW);
+  return { shown, hiddenCount: newestFirst.length - shown.length };
+}
+
+/** Folderaden: «4 til gjort i dag». Samme form for 1 og flere. */
+export function moreDoneText(count: number): string {
+  return `${count} til gjort i dag`;
+}
+
+/** Skjermleser: «Vis 1 oppgave til …» / «Vis 4 oppgaver til …». */
+export function moreDoneA11yLabel(count: number): string {
+  return `Vis ${count} ${count === 1 ? 'oppgave' : 'oppgaver'} til som er gjort i dag`;
+}
+
+/** Fremdrift i kortet: «3 av 7» (utført av totalt i dag). undefined når kortet er tomt. */
+export function progressText(openCount: number, doneCount: number): string | undefined {
+  const total = openCount + doneCount;
+  return total > 0 ? `${doneCount} av ${total}` : undefined;
+}
+
 /**
  * Kan avkrysningen angres med et trykk? Samme regler som undo_completion: den siste på oppgaven,
  * innen 10 minutter, og barn bare det de selv har registrert.

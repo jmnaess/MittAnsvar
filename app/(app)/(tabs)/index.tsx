@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
@@ -8,7 +8,7 @@ import type { TodayCompletion } from '../../../src/features/completions/api';
 import { DoneActionsSheet } from '../../../src/features/completions/components/DoneActionsSheet';
 import { DoneList } from '../../../src/features/completions/components/DoneList';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
-import { reassignCandidates } from '../../../src/features/completions/doneToday';
+import { progressText, reassignCandidates } from '../../../src/features/completions/doneToday';
 import {
   useCompleteTask,
   useReassignCompletion,
@@ -33,6 +33,7 @@ import { formatKroner } from '../../../src/features/tasks/reward';
 import type { TodayTask } from '../../../src/features/tasks/types';
 import { formatDate, formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
   Card,
@@ -77,6 +78,7 @@ export default function TodayScreen() {
     [refetchTasks, refetchDone],
   );
   const pullToRefresh = usePullToRefresh(refetch);
+  const day = useMidnightRefetch(refetch);
   const { data: members = [] } = useMembers(householdId);
   const { data: balances = [] } = useBalances(householdId);
   const complete = useCompleteTask(householdId);
@@ -98,6 +100,18 @@ export default function TodayScreen() {
   const [creating, setCreating] = useState(false);
   /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  /** Kort der alle utførte er foldet ut (seksjonsnøkler). Ny dag: alt foldes inn igjen. */
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  useEffect(() => setExpandedKeys(new Set()), [day]);
+
+  function toggleExpanded(key: string) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   // Hent på nytt når fanen vises igjen: datoen kan ha skiftet, eller en annen voksen har krysset av.
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -264,6 +278,8 @@ export default function TodayScreen() {
             onRemove: confirmRemove,
             onOpen: (completion) => setFixing({ completion, step: 'menu' }),
           }}
+          expanded={expandedKeys.has(section.key)}
+          onToggleExpanded={() => toggleExpanded(section.key)}
         />
       </>
     );
@@ -295,10 +311,14 @@ export default function TodayScreen() {
     }
     const member = section.member;
     const color = member ? personColor(member.avatar) : sharedColors;
-    const right =
+    const earned =
       member?.role === 'child'
         ? earnedLabel(balances.find((b) => b.member_id === member.id))
         : undefined;
+    // «3 av 7 · 35 kr tjent»: fremdrift i dag, og saldo for barn.
+    const right =
+      [progressText(section.data.length, section.done.length), earned].filter(Boolean).join(' · ') ||
+      undefined;
     return (
       <SectionCard key={section.key} title={section.title} color={color} avatar={member?.avatar} right={right}>
         {renderRows(section, color.ring)}

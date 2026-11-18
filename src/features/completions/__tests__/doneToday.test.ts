@@ -4,7 +4,11 @@ import {
   canUndo,
   doneByText,
   doneSectionKey,
+  moreDoneA11yLabel,
+  moreDoneText,
+  progressText,
   reassignCandidates,
+  visibleDone,
   SHARED_KEY,
   UNDO_WINDOW_MS,
 } from '../doneToday';
@@ -100,5 +104,68 @@ describe('reassignCandidates', () => {
   it('gir alle barna (ingen voksne) for en jobb uten liste', () => {
     const job = done({ recurrence_type: 'job', job_member_ids: [] });
     expect(ids(reassignCandidates(job, people))).toEqual(['leah', 'jesper']);
+  });
+});
+
+describe('visibleDone', () => {
+  // Utført for 1, 2, … minutter siden. Listen kommer eldste først, som fra databasen.
+  const list = (n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      done({ id: `c${n - i}`, completed_at: new Date(NOW - (n - i) * 60_000).toISOString() }),
+    );
+  const ids = (cs: TodayCompletion[]) => cs.map((c) => c.id);
+
+  it('gir ingenting når ingenting er gjort', () => {
+    expect(visibleDone([], false)).toEqual({ shown: [], hiddenCount: 0 });
+  });
+
+  it('viser alle når det er 1 eller 2', () => {
+    expect(visibleDone(list(1), false)).toEqual({ shown: list(1), hiddenCount: 0 });
+    expect(ids(visibleDone(list(2), false).shown)).toEqual(['c1', 'c2']);
+    expect(visibleDone(list(2), false).hiddenCount).toBe(0);
+  });
+
+  it('viser de 2 siste, nyeste først, og teller resten', () => {
+    const { shown, hiddenCount } = visibleDone(list(5), false);
+    expect(ids(shown)).toEqual(['c1', 'c2']);
+    expect(hiddenCount).toBe(3);
+  });
+
+  it('viser alle nyeste først når listen er foldet ut', () => {
+    const { shown, hiddenCount } = visibleDone(list(5), true);
+    expect(ids(shown)).toEqual(['c1', 'c2', 'c3', 'c4', 'c5']);
+    expect(hiddenCount).toBe(0);
+  });
+
+  it('endrer ikke listen den får', () => {
+    const input = list(3);
+    visibleDone(input, false);
+    expect(ids(input)).toEqual(['c3', 'c2', 'c1']);
+  });
+});
+
+describe('progressText', () => {
+  it('gir utført av totalt', () => {
+    expect(progressText(4, 3)).toBe('3 av 7');
+  });
+
+  it('gir alt gjort når ingen er igjen', () => {
+    expect(progressText(0, 2)).toBe('2 av 2');
+  });
+
+  it('gir ingenting for et tomt kort', () => {
+    expect(progressText(0, 0)).toBeUndefined();
+  });
+});
+
+describe('moreDoneText og moreDoneA11yLabel', () => {
+  it('bruker samme korte tekst for 1 og flere', () => {
+    expect(moreDoneText(1)).toBe('1 til gjort i dag');
+    expect(moreDoneText(4)).toBe('4 til gjort i dag');
+  });
+
+  it('bøyer «oppgave» for skjermleser', () => {
+    expect(moreDoneA11yLabel(1)).toBe('Vis 1 oppgave til som er gjort i dag');
+    expect(moreDoneA11yLabel(4)).toBe('Vis 4 oppgaver til som er gjort i dag');
   });
 });

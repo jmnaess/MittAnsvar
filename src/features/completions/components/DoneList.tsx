@@ -1,7 +1,7 @@
-import { Chip, colors, TaskRow, Text } from '../../../ui';
+import { Chip, colors, ShowMoreRow, TaskRow, Text } from '../../../ui';
 import { formatKroner } from '../../tasks/reward';
 import type { TodayCompletion } from '../api';
-import { canUndo, doneByText } from '../doneToday';
+import { canUndo, DONE_PREVIEW, doneByText, moreDoneA11yLabel, moreDoneText, visibleDone } from '../doneToday';
 
 /** Det voksne kan gjøre med en utført rad, hele dagen. */
 export type AdultDoneActions = {
@@ -28,17 +28,24 @@ type Props = {
   onUndo: (completion: TodayCompletion) => void;
   /** Satt for voksne: rette feil uten tidsgrense i stedet for angring. */
   adultActions?: AdultDoneActions;
+  /** Alle utførte vises (ellers bare de to siste, se visibleDone). */
+  expanded: boolean;
+  onToggleExpanded: () => void;
 };
 
 /**
- * Det som er gjort i dag, nederst i et kort i «I dag»: gjennomstreket og dempet.
+ * Det som er gjort i dag, nederst i et kort i «I dag»: gjennomstreket og dempet, nyeste først.
+ * Bare de to siste vises; resten ligger bak «4 til gjort i dag», som kan foldes ut.
  * Voksne kan rette hele dagen (se adultActions). Barn kan angre egne avkrysninger innen
  * 10 minutter (se canUndo). Ellers skjer ingenting.
  */
 export function DoneList({
   done, sectionKey, allDone, nameOf, checkColor, isAdult, userId, busyId, onUndo, adultActions,
+  expanded, onToggleExpanded,
 }: Props) {
   if (done.length === 0) return null;
+  const { shown } = visibleDone(done, expanded);
+  const more = done.length - DONE_PREVIEW;
   const now = Date.now();
   const adult = isAdult ? adultActions : undefined;
   return (
@@ -46,7 +53,7 @@ export function DoneList({
       {allDone && (
         <Text variant="rowTitle" color={colors.textWarm}>Alt er gjort i dag!</Text>
       )}
-      {done.map((c) => {
+      {shown.map((c) => {
         const undoable = canUndo(c, { now, isAdult, userId });
         const doneBy = doneByText(c, sectionKey, nameOf);
         const label = `${c.title}, utført${doneBy ? `, ${doneBy.toLowerCase()}` : ''}`;
@@ -93,6 +100,14 @@ export function DoneList({
           />
         );
       })}
+      {more > 0 && (
+        <ShowMoreRow
+          label={moreDoneText(more)}
+          accessibilityLabel={moreDoneA11yLabel(more)}
+          expanded={expanded}
+          onPress={onToggleExpanded}
+        />
+      )}
     </>
   );
 }

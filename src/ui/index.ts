@@ -23,6 +23,7 @@ export { PageHeader } from './PageHeader';
 export { Section } from './Section';
 export { SectionCard } from './SectionCard';
 export { Sheet } from './Sheet';
+export { ShowMoreRow } from './ShowMoreRow';
 export { SwipeToDelete } from './SwipeToDelete';
 export { Switch } from './Switch';
 export { tabIcon } from './tabIcon';

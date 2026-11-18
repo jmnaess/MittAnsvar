@@ -97,7 +97,8 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 |---|---|
 | `Text` | tekst med variant fra skalaen og valgfri `color` |
 | `Card` | hvitt kort med skygge (radius 20) |
-| `SectionCard` | seksjon i personens `tint`, navn i `ink`, valgfri tekst til høyre («35 kr tjent») |
+| `SectionCard` | seksjon i personens `tint`, navn i `ink`, valgfri tekst til høyre («3 av 7 · 35 kr tjent») |
+| `ShowMoreRow` | liten tekstrad med chevron som folder en liste ut og inn («4 til gjort i dag» / «Vis færre») |
 | `TaskRow` | sjekkboks, tittel, metalinje, merkelapper til høyre. `done`, `muted` (i hvite kort) |
 | `Checkbox` | sirkel 30, kant 2.5; avkrysset = fylt med ring-farge og hvit hake |
 | `Chip` | merkelapp: `money`, `overdue`, `neutral` |

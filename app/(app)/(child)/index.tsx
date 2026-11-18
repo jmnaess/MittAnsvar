@@ -1,10 +1,11 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import type { TodayCompletion } from '../../../src/features/completions/api';
 import { DoneList } from '../../../src/features/completions/components/DoneList';
+import { progressText } from '../../../src/features/completions/doneToday';
 import {
   useCompleteTask,
   useTodayCompletions,
@@ -23,6 +24,7 @@ import { formatKroner } from '../../../src/features/tasks/reward';
 import type { TodayTask } from '../../../src/features/tasks/types';
 import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
   Avatar,
@@ -53,12 +55,16 @@ export default function ChildTodayScreen() {
     [refetchTasks, refetchDone],
   );
   const pullToRefresh = usePullToRefresh(refetch);
+  const day = useMidnightRefetch(refetch);
   const balance = useBalance(householdId, me?.id ?? '');
   const complete = useCompleteTask(householdId);
   const undo = useUndoCompletion(householdId);
   const insets = useSafeAreaInsets();
   const [toast, setToast] = useState<Toast | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** Alle utførte vises. Ny dag: foldes inn igjen. */
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => setExpanded(false), [day]);
 
   // Hent på nytt når fanen vises: en voksen kan ha lagt ut en ny jobb.
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -70,6 +76,10 @@ export default function ChildTodayScreen() {
   const jobs = sections.find((s) => s.key === JOBS_KEY)?.data ?? [];
   const nothingToDo = !isPending && !!me && sections.length === 0;
   const color = personColor(me?.avatar);
+  // «3 av 7 · 35 kr tjent»
+  const right =
+    [progressText(mine.length, mineDone.length), earnedLabel(balance)].filter(Boolean).join(' · ') ||
+    undefined;
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
 
   function markDone(task: TodayTask) {
@@ -131,7 +141,7 @@ export default function ChildTodayScreen() {
           {nothingToDo && <EmptyState title="Ingenting å gjøre i dag 🎉" />}
 
           {me && (mine.length > 0 || mineDone.length > 0) && (
-            <SectionCard title="Mine oppgaver i dag" color={color} right={earnedLabel(balance)}>
+            <SectionCard title="Mine oppgaver i dag" color={color} right={right}>
               {mine.map((task) => (
                 <TodayTaskRow
                   key={task.id}
@@ -152,6 +162,8 @@ export default function ChildTodayScreen() {
                 userId={session?.user.id}
                 busyId={undo.isPending ? undo.variables : undefined}
                 onUndo={undoDone}
+                expanded={expanded}
+                onToggleExpanded={() => setExpanded((e) => !e)}
               />
             </SectionCard>
           )}

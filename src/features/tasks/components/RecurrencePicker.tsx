@@ -1,8 +1,10 @@
 import { StyleSheet, View } from 'react-native';
-import { ChoiceChips, colors, DateField, MultiChoiceChips, Text, TextField } from '../../../ui';
+import { ChoiceChips, colors, DateField, MultiChoiceChips, Switch, Text, TextField } from '../../../ui';
 import { MONTH_NAMES } from '../../../lib/dates';
 import {
+  canBeSeasonal,
   describeSchedule,
+  repeatHint,
   toRecurrence,
   type CalendarUnit,
   type IntervalUnit,
@@ -56,15 +58,10 @@ const INTERVAL_UNIT_OPTIONS: { value: IntervalUnit; label: string }[] = [
   { value: 'year', label: 'år' },
 ];
 
-const ONCE_HINT = 'Vises på dagen og forsvinner når den er gjort.';
-const REPEAT_HINTS: Record<RecurrenceMode, string> = {
-  calendar: 'Første gang er den første dagen som passer, fra og med i dag.',
-  interval: 'Første gang er i dag. Deretter teller vi fra hver gang den blir gjort.',
-};
-
 /**
  * «Når?»: i dag, i morgen eller en valgt dato (engangsoppgave), eller «Gjentas» med fast dag
- * i kalenderen eller et intervall etter sist utført. Ledige jobber har sitt eget skjema.
+ * i kalenderen eller et intervall etter sist utført. Gjentakelsen kan begrenses til deler av
+ * året (ikke årlige oppgaver). Ledige jobber har sitt eget skjema.
  */
 export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
   const set = (changes: Partial<RecurrenceForm>) => onChange({ ...value, ...changes });
@@ -184,8 +181,38 @@ export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
         </>
       )}
 
+      {repeats && canBeSeasonal(value) && (
+        <>
+          <Switch
+            label="Bare deler av året"
+            accessibilityLabel="Bare deler av året"
+            value={value.seasonal}
+            onValueChange={(seasonal) => set({ seasonal })}
+            disabled={disabled}
+          />
+          {value.seasonal && (
+            <>
+              <ChoiceChips
+                label="Fra"
+                options={MONTH_OPTIONS}
+                value={value.seasonFrom}
+                onChange={(seasonFrom) => set({ seasonFrom })}
+                disabled={disabled}
+              />
+              <ChoiceChips
+                label="Til"
+                options={MONTH_OPTIONS}
+                value={value.seasonTo}
+                onChange={(seasonTo) => set({ seasonTo })}
+                disabled={disabled}
+              />
+            </>
+          )}
+        </>
+      )}
+
       {schedule && <Text variant="bodyStrong" color={colors.primary}>{describeSchedule(schedule, today)}</Text>}
-      <Text variant="hint" color={colors.textMuted}>{repeats ? REPEAT_HINTS[value.mode] : ONCE_HINT}</Text>
+      <Text variant="hint" color={colors.textMuted}>{repeatHint(value, today)}</Text>
     </View>
   );
 }

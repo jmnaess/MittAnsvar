@@ -44,6 +44,8 @@ describe('toTaskInputs', () => {
     month: null,
     job_repeats: false,
     once_on: '2026-11-18',
+    season_start_month: null,
+    season_end_month: null,
   };
 
   it('én oppgave per person, med samme tittel, dato og lønn', () => {

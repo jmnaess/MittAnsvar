@@ -15,6 +15,22 @@ A family responsibility and household task management app for parents and childr
   Voksne kan trykke på en kommende oppgave for å endre den. Barnet ser det samme for seg selv
   på egen enhet, men «Kommende» viser bare 2 uker og ikke de hyppige oppgavene.
 
+## Sesongoppgaver (19. november 2026)
+
+- **Bare deler av året:** gjentakende oppgaver (fast dag eller etter sist utført) kan begrenses
+  til en periode i hele måneder, også over nyttår. Velges under «Gjentas» i oppgaveskjemaet.
+  Teksten blir f.eks. «1 uke etter sist · mai–sep». Årlige oppgaver har allerede en måned og
+  kan ikke ha periode.
+- **Utenfor perioden** finnes ingen forekomster, verken i «I dag», «Kommende» eller påminnelser.
+  Etter siste gang i perioden kommer oppgaven tilbake når neste periode starter.
+- **Forfalt når perioden slutter:** en timesjobb i databasen (pg_cron) flytter fristen til neste
+  periode, så oppgaven ikke står forfalt hele vinteren. Utsetter man til en dato utenfor
+  perioden, gjelder datoen.
+- **Årshjulet** viser sesongoppgaver i periodens første måned.
+- **Maler:** varmepumpefilteret gjelder nå okt–apr (allerede aktiverte oppgaver er uendret).
+  Nye: «Klipp plenen» (1 uke etter sist, mai–sep) og «Luk ugress i bedene» (2 uker etter sist,
+  mai–aug), begge krever hage.
+
 ## Hjemprofil (18. november 2026)
 
 - **Om hjemmet:** noen spørsmål om boligen (boligtype, hage, bil, hytte, varmepumpe, peis,
@@ -23,8 +39,9 @@ A family responsibility and household task management app for parents and childr
 - **Forslag:** etter svarene vises en liste med oppgaver til årshjulet, alle valgt, som kan
   velges bort før «Legg til». Endres svarene senere, foreslås bare nye oppgaver. Ingenting slettes.
 - **Innhold:** 23 nye maler og betingelser på eksisterende, fra `docs/hjemprofil-oppgaver-UTKAST.md`.
-  Filtrene i varmepumpe og ventilasjon gjentas «8 uker / 6 måneder etter sist» og ligger i Oppgaver,
-  ikke i årshjulet. Første frist er ett intervall frem.
+  Filtrene i varmepumpe og ventilasjon gjentas «8 uker / 6 måneder etter sist» og ligger i Oppgaver.
+  Første frist er ett intervall frem. (Varmepumpefilteret har fått periode okt–apr og står i
+  oktober i årshjulet, se Sesongoppgaver.)
 - **Årshjulet:** aktive oppgaver blir værende selv om svarene endres.
 
 ## Kom i gang
@@ -41,4 +58,5 @@ Skann QR-koden med Expo Go på mobilen (Android: i Expo Go, iOS: med kameraet).
 ```bash
 npm test          # enhetstester (Jest), f.eks. planlegging av påminnelser
 npm run db:test   # databasetester (pgTAP), krever at Supabase kjører lokalt (npm run db:start)
+                  # pg_cron (timesjobben for sesongoppgaver) følger med i Supabase CLI
 ```

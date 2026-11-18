@@ -19,6 +19,8 @@ const once = (once_on: string | null, next_due_on: string | null = once_on) => (
   job_repeats: false,
   once_on,
   next_due_on,
+  season_start_month: null,
+  season_end_month: null,
 });
 
 describe('«Når?» → kolonner', () => {

@@ -1,5 +1,5 @@
 import { ListRow, Switch } from '../../../ui';
-import { formatNextDue } from '../../tasks/recurrence';
+import { describeRecurrence, formatNextDue, isSeasonal } from '../../tasks/recurrence';
 import type { Task } from '../../tasks/types';
 import type { TaskTemplate } from '../types';
 
@@ -18,7 +18,11 @@ export function TemplateRow({ template, task, value, disabled, onToggle }: Props
   return (
     <ListRow
       title={template.title}
-      meta={[template.description, task && `Neste frist: ${formatNextDue(task)}`]}
+      meta={[
+        isSeasonal(template) && describeRecurrence({ ...template, job_repeats: false }),
+        template.description,
+        task && `Neste frist: ${formatNextDue(task)}`,
+      ]}
       right={
         <Switch
           value={value}

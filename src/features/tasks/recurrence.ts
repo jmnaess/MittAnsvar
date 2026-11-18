@@ -1,4 +1,12 @@
-import { addDays, formatDate, formatLongDate, formatMonthYear, MONTH_NAMES, WEEKDAY_NAMES } from '../../lib/dates';
+import {
+  addDays,
+  formatDate,
+  formatLongDate,
+  formatMonthYear,
+  MONTH_ABBR,
+  MONTH_NAMES,
+  WEEKDAY_NAMES,
+} from '../../lib/dates';
 import { isPostponed } from './postpone';
 import type { Recurrence } from './types';
 
@@ -8,6 +16,11 @@ import type { Recurrence } from './types';
  */
 export function isMonthTask(r: Recurrence): boolean {
   return r.recurrence_type === 'calendar' && r.recurrence_unit === 'year' && r.month_day === null;
+}
+
+/** Sesongoppgave: gjentas bare i en del av året («Hver uke · mai–sep»). */
+export function isSeasonal(r: Pick<Recurrence, 'season_start_month'>): boolean {
+  return r.season_start_month !== null;
 }
 
 /** Ledig jobb: ingen dato, blir aldri forfalt (steg 9). */
@@ -56,6 +69,10 @@ export type RecurrenceForm = {
   month: number; // 1–12
   intervalEvery: string;
   intervalUnit: IntervalUnit;
+  /** «Bare deler av året»: aktiv periode fra–til måned (1–12). Kan gå over nyttår. */
+  seasonal: boolean;
+  seasonFrom: number;
+  seasonTo: number;
 };
 
 /** Høyeste «hver N.» databasen tillater (check-constraint på recurrence_every). */
@@ -74,6 +91,9 @@ export function defaultRecurrenceForm(today: string): RecurrenceForm {
     month: 1,
     intervalEvery: '14',
     intervalUnit: 'day',
+    seasonal: false,
+    seasonFrom: 5,
+    seasonTo: 9,
   };
 }
 
@@ -92,6 +112,8 @@ const NONE = {
   month: null,
   job_repeats: false,
   once_on: null,
+  season_start_month: null,
+  season_end_month: null,
 };
 
 /**
@@ -112,14 +134,35 @@ export function toRecurrence(form: RecurrenceForm, today: string): Schedule | nu
   }
 }
 
+/** Kan gjentakelsen i skjemaet ha periode? Ikke årlige oppgaver (de har allerede en måned). */
+export function canBeSeasonal(form: Pick<RecurrenceForm, 'mode' | 'calendarUnit'>): boolean {
+  return form.mode === 'interval' || form.calendarUnit !== 'year';
+}
+
+/** Alle tolv måneder (f.eks. jan–des eller mar–feb) er det samme som ingen periode. */
+function coversWholeYear(from: number, to: number): boolean {
+  return to === ((from + 10) % 12) + 1;
+}
+
+/** Periodekolonnene fra skjemaet. null/null = hele året. */
+function toSeason(form: RecurrenceForm): Pick<Schedule, 'season_start_month' | 'season_end_month'> {
+  if (!form.seasonal || !canBeSeasonal(form) || coversWholeYear(form.seasonFrom, form.seasonTo)) {
+    return { season_start_month: null, season_end_month: null };
+  }
+  return { season_start_month: form.seasonFrom, season_end_month: form.seasonTo };
+}
+
 function toRepeat(form: RecurrenceForm): Schedule | null {
+  const season = toSeason(form);
   if (form.mode === 'interval') {
     const every = parseIntIn(form.intervalEvery, 1, MAX_EVERY);
     if (every === null) return null;
-    return { recurrence_type: 'interval', ...NONE, recurrence_unit: form.intervalUnit, recurrence_every: every };
+    return {
+      recurrence_type: 'interval', ...NONE, ...season, recurrence_unit: form.intervalUnit, recurrence_every: every,
+    };
   }
 
-  const base = { recurrence_type: 'calendar' as const, ...NONE, recurrence_unit: form.calendarUnit };
+  const base = { recurrence_type: 'calendar' as const, ...NONE, ...season, recurrence_unit: form.calendarUnit };
   switch (form.calendarUnit) {
     case 'week':
       if (form.weekdays.length === 0) return null;
@@ -132,6 +175,7 @@ function toRepeat(form: RecurrenceForm): Schedule | null {
     case 'year': {
       const day = form.monthDay.trim() === '' ? null : parseIntIn(form.monthDay, 1, 31);
       if (day === null && form.monthDay.trim() !== '') return null;
+      // toSeason gir alltid null her (årlige oppgaver har ingen periode).
       return { ...base, recurrence_every: 1, month: form.month, month_day: day };
     }
   }
@@ -172,7 +216,47 @@ export function fromRecurrence(
     form.month = r.month ?? 1;
   }
 
+  if (r.season_start_month !== null && r.season_end_month !== null) {
+    form.seasonal = true;
+    form.seasonFrom = r.season_start_month;
+    form.seasonTo = r.season_end_month;
+  }
+
   return form;
+}
+
+const ONCE_HINT = 'Vises på dagen og forsvinner når den er gjort.';
+const SEASON_HINT = 'Utenfor perioden vises den ikke.';
+
+/**
+ * Forklaringen under «Når?». Med periode sier den når første gang er, fordi den ikke er i dag
+ * når denne måneden er utenfor perioden. Samme regel som private.first_due i databasen.
+ */
+export function repeatHint(form: RecurrenceForm, today: string): string {
+  if (form.when !== 'repeat') return ONCE_HINT;
+  const season = toSeason(form);
+  const from = season.season_start_month;
+  const outside = from !== null && !inSeason(Number(today.slice(5, 7)), from, season.season_end_month ?? from);
+
+  if (form.mode === 'calendar') {
+    const first = outside
+      ? `Første gang er den første dagen som passer fra 1. ${MONTH_NAMES[from - 1]}.`
+      : 'Første gang er den første dagen som passer, fra og med i dag.';
+    return from === null ? first : `${first} ${SEASON_HINT}`;
+  }
+  const first = outside ? `Første gang er 1. ${MONTH_NAMES[from - 1]}.` : 'Første gang er i dag.';
+  const rest = 'Deretter teller vi fra hver gang den blir gjort.';
+  return from === null ? `${first} ${rest}` : `${first} ${rest} ${SEASON_HINT}`;
+}
+
+/** Er måneden (1–12) innenfor perioden from–to? Perioden kan gå over nyttår (okt–apr). */
+export function inSeason(month: number, from: number, to: number): boolean {
+  return from <= to ? month >= from && month <= to : month >= from || month <= to;
+}
+
+/** «mai–sep», «okt–apr». Én måned: «jun». */
+export function formatSeason(from: number, to: number): string {
+  return from === to ? MONTH_ABBR[from - 1] : `${MONTH_ABBR[from - 1]}–${MONTH_ABBR[to - 1]}`;
 }
 
 /** Har brukeren endret «Når?»? Brukes for å ikke røre datoen når bare tittelen endres. */
@@ -216,7 +300,14 @@ function everyWord(every: number): string {
   return `hver ${every}.`;
 }
 
+/** «Hver lørdag · mai–sep». Uten periode som describeBase. */
 export function describeRecurrence(r: Recurrence): string {
+  const base = describeBase(r);
+  if (r.season_start_month === null || r.season_end_month === null) return base;
+  return `${base} · ${formatSeason(r.season_start_month, r.season_end_month)}`;
+}
+
+function describeBase(r: Recurrence): string {
   const every = r.recurrence_every ?? 1;
 
   if (r.recurrence_type === 'once') return 'Én gang';

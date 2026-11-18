@@ -11,6 +11,11 @@ export const MONTH_NAMES = [
   'januar', 'februar', 'mars', 'april', 'mai', 'juni',
   'juli', 'august', 'september', 'oktober', 'november', 'desember',
 ];
+/** Korte månedsnavn uten punktum, for perioder: «mai–sep». */
+export const MONTH_ABBR = [
+  'jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des',
+];
+
 const MONTH_SHORT = [
   'jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.',
 ];

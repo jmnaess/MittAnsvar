@@ -39,6 +39,8 @@ const template = (id: string, overrides: Partial<TaskTemplate> = {}) =>
     household_types: null,
     housing_types: null,
     requires: null,
+    season_start_month: null,
+    season_end_month: null,
     ...overrides,
   }) as TaskTemplate;
 

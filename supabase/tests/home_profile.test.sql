@@ -207,8 +207,8 @@ select is(
   'innhold: strøkne maler finnes ikke');
 
 select is(
-  (select count(*)::int from public.task_templates where requires is not null and is_active), 24,
-  'innhold: 24 aktive maler har betingelse (4 eksisterende, 18 nye årsmaler, 2 intervallmaler)');
+  (select count(*)::int from public.task_templates where requires is not null and is_active), 26,
+  'innhold: 26 aktive maler har betingelse (4 eksisterende, 18 nye årsmaler, 2 intervallmaler, 2 sesongmaler)');
 
 select lives_ok($$select tests.insert_template('t-null', null)$$,
   'requires null = ingen betingelse');

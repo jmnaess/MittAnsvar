@@ -122,6 +122,7 @@ Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader
 | assigned_member_id | uuid null | null = «hvem som helst». Sammensatt FK `(household_id, assigned_member_id) → members (household_id, id) on delete set null (assigned_member_id)`, så den ansvarlige alltid er i samme husstand. Alltid null for jobber (check `tasks_job_no_assignee`) |
 | template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra (steg 7). Kan settes ved insert, ikke endres |
 | *gjentakelse* | se §2 | `recurrence_type`, `recurrence_unit`, `recurrence_every`, `weekdays`, `month_day`, `month`, `anchor_on` |
+| season_start_month, season_end_month | smallint null (1–12) | aktiv periode (sesong), se §2 Sesong. Begge null = hele året |
 | next_due_on | date null | neste frist. null = engangsoppgave som er utført, eller en jobb (har aldri frist). Skrives bare av databasen (trigger og RPC) |
 | postponed_from | date null | «Utsett til»: fristen før utsettelsen, til «Angre». Bare RPC-ene `postpone_task`/`undo_postpone` skriver den (ingen kolonnerettighet). Se §2 Utsettelse |
 | postponed_to | date null | datoen oppgaven ble utsatt til. Oppgaven er utsatt så lenge `postponed_to = next_due_on` (`private.is_postponed`). Check: begge eller ingen er satt |
@@ -135,7 +136,7 @@ Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader
 
 Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik** `(household_id, template_id) where archived_at is null and template_id is not null`. Den sørger for at samme mal bare kan være aktiv én gang per husstand. Arkiverte oppgaver teller ikke, så en deaktivert mal kan aktiveres igjen som en ny oppgave.
 
-**Trigger `tasks_set_defaults`** (before insert/update): ved insert settes `anchor_on` = i dag i husstandens tidssone, `created_by` = innlogget medlem og `next_due_on` = `private.first_due(oppgaven)`. Endres gjentakelseskolonnene, settes `anchor_on` til i dag og fristen beregnes på nytt. Klienten har ikke kolonnerettighet til `next_due_on`, `anchor_on` eller `created_by` (kolonnerettigheter sjekker bare kolonnene i selve spørringen, så triggeren kan sette dem).
+**Trigger `tasks_set_defaults`** (before insert/update): ved insert settes `anchor_on` = i dag i husstandens tidssone, `created_by` = innlogget medlem og `next_due_on` = `private.first_due(oppgaven)`. Endres gjentakelseskolonnene (også `once_on` og periodekolonnene), settes `anchor_on` til i dag og fristen beregnes på nytt. Klienten har ikke kolonnerettighet til `next_due_on`, `anchor_on` eller `created_by` (kolonnerettigheter sjekker bare kolonnene i selve spørringen, så triggeren kan sette dem).
 
 **View `today_tasks`** (`security_invoker = true`, så RLS på `tasks` gjelder): aktive oppgaver med `next_due_on <= private.household_today(household_id)`, og alle aktive jobber (steg 9). Viewet har tre ekstra kolonner:
 - `is_month_task`: oppgaven er en månedsoppgave (se §2), og ikke utsatt.
@@ -195,6 +196,7 @@ Tabellen skrives bare av Edge Function `revenuecat-webhook` med service role.
 | month | smallint null (1–12) | – | påkrevd når unit = `year` | – | – |
 | anchor_on | date not null | frist | startdato (for «annenhver uke») | første frist | (brukes ikke) |
 | job_repeats | boolean not null | false | false | false | engangs- eller gjentakende jobb |
+| season_start_month, season_end_month | smallint null (1–12) | – | valgfri, ikke når unit = `year` | valgfri | – |
 
 Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke kan lagres.
 
@@ -212,6 +214,8 @@ Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke 
 | Henge opp vask (ledig jobb, én gang) | job, job_repeats false |
 | Tømme oppvaskmaskinen (ledig jobb, igjen og igjen) | job, job_repeats true |
 | Rydde boden (ledig jobb for Leah og Ola) | job, job_member_ids `{leah, ola}` |
+| Klippe plenen, mai–sep | interval, week, every 1, season 5–9 |
+| Rense varmepumpefilter, okt–apr | interval, week, every 8, season 10–4 |
 
 ### Ledige jobber (steg 9)
 En jobb er en oppgave **uten dato**. Den minste endringen var én ny enum-verdi og én boolsk kolonne:
@@ -224,7 +228,7 @@ En jobb er en oppgave **uten dato**. Den minste endringen var én ny enum-verdi 
 
 **Beregning av neste frist** skjer i databasen, i `private.compute_next_due(p_task public.tasks, p_completed_on date) returns date`. Funksjonen er `language plpgsql immutable` og ligger i schemaet `private`, som ikke eksponeres i API-et:
 - `once`: gir `null` (oppgaven er ferdig). `job` gir også `null` (har aldri frist).
-- `interval`: `completed_on + every × unit`. Det er fra *faktisk utført*, uavhengig av fristen. Månedsregning følger Postgres: 31. januar + 1 måned = 28. (eller 29.) februar.
+- `interval`: `completed_on + every × unit`. Det er fra *faktisk utført*, uavhengig av fristen. Månedsregning følger Postgres: 31. januar + 1 måned = 28. (eller 29.) februar. Med periode: havner datoen utenfor, blir fristen den 1. i periodens første måned (se Sesong).
 - `calendar`: første forekomst i mønsteret som er **etter** `max(next_due_on, completed_on)`.
   - Gjort tidlig (lørdag, frist søndag): neste frist blir søndagen etter.
   - Gjort sent (mandag): neste frist blir førstkommende søndag. Tapte forekomster hoper seg ikke opp.
@@ -234,7 +238,8 @@ Hvorfor i databasen? Regelen finnes ett sted, klienten kan ikke sende en feil fr
 Hjelpefunksjoner (alle i `private`):
 - `matches_pattern(t, d)`: er `d` en forekomst?
 - `next_occurrence(t, after)`: første treff etter `after`.
-- `first_due(t)`: første frist for en ny oppgave. Det er `once_on` (eller `anchor_on` uten dato) for once, `anchor_on` for interval, og første treff fra og med `anchor_on` for calendar. Månedsoppgaver regnes fra den 1. i måneden til `anchor_on`.
+- `first_due(t)`: første frist for en ny oppgave. Det er `once_on` (eller `anchor_on` uten dato) for once, `anchor_on` for interval (eller periodens start), og første treff fra og med `anchor_on` for calendar. Månedsoppgaver regnes fra den 1. i måneden til `anchor_on`.
+- `in_season(t, d)`, `season_start_on_or_after(t, d)`, `season_gap_after(t, d)`, `season_resume(t, today)`: perioden, se Sesong.
 - `is_month_task(t)`, `due_by(t)` og `is_overdue(t, today)`: se under.
 - `local_today(tz, at)` og `household_today(hid)`.
 
@@ -251,6 +256,20 @@ En voksen trykker på raden til en åpen oppgave i «I dag» (sirkelen krysser a
 - **«I dag»** viser den ikke før den nye datoen. **Påminnelser** og andre som bruker `get_upcoming_occurrences` får den utsatte datoen og så det vanlige mønsteret, uten endring i funksjonen. Appen planlegger påminnelsene på nytt fordi mutasjonen invaliderer `['tasks', householdId]`. **Årshjulet** grupperer på `month` fra gjentakelsen, så oppgaven står i samme måned.
 - Jobber kan ikke utsettes.
 - «Til helga» regnes i `src/features/tasks/postpone.ts`: førstkommende lørdag, søndag hvis det er lørdag, neste lørdag hvis det er søndag. På fredag er det samme dag som «I morgen», og bare «I morgen» vises.
+
+### Sesong (aktiv periode)
+En gjentakende oppgave kan begrenses til en del av året: «Klipp plenen, mai–sep», «Rens varmepumpefilteret, okt–apr». Migrasjon `*_seasonal_tasks.sql`.
+
+- **Kolonner:** `season_start_month` og `season_end_month` (1–12) på `tasks` og `task_templates`. Hele måneder. Start > slutt = over nyttår. Start = slutt = én måned. Check `tasks_season_valid`: begge eller ingen, og bare for `interval` og `calendar` med unit ≠ `year`. Engangsoppgaver, jobber og årlige oppgaver har allerede en dato eller måned. Klienten sender ingen periode når alle tolv måneder er valgt.
+- **Utenfor perioden finnes ingen forekomster.** `matches_pattern` krever `in_season(t, d)`, så `next_occurrence`, `first_due`, `compute_next_due` og `get_upcoming_occurrences` følger med for kalenderoppgaver uten flere endringer. Sperren i `next_occurrence` får 366 dager ekstra med periode. «Annenhver uke» teller fortsatt fra `anchor_on`, også over vinteren.
+- **Intervall:** `compute_next_due` = `season_start_on_or_after(t, utført + intervall)`. Rens 20. mars + 8 uker = 15. mai → 1. oktober. Første frist (`first_due`) er i dag eller periodens start. Intervallmaler (ett intervall frem) går via `compute_next_due` og følger med.
+- **Ny periode = ny gjentakelse:** triggeren regner ut ny frist fra i dag når periodekolonnene endres.
+- **Forfalt når perioden slutter:** en oppgave som ikke er gjort når perioden er over, skal ikke stå forfalt hele vinteren. `private.roll_over_seasons(p_now default now())` flytter aktive oppgaver der `season_gap_after(t, next_due_on) <= i dag` (perioden har sluttet etter fristen) til `season_resume(t, i dag)`: første forekomst i neste periode, eller fra i dag hvis jobben ikke har kjørt på lenge. `postponed_*` nullstilles. Ingen avkrysning lagres, så historikken viser at den ikke ble gjort. Den kjøres hver time av pg_cron (`cron.job` `roll-over-seasons`, minutt 5), fordi husstander kan ha ulik tidssone. Etter midnatt kan oppgaven altså stå i opptil en time. Innloggede kan ikke kjøre funksjonen. `next_due_on` er dermed alltid riktig lagret, og «I dag», Oppgaver, «Kommende» og påminnelser trenger ingen egen regel.
+- **Utsatt til en dato utenfor perioden:** tillatt, og datoen respekteres (`postpone_task` er uendret). Gjøres den, gir `compute_next_due` første forekomst i neste periode. Gjøres den ikke, ruller jobben den dagen etter.
+- **Klient:** «Bare deler av året» under «Gjentas» (ikke for årlig), med fra–til måned. Teksten blir «Hver lørdag · mai–sep» / «8 uker etter sist · okt–apr» (`describeRecurrence`, `formatSeason`). Hintet sier «Første gang er 1. mai» når denne måneden er utenfor (`repeatHint`).
+- **Årshjulet:** sesongmaler og egne sesongoppgaver vises én gang, i periodens første måned (`yearWheelMonth` i `templates/suggest.ts`).
+- **Maler:** `heat-pump-filter` har okt–apr. `ventilation-filter` har ingen periode (anlegget går hele året). Nye: `lawn-mow` (1 uke etter sist, mai–sep) og `weed-beds` (2 uker etter sist, mai–aug), begge `{"has_garden": true}`. Aktiverte oppgaver er kopier og fikk ikke perioden.
+- **Tester:** `supabase/tests/seasonal_tasks.test.sql` (periode innenfor ett år, over nyttår, én måned, hopp til neste periode, intervall over periodeslutt, forfalt ved periodeslutt, utsettelse utenfor perioden, «Kommende», check-constraint, trigger, aktivering, rettigheter og jobben) og `src/features/tasks/__tests__/season.test.ts`.
 
 ### Månedsoppgaver (steg 7)
 En årlig kalenderoppgave **uten dag** (`calendar, year, month_day null`) har hele måneden som frist. Formen fantes fra før («i løpet av oktober»), så det trengs ingen ny kolonne.
@@ -373,7 +392,7 @@ Begge er globale tabeller uten `household_id`. Innholdet legges inn via migrasjo
 | household_types | household_type[] null | null = alle. Barnemaler: `{family}` |
 | housing_types | housing_type[] null | null = alle. «Hus» (eget tak og uteområde) = `{townhouse, house}` |
 | requires | jsonb null | betingelser på hjemprofilen. null = ingen. Alle nøkler må stemme. `has_*`: `true`/`false`. `sewage_type`: ikke-tom liste, én må stemme. Eksempel: `{"has_air_heat_pump": true}`, `{"sewage_type": ["septic_tank"]}`. Gyldige nøkler håndheves av `private.template_requires_valid` |
-| *gjentakelse* | samme kolonner og check-constraint som `tasks`, unntatt `anchor_on` | årshjulet: `calendar, year, every 1`, `month`, og `month_day` null (månedsoppgave) eller satt (fast dato) |
+| *gjentakelse* | samme kolonner og check-constraint som `tasks` (også periodekolonnene), unntatt `anchor_on` | årshjulet: `calendar, year, every 1`, `month`, og `month_day` null (månedsoppgave) eller satt (fast dato) |
 | source_url | text null | f.eks. DSB for røykvarsler. Tom til lenkene er sjekket |
 | sort_order | smallint not null default 0 | rekkefølge innen måneden |
 | is_active | boolean not null default true | maler slettes ikke, de deaktiveres |
@@ -386,17 +405,19 @@ Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_b
 - **Betingelser på eksisterende maler:** dekkskift krever bil, `chimney-check` krever peis (i stedet for «hus»), og `garden-mower` krever hage.
 - **Erstattet:** `ventilation-filter-spring/autumn` er deaktivert og erstattet av intervallmalen `ventilation-filter`.
 - **Nye maler:** 21 årsmaler og 2 intervallmaler (`heat-pump-filter` hver 8. uke, `ventilation-filter` hver 6. måned). Det gir 46 aktive maler.
+- **Sesongmaler** (`*_seasonal_tasks.sql`): `lawn-mow` og `weed-beds`. Det gir 48 aktive maler. Se §2 Sesong.
 - **Årshjulet** viser maler som passer husstanden, og i tillegg maler husstanden allerede har aktive (`yearWheelTemplates`). En aktiv oppgave forsvinner dermed ikke når et svar endres. En oppgave fra en deaktivert mal vises som egen.
 
 **Aktivering:** RPC `activate_templates(p_household_id, p_template_ids uuid[]) returns int` **kopierer** malene til nye `tasks`-rader med `template_id` satt og returnerer antall nye oppgaver.
+- Periodekolonnene kopieres også.
 - Maler som allerede er aktive, hoppes over (`on conflict do nothing` på den unike indeksen). Samme RPC brukes for én bryter og for «Velg anbefalte».
 - Den kjører som `security invoker`. RLS på `tasks` (voksen og `household_has_access`) og triggeren (`anchor_on` = i dag, `first_due`) gjelder dermed som for andre oppgaver.
 - Husstanden kan endre kopien fritt, og senere endringer i malen påvirker ikke eksisterende oppgaver.
 - **Intervallmaler** (`recurrence_type = 'interval'`, hjemprofil): første frist er **ett intervall frem**
   (`compute_next_due(oppgaven, i dag)`), ikke i dag. Det settes i INSERT-grenen av `tasks_set_defaults` når
   `template_id` er satt (`*_interval_templates.sql`). Egne intervalloppgaver får fortsatt første frist i dag.
-  Endres gjentakelsen senere, starter oppgaven fra i dag, som andre oppgaver. Intervallmaler vises ikke i
-  årshjulet, bare i forslagene fra hjemprofilen. Oppgavene havner i Oppgaver.
+  Endres gjentakelsen senere, starter oppgaven fra i dag, som andre oppgaver. Intervallmaler uten periode vises ikke i
+  årshjulet, bare i forslagene fra hjemprofilen. Med periode står de i periodens første måned. Oppgavene havner i Oppgaver.
 - **Deaktivering** = arkivere oppgaven (`archived_at`).
 
 Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, boligtype og hjemprofilen (`requires`, se `templates/requires.ts`), og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 16.

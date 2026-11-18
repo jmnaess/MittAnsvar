@@ -1,6 +1,6 @@
 import { MONTH_NAMES } from '../../lib/dates';
 import type { Household, HomeProfile } from '../household/types';
-import { describeRecurrence } from '../tasks/recurrence';
+import { describeRecurrence, isSeasonal } from '../tasks/recurrence';
 import type { Task } from '../tasks/types';
 import { meetsRequires } from './requires';
 import type { TaskTemplate } from './types';
@@ -17,9 +17,14 @@ function fitsHousehold(t: TaskTemplate, household: SuggestionHousehold): boolean
   );
 }
 
-/** Årshjulet: årlige maler med måned. */
+/** Årshjulet: årlige maler med måned, og sesongmaler (vises i periodens første måned). */
 function isYearWheelTemplate(t: TaskTemplate): boolean {
-  return t.recurrence_unit === 'year' && t.month !== null;
+  return (t.recurrence_unit === 'year' && t.month !== null) || isSeasonal(t);
+}
+
+/** Måneden en rad står under i årshjulet: årlig måned, eller periodens første måned. */
+export function yearWheelMonth(r: Pick<Task, 'month' | 'season_start_month'>): number | null {
+  return r.month ?? r.season_start_month;
 }
 
 /** Intervallmal («hver 8. uke etter sist utført»). Foreslås fra hjemprofilen, men er ikke i årshjulet. */
@@ -50,7 +55,7 @@ export function yearWheelTemplates(
   );
 }
 
-/** Maler hjemprofilen kan foreslå: årshjulet og intervallmalene. */
+/** Maler hjemprofilen kan foreslå: årshjulet (også sesongmaler) og intervallmalene. */
 function suggestForHomeProfile(templates: TaskTemplate[], household: SuggestionHousehold): TaskTemplate[] {
   return templates.filter(
     (t) => (isYearWheelTemplate(t) || isIntervalTemplate(t)) && fitsHousehold(t, household),
@@ -97,13 +102,15 @@ export type SuggestionGroup = {
 
 /**
  * Slår sammen årsmaler med samme tittel, i rekkefølgen den første av dem har.
- * Intervallmaler får alltid sin egen rad (de har ingen måned).
+ * Intervall- og sesongmaler får alltid sin egen rad, med gjentakelsen som tekst
+ * («1 uke etter sist · mai–sep»).
  */
 export function groupSuggestions(templates: TaskTemplate[]): SuggestionGroup[] {
   // Map beholder rekkefølgen nøklene ble lagt inn i.
   const groups = new Map<string, { first: TaskTemplate; months: number[]; templateIds: string[] }>();
   for (const t of templates) {
-    const groupKey = isIntervalTemplate(t) ? `interval:${t.id}` : `title:${t.title}`;
+    const ownRow = isIntervalTemplate(t) || isSeasonal(t);
+    const groupKey = ownRow ? `own:${t.id}` : `title:${t.title}`;
     const group = groups.get(groupKey) ?? { first: t, months: [], templateIds: [] };
     if (t.month !== null && !group.months.includes(t.month)) group.months.push(t.month);
     group.templateIds.push(t.id);
@@ -112,7 +119,7 @@ export function groupSuggestions(templates: TaskTemplate[]): SuggestionGroup[] {
   return [...groups.values()].map(({ first, months, templateIds }) => ({
     key: first.id,
     title: first.title,
-    when: isIntervalTemplate(first)
+    when: isIntervalTemplate(first) || isSeasonal(first)
       ? describeRecurrence({ ...first, job_repeats: false })
       : formatSuggestionWhen([...months].sort((a, b) => a - b)),
     templateIds,
@@ -133,14 +140,13 @@ export function formatSuggestionWhen(months: number[]): string {
  * og ikke vist som en mal i årshjulet (de vises som malen, med bryter). En oppgave fra en mal
  * som ikke vises (f.eks. deaktivert), regnes som egen, så den ikke forsvinner fra årshjulet.
  * Arkiverte er allerede borte fra listen. «Hvert år etter sist utført» (intervall) har ingen fast
- * måned og er ikke med.
+ * måned og er ikke med. Oppgaver med periode («Hver uke · mai–sep») er med, i periodens første måned.
  */
 export function isOwnYearlyTask(task: Task, shownTemplateIds: Set<string>): boolean {
   return (
     (task.template_id === null || !shownTemplateIds.has(task.template_id)) &&
-    task.recurrence_type === 'calendar' &&
-    task.recurrence_unit === 'year' &&
-    task.month !== null
+    ((task.recurrence_type === 'calendar' && task.recurrence_unit === 'year' && task.month !== null) ||
+      isSeasonal(task))
   );
 }
 
@@ -178,10 +184,10 @@ export function groupByMonth(
       title: name.charAt(0).toUpperCase() + name.slice(1),
       data: [
         ...templates
-          .filter((t) => t.month === month)
+          .filter((t) => yearWheelMonth(t) === month)
           .map((template): YearItem => ({ kind: 'template', key: `t-${template.id}`, template })),
         ...own
-          .filter((t) => t.month === month)
+          .filter((t) => yearWheelMonth(t) === month)
           .map((task): YearItem => ({ kind: 'own', key: `o-${task.id}`, task })),
       ],
     };

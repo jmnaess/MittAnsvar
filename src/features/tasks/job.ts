@@ -31,6 +31,8 @@ export function toJobInput(values: JobFormValues): TaskInput | null {
     month: null,
     job_repeats: values.repeats,
     once_on: null,
+    season_start_month: null,
+    season_end_month: null,
   };
 }
 

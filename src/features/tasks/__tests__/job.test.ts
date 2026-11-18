@@ -37,6 +37,8 @@ describe('toJobInput', () => {
       month: null,
       job_repeats: false,
       once_on: null,
+      season_start_month: null,
+      season_end_month: null,
     });
   });
 

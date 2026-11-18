@@ -13,7 +13,10 @@ export type Occurrence = Database['public']['Functions']['get_upcoming_occurrenc
 export type RecurrenceType = Enums['recurrence_type'];
 export type RecurrenceUnit = Enums['recurrence_unit'];
 
-/** Gjentakelseskolonnene på tasks. Se docs/DATABASE.md §2. */
+/**
+ * Gjentakelseskolonnene på tasks. Se docs/DATABASE.md §2.
+ * season_start_month/season_end_month: aktiv periode (1–12), begge null = hele året.
+ */
 export type Recurrence = Pick<
   Task,
   | 'recurrence_type'
@@ -23,6 +26,8 @@ export type Recurrence = Pick<
   | 'month_day'
   | 'month'
   | 'job_repeats'
+  | 'season_start_month'
+  | 'season_end_month'
 >;
 
 /**

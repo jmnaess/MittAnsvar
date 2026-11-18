@@ -1,5 +1,5 @@
 import { Chip, ListRow } from '../../../ui';
-import { formatNextDue } from '../../tasks/recurrence';
+import { describeRecurrence, formatNextDue, isSeasonal } from '../../tasks/recurrence';
 import type { Task } from '../../tasks/types';
 
 type Props = {
@@ -16,7 +16,11 @@ export function OwnYearTaskRow({ task, assigneeName, onPress }: Props) {
     <ListRow
       title={task.title}
       badge={<Chip label="Egen" />}
-      meta={[assigneeName, `Neste frist: ${formatNextDue(task)}`]}
+      meta={[
+        assigneeName,
+        isSeasonal(task) && describeRecurrence(task),
+        `Neste frist: ${formatNextDue(task)}`,
+      ]}
       onPress={onPress}
       accessibilityLabel={`${task.title}. Egen oppgave`}
       accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}

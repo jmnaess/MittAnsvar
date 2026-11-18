@@ -1,7 +1,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useInvalidateRewards } from '../rewards/hooks';
 import { useInvalidateTasks } from '../tasks/hooks';
-import { completeTask, listTodayCompletions, undoCompletion } from './api';
+import {
+  completeTask,
+  listTodayCompletions,
+  reassignCompletion,
+  removeCompletion,
+  undoCompletion,
+} from './api';
 
 // Begge endrer next_due_on (og arkiverer engangsjobber), så både «I dag» og oversikten må hentes
 // på nytt. Begge kan også endre saldoen til et barn.
@@ -34,4 +40,20 @@ export function useCompleteTask(householdId: string) {
 export function useUndoCompletion(householdId: string) {
   const onSettled = useInvalidateAfterCompletion(householdId);
   return useMutation({ mutationFn: undoCompletion, onSettled });
+}
+
+/** «Ikke gjort» for voksne, hele dagen. */
+export function useRemoveCompletion(householdId: string) {
+  const onSettled = useInvalidateAfterCompletion(householdId);
+  return useMutation({ mutationFn: removeCompletion, onSettled });
+}
+
+/** «Endre hvem som gjorde det» for voksne. Kan flytte lønn mellom barn. */
+export function useReassignCompletion(householdId: string) {
+  const onSettled = useInvalidateAfterCompletion(householdId);
+  return useMutation({
+    mutationFn: ({ completionId, memberId }: { completionId: string; memberId: string }) =>
+      reassignCompletion(completionId, memberId),
+    onSettled,
+  });
 }

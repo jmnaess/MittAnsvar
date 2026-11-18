@@ -137,7 +137,7 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 
 «I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden», og jobber i «Ledige jobber».
 
-**View `today_completions`** (`security_invoker = true`, så RLS på `task_completions` og `tasks` gjelder): dagens avkrysninger (`completed_on = private.household_today(household_id)`), uten avviste. Med tittel, `assigned_member_id` og `recurrence_type` fra oppgaven, også når oppgaven er arkivert (en ledig jobb som er gjort). `is_latest`: ingen nyere avkrysning på samme oppgave, samme regel som `undo_completion`. «I dag» viser radene som utført nederst i hvert kort. Appen angrer ved trykk bare når `is_latest`, innen 10 minutter, og for barn bare det de selv registrerte (`recorded_by`); serveren sjekker det samme i `undo_completion`. Testes i `today_completions.test.sql`.
+**View `today_completions`** (`security_invoker = true`, så RLS på `task_completions` og `tasks` gjelder): dagens avkrysninger (`completed_on = private.household_today(household_id)`), uten avviste. Med tittel, `assigned_member_id`, `recurrence_type` og `job_member_ids` (hvem en jobb kan flyttes til) fra oppgaven, også når oppgaven er arkivert (en ledig jobb som er gjort). `is_latest`: ingen nyere avkrysning på samme oppgave, samme regel som `undo_completion`. «I dag» viser radene som utført nederst i hvert kort. Appen angrer ved trykk bare når `is_latest`, innen 10 minutter, og for barn bare det de selv registrerte (`recorded_by`); serveren sjekker det samme i `undo_completion`. Voksne kan i tillegg rette hele dagen: trykk på sirkelen gir «Merke som ikke gjort?» (`remove_completion`), og trykk på raden gir valg mellom «Ikke gjort» og «Endre hvem som gjorde det» (`reassign_completion`). Testes i `today_completions.test.sql`.
 
 ### `payouts` (utbetalinger, steg 9)
 | Kolonne | Type | Merknad |
@@ -289,7 +289,7 @@ Angring, aktivering og `today_tasks` testes i `templates.test.sql` (se §5).
 
 ## 3. `task_completions` og historikk
 
-Hver avkrysning blir en ny rad. Tabellen er nesten append-only: bare `status` kan endres (steg 10b, via `approve_completions`, `reject_completion` og `set_completion_status`), og raden slettes bare ved «angre».
+Hver avkrysning blir en ny rad. Tabellen er nesten append-only: bare `status` kan endres (steg 10b, via `approve_completions`, `reject_completion` og `set_completion_status`), `reassign_completion` kan flytte dagens avkrysning til en annen person (`completed_by_member_id`, `reward_nok`, `status`, `recorded_by`), og raden slettes bare ved «angre» og «Ikke gjort» (`undo_completion`, `remove_completion`).
 
 | Kolonne | Type | Merknad |
 |---------|------|---------|
@@ -324,7 +324,10 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
   - Til `rejected`: som `reject_completion`. I tillegg avvises det med `reward_already_paid` hvis godkjent − utbetalt − beløpet blir under 0.
   - Til `approved`: beløpet teller igjen. Er det fortsatt den siste ikke-avviste avkrysningen, settes `next_due_on = compute_next_due(oppgaven, completed_on)` (regnet fra dagen den ble gjort), og en engangsjobb som fortsatt er ledig (`archived_at is null`), arkiveres igjen. Er oppgaven gjort på nytt siden (også når en annen har tatt jobben), endres bare statusen.
   - Feil: `status_not_changeable` (venter, uten lønn, samme status eller `p_status = pending`), `reward_already_paid`.
-- Alle tre krever at kalleren er voksen i husstanden til alle radene og `household_has_access`. Barn, andre husstander og ukjente id-er gir samme feil (`not_adult`), via `private.assert_adult_for_completions`.
+- `remove_completion(p_completion_id)`: «Ikke gjort» for voksne i «I dag», uten tidsgrense. Bare avkrysninger fra i dag (`completed_on = household_today`) som ikke er avvist. Raden slettes. Er det den siste ikke-avviste avkrysningen på oppgaven, settes `next_due_on` tilbake til `due_on`, og en engangsjobb får `archived_at = null`. Ellers slettes bare raden. Et godkjent beløp som allerede er betalt ut (saldo − beløp < 0), gir `reward_already_paid`. Ventende rader kan alltid fjernes.
+- `reassign_completion(p_completion_id, p_member_id)`: «Endre hvem som gjorde det», samme krav om i dag og ikke avvist. Frist og arkivering endres ikke. Et barn får beløpet som ble lagret på avkrysningen, eller oppgavens nåværende `reward_nok` hvis avkrysningen ikke hadde beløp (en voksen gjorde den). En voksen får `null`. `status = approved` og `recorded_by = auth.uid()` (en voksen registrerte det, og det forrige barnet kan ikke angre). En jobb kan bare flyttes til et barn jobben gjelder (tom `job_member_ids` = alle barna). Samme sjekk for utbetalt beløp hos personen den flyttes fra. Samme person: ingen endring.
+  - Begge låser oppgaven, så de berørte `members`-radene sortert på id, så raden. Feil: `completion_not_found` (borte eller avvist), `not_today`, `reward_already_paid`, `invalid_member` (bare reassign: ikke i husstanden, eller jobben gjelder ikke personen).
+- Alle fem krever at kalleren er voksen i husstanden til alle radene og `household_has_access`. Barn, andre husstander og ukjente id-er gir samme feil (`not_adult`), via `private.assert_adult_for_completions`.
 
 **Historikkspørringer** (vanlig select, ingen egne tabeller):
 - Sist utført: `select completed_at from task_completions where task_id = $1 order by completed_at desc limit 1`
@@ -464,6 +467,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `approve_completions(p_completion_ids)` / `reject_completion(p_completion_id)` | voksen, `household_has_access` | godkjenning av lønn (se §3). Feil: `not_adult` (barn, annen husstand, ukjent id), `subscription_required`, `not_pending` (bare avvisning) |
 | `set_completion_status(p_completion_id, p_status)` | voksen, `household_has_access` | endre godkjenning i ettertid, godkjent ↔ ikke godkjent (se §3). Feil: `not_adult`, `subscription_required`, `status_not_changeable`, `reward_already_paid` |
+| `remove_completion(p_completion_id)` / `reassign_completion(p_completion_id, p_member_id)` | voksen, `household_has_access` | rette dagens avkrysninger i «I dag» hele dagen: «Ikke gjort» og «Endre hvem som gjorde det» (se §3). Feil: `not_adult`, `subscription_required`, `completion_not_found`, `not_today`, `reward_already_paid`, `invalid_member` |
 | `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Fra steg 10b er grensen godkjent saldo (ventende og avviste teller ikke). Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
 | `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade) og barnas anonyme brukere (steg 10a). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |

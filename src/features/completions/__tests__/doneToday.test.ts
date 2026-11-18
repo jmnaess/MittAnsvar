@@ -1,5 +1,13 @@
 import type { TodayCompletion } from '../api';
-import { canUndo, doneByText, doneSectionKey, SHARED_KEY, UNDO_WINDOW_MS } from '../doneToday';
+import type { Member } from '../../household/types';
+import {
+  canUndo,
+  doneByText,
+  doneSectionKey,
+  reassignCandidates,
+  SHARED_KEY,
+  UNDO_WINDOW_MS,
+} from '../doneToday';
 
 const NOW = Date.parse('2026-11-18T12:00:00Z');
 
@@ -16,6 +24,7 @@ const done = (overrides: Partial<TodayCompletion>) =>
     is_latest: true,
     reward_nok: null,
     status: 'approved',
+    job_member_ids: [],
     ...overrides,
   }) as TodayCompletion;
 
@@ -68,5 +77,28 @@ describe('canUndo', () => {
   it('barn kan bare angre det de selv registrerte', () => {
     expect(canUndo(done({}), { now: NOW, isAdult: false, userId: 'user-leah' })).toBe(true);
     expect(canUndo(done({ recorded_by: 'user-voksen' }), { now: NOW, isAdult: false, userId: 'user-leah' })).toBe(false);
+  });
+});
+
+describe('reassignCandidates', () => {
+  const people = [
+    { id: 'mor', role: 'adult' },
+    { id: 'leah', role: 'child' },
+    { id: 'jesper', role: 'child' },
+  ] as Member[];
+  const ids = (list: Member[]) => list.map((m) => m.id);
+
+  it('gir alle i husstanden for vanlige oppgaver', () => {
+    expect(ids(reassignCandidates(done({}), people))).toEqual(['mor', 'leah', 'jesper']);
+  });
+
+  it('gir bare barna jobben gjelder', () => {
+    const job = done({ recurrence_type: 'job', job_member_ids: ['jesper'] });
+    expect(ids(reassignCandidates(job, people))).toEqual(['jesper']);
+  });
+
+  it('gir alle barna (ingen voksne) for en jobb uten liste', () => {
+    const job = done({ recurrence_type: 'job', job_member_ids: [] });
+    expect(ids(reassignCandidates(job, people))).toEqual(['leah', 'jesper']);
   });
 });

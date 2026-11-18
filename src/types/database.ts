@@ -364,7 +364,7 @@ isOneToOne: false
                   ]
                 },"today_completions": {
                   Row: {
-                    "assigned_member_id": string | null,"completed_at": string,"completed_by_member_id": string,"household_id": string,"id": string,"is_latest": boolean | null,"recorded_by": string | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_id": string,"title": string
+                    "assigned_member_id": string | null,"completed_at": string,"completed_by_member_id": string,"household_id": string,"id": string,"is_latest": boolean | null,"job_member_ids": (string)[],"recorded_by": string | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_id": string,"title": string
                   }
                   ComputedFields: never
                   Relationships: [
@@ -488,6 +488,9 @@ isOneToOne: false
               "due_on": string,"task_id": string
             }[]
                            },
+"reassign_completion":
+{ Args: { "p_completion_id": string,"p_member_id": string }; Returns: undefined
+                           },
 "record_payout":
 { Args: { "p_amount_nok": number,"p_member_id": string }; Returns: string
                            },
@@ -495,6 +498,9 @@ isOneToOne: false
 { Args: { "p_code": string }; Returns: string
                            },
 "reject_completion":
+{ Args: { "p_completion_id": string }; Returns: undefined
+                           },
+"remove_completion":
 { Args: { "p_completion_id": string }; Returns: undefined
                            },
 "set_completion_status":

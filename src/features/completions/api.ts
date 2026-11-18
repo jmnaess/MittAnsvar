@@ -38,6 +38,27 @@ export async function undoCompletion(completionId: string): Promise<void> {
   unwrap(await supabase.rpc('undo_completion', { p_completion_id: completionId }));
 }
 
+/**
+ * «Ikke gjort» (bare voksne, avkrysninger fra i dag, uten tidsgrense). Raden slettes. Var den
+ * den siste på oppgaven, går fristen tilbake og en engangsjobb blir ledig igjen.
+ */
+export async function removeCompletion(completionId: string): Promise<void> {
+  unwrap(await supabase.rpc('remove_completion', { p_completion_id: completionId }));
+}
+
+/**
+ * «Endre hvem som gjorde det» (bare voksne, avkrysninger fra i dag). Et barn får beløpet godkjent,
+ * en voksen får ingen lønn. Jobber kan bare flyttes til barn jobben gjelder.
+ */
+export async function reassignCompletion(completionId: string, memberId: string): Promise<void> {
+  unwrap(
+    await supabase.rpc('reassign_completion', {
+      p_completion_id: completionId,
+      p_member_id: memberId,
+    }),
+  );
+}
+
 /** En avkrysning fra i dag (viewet today_completions), med tittel og ansvarlig fra oppgaven. */
 export type TodayCompletion = Database['public']['Views']['today_completions']['Row'];
 

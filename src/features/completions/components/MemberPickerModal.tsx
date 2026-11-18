@@ -14,12 +14,19 @@ type Props = {
   preselectedId?: string | null;
   /** Mitt medlem, så raden kan vises som «(meg)». */
   meId?: string;
+  /** Teksten på bekreft-knappen når preselectedId er satt. Standard «Kryss av». */
+  confirmLabel?: string;
   onPick: (member: Member) => void;
   onClose: () => void;
 };
 
-/** «Hvem gjorde det?» Ved langt trykk, ledige jobber og oppgaver med lønn i «I dag». */
-export function MemberPickerModal({ taskTitle, members, preselectedId, meId, onPick, onClose }: Props) {
+/**
+ * «Hvem gjorde det?» Ved langt trykk, ledige jobber og oppgaver med lønn i «I dag», og når en
+ * voksen flytter en utført oppgave til en annen person.
+ */
+export function MemberPickerModal({
+  taskTitle, members, preselectedId, meId, confirmLabel = 'Kryss av', onPick, onClose,
+}: Props) {
   const confirm = !!preselectedId;
   const [selectedId, setSelectedId] = useState(preselectedId ?? null);
 
@@ -54,7 +61,7 @@ export function MemberPickerModal({ taskTitle, members, preselectedId, meId, onP
         );
       })}
       {confirm && (
-        <Button title="Kryss av" onPress={() => selected && onPick(selected)} disabled={!selected} />
+        <Button title={confirmLabel} onPress={() => selected && onPick(selected)} disabled={!selected} />
       )}
       <Button variant="text" title="Avbryt" onPress={onClose} />
     </Sheet>

@@ -150,7 +150,7 @@ export default function ChildTodayScreen() {
                 checkColor={color.ring}
                 isAdult={false}
                 userId={session?.user.id}
-                undoingId={undo.isPending ? undo.variables : undefined}
+                busyId={undo.isPending ? undo.variables : undefined}
                 onUndo={undoDone}
               />
             </SectionCard>

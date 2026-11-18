@@ -17,6 +17,13 @@ type Props = {
   muted?: boolean;
   onPress: () => void;
   onLongPress?: () => void;
+  /**
+   * Satt: sjekkboksen får sitt eget trykk (f.eks. «Merke som ikke gjort?»), og resten av raden
+   * bruker onPress. Ikke satt: hele raden er ett trykk.
+   */
+  onCheckPress?: () => void;
+  /** Skjermleser-tekst for sjekkboksen når den har eget trykk. */
+  checkAccessibilityLabel?: string;
   accessibilityLabel?: string;
   accessibilityHint?: string;
 };
@@ -24,8 +31,9 @@ type Props = {
 /** Én oppgave med sjekkboks: hvit rad, tittel og valgfri metalinje. */
 export function TaskRow({
   title, meta, right, done = false, checkColor, disabled, muted, onPress, onLongPress,
-  accessibilityLabel, accessibilityHint,
+  onCheckPress, checkAccessibilityLabel, accessibilityLabel, accessibilityHint,
 }: Props) {
+  const checkbox = <Checkbox checked={done} color={checkColor} />;
   return (
     <Pressable
       onPress={onPress}
@@ -41,7 +49,21 @@ export function TaskRow({
         pressed && (muted ? styles.mutedPressed : styles.pressed),
       ]}
     >
-      <Checkbox checked={done} color={checkColor} />
+      {onCheckPress ? (
+        // Et indre Pressable tar trykket, så raden rundt ikke også reagerer.
+        <Pressable
+          onPress={onCheckPress}
+          disabled={disabled}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={checkAccessibilityLabel}
+          style={({ pressed }) => pressed && styles.checkPressed}
+        >
+          {checkbox}
+        </Pressable>
+      ) : (
+        checkbox
+      )}
       <View style={styles.text}>
         <Text
           variant="rowTitle"
@@ -73,5 +95,6 @@ const styles = StyleSheet.create({
   mutedPressed: { backgroundColor: colors.border },
   text: { flex: 1, gap: 1 },
   strike: { textDecorationLine: 'line-through' },
+  checkPressed: { opacity: 0.6 },
   right: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

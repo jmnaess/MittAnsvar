@@ -1,3 +1,5 @@
+import type { Member } from '../household/types';
+import { jobMembers } from '../tasks/job';
 import type { TodayCompletion } from './api';
 
 /** Hvor lenge en avkrysning kan angres. Samme grense som undo_completion i databasen. */
@@ -29,6 +31,17 @@ export function doneByText(
   if (sectionKey === c.completed_by_member_id) return undefined;
   const name = nameOf(c.completed_by_member_id);
   return name ? `Gjort av ${name}` : undefined;
+}
+
+/**
+ * Hvem en avkrysning kan flyttes til («Endre hvem som gjorde det»). Samme regel som
+ * reassign_completion: en jobb bare til barna den gjelder (tom liste = alle barna), ellers alle.
+ */
+export function reassignCandidates(
+  c: Pick<TodayCompletion, 'recurrence_type' | 'job_member_ids'>,
+  members: Member[],
+): Member[] {
+  return c.recurrence_type === 'job' ? jobMembers(c.job_member_ids, members) : members;
 }
 
 /**

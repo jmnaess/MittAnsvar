@@ -1,14 +1,18 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { chooseCompletionAction } from '../../../src/features/completions/chooseDoer';
 import type { TodayCompletion } from '../../../src/features/completions/api';
+import { DoneActionsSheet } from '../../../src/features/completions/components/DoneActionsSheet';
 import { DoneList } from '../../../src/features/completions/components/DoneList';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
+import { reassignCandidates } from '../../../src/features/completions/doneToday';
 import {
   useCompleteTask,
+  useReassignCompletion,
+  useRemoveCompletion,
   useTodayCompletions,
   useUndoCompletion,
 } from '../../../src/features/completions/hooks';
@@ -48,6 +52,9 @@ type Toast = { completionId: string; title: string; message: string | null; rewa
 /** «Hvem gjorde det?»: hvilke personer som kan velges, og om en er forhåndsvalgt. */
 type Picking = { task: TodayTask; members: Member[]; preselectedId: string | null };
 
+/** En voksen retter en utført rad: valgene først, så personvelgeren ved «Endre hvem». */
+type Fixing = { completion: TodayCompletion; step: 'menu' | 'pick' };
+
 /**
  * «I dag»: dato og tittel, alle i husstanden (trykk for å vise bare én), godkjenningsbanner for
  * voksne, én seksjon per person i personens farge, «Felles», «Denne måneden» og «Ledige jobber».
@@ -69,10 +76,13 @@ export default function TodayScreen() {
   const { data: balances = [] } = useBalances(householdId);
   const complete = useCompleteTask(householdId);
   const undo = useUndoCompletion(householdId);
+  const remove = useRemoveCompletion(householdId);
+  const reassign = useReassignCompletion(householdId);
   const insets = useSafeAreaInsets();
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
+  const [fixing, setFixing] = useState<Fixing | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   // Pluss: velg «Oppgave i dag» eller «Ledig jobb».
   const [creating, setCreating] = useState(false);
@@ -135,6 +145,42 @@ export default function TodayScreen() {
     });
   }
 
+  // Voksne, hele dagen: «Ikke gjort» fjerner avkrysningen.
+  function removeDone(completion: TodayCompletion) {
+    setFixing(null);
+    setActionError(null);
+    remove.mutate(completion.id, {
+      onSuccess: () => setToast((t) => (t?.completionId === completion.id ? null : t)),
+      onError: (e) => setActionError(toNorwegianMessage(e)),
+    });
+  }
+
+  // Trykk på sirkelen: bekreft først. «Ikke gjort» i valgene er allerede et bevisst valg, og en
+  // Alert mens Sheet lukkes kan forsvinne på iOS.
+  function confirmRemove(completion: TodayCompletion) {
+    Alert.alert('Merke som ikke gjort?', completion.title, [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Ikke gjort', style: 'destructive', onPress: () => removeDone(completion) },
+    ]);
+  }
+
+  // «Endre hvem som gjorde det»: flytter avkrysningen (og eventuell lønn) til en annen.
+  function reassignDone(completion: TodayCompletion, member: Member) {
+    setFixing(null);
+    if (member.id === completion.completed_by_member_id) return;
+    setActionError(null);
+    reassign.mutate(
+      { completionId: completion.id, memberId: member.id },
+      { onError: (e) => setActionError(toNorwegianMessage(e)) },
+    );
+  }
+
+  const fixingBusyId = remove.isPending
+    ? remove.variables
+    : reassign.isPending
+      ? reassign.variables?.completionId
+      : undefined;
+
   function handleUndo() {
     if (!toast) return;
     undo.mutate(toast.completionId, {
@@ -170,8 +216,12 @@ export default function TodayScreen() {
           checkColor={checkColor}
           isAdult={isAdult}
           userId={session?.user.id}
-          undoingId={undo.isPending ? undo.variables : undefined}
+          busyId={undo.isPending ? undo.variables : fixingBusyId}
           onUndo={undoDone}
+          adultActions={{
+            onRemove: confirmRemove,
+            onOpen: (completion) => setFixing({ completion, step: 'menu' }),
+          }}
         />
       </>
     );
@@ -264,6 +314,23 @@ export default function TodayScreen() {
           if (picking) markDone(picking.task, member.id);
           setPicking(null);
         }}
+      />
+
+      <DoneActionsSheet
+        taskTitle={fixing?.step === 'menu' ? fixing.completion.title : null}
+        onClose={() => setFixing(null)}
+        onRemove={() => fixing && removeDone(fixing.completion)}
+        onReassign={() => fixing && setFixing({ ...fixing, step: 'pick' })}
+      />
+
+      <MemberPickerModal
+        taskTitle={fixing?.step === 'pick' ? fixing.completion.title : null}
+        members={fixing ? reassignCandidates(fixing.completion, members) : []}
+        preselectedId={fixing?.completion.completed_by_member_id}
+        meId={me?.id}
+        confirmLabel="Lagre"
+        onClose={() => setFixing(null)}
+        onPick={(member) => fixing && reassignDone(fixing.completion, member)}
       />
 
       <NewTaskSheet

@@ -69,6 +69,7 @@ const KNOWN: Record<string, string> = {
   completion_not_found: 'Avkrysningen finnes ikke lenger.',
   undo_not_allowed: 'Bare den siste avkrysningen kan angres.',
   undo_expired: 'Det er for lenge siden til å angre.',
+  not_today: 'Bare det som er gjort i dag, kan endres her.',
   // Utbetaling og godkjenning
   amount_exceeds_balance: 'Beløpet kan ikke være større enn det som er godkjent.',
   not_pending: 'Denne er allerede godkjent eller avvist.',

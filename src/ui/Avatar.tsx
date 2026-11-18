@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import Svg from 'react-native-svg';
 import { avatarArt, fallbackArt } from './avatarArt';
-import { colors } from './theme';
+import { useTheme } from './ThemeProvider';
 
 /** Størrelsene designsystemet bruker. */
 export type AvatarSize = 22 | 32 | 44 | 48 | 100;
@@ -19,7 +19,7 @@ type Props = {
   size?: AvatarSize | (number & {});
   /** Ring rundt avataren (personens ring-farge). Ringen ligger utenpå, med 3 px luft. */
   ring?: string;
-  /** Hvit kant, brukes når avatarer overlapper (AvatarStack). */
+  /** Kant i flatefargen, brukes når avatarer overlapper (AvatarStack). */
   outlined?: boolean;
 };
 
@@ -28,6 +28,7 @@ const RING_WIDTH = 3;
 
 /** Tegnet avatar eller profilbilde. Skjult for skjermlesere: navnet står alltid ved siden av. */
 export function Avatar({ avatar, photo, size = 44, ring, outlined }: Props) {
+  const { colors } = useTheme();
   const [failedKey, setFailedKey] = useState<string | null>(null);
   const showPhoto = photo && photo.cacheKey !== failedKey;
 

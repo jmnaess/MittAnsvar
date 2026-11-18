@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Checkbox } from './Checkbox';
 import { Text } from './Text';
-import { colors, minTouch, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { minTouch, radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   title: string;
@@ -16,6 +18,8 @@ type Props = {
  * avkrysset betyr «valgt», ikke «gjort»: ingen gjennomstreking. Hele raden er ett trykk.
  */
 export function CheckRow({ title, meta, checked, onToggle, disabled }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onToggle}
@@ -34,18 +38,20 @@ export function CheckRow({ title, meta, checked, onToggle, disabled }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: minTouch + 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: radius.row,
-    backgroundColor: colors.surface,
-  },
-  pressed: { backgroundColor: colors.surfaceMuted },
-  disabled: { opacity: 0.6 },
-  text: { flex: 1, gap: 1 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: minTouch + 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: radius.row,
+      backgroundColor: colors.surface,
+    },
+    pressed: { backgroundColor: colors.surfaceMuted },
+    disabled: { opacity: 0.6 },
+    text: { flex: 1, gap: 1 },
+  }),
+);

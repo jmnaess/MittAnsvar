@@ -12,7 +12,9 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Avatar, type AvatarPhotoSource } from './Avatar';
 import { familyStripLayout, RING_EXTRA, shortName } from './familyStripLayout';
 import { Text } from './Text';
-import { colors, personColor, spacing } from './theme';
+import { makeStyles } from './makeStyles';
+import { spacing } from './theme';
+import { useTheme } from './ThemeProvider';
 
 export type FamilyStripPerson = { id: string; name: string; avatar: string; photo?: AvatarPhotoSource };
 
@@ -36,6 +38,7 @@ export function FamilyStrip({ people, selectedId, onSelect }: Props) {
   const { width } = useWindowDimensions();
   const layout = familyStripLayout(people.length, width - 2 * spacing.page);
   const [atEnd, setAtEnd] = useState(false);
+  const styles = useStyles();
 
   const cells = people.map((p) => (
     <Person
@@ -85,6 +88,8 @@ type PersonProps = {
 };
 
 function Person({ person, ring, cellWidth, selected, dimmed, onPress }: PersonProps) {
+  const { colors, personColor } = useTheme();
+  const styles = useStyles();
   const name = shortName(person.name);
   return (
     <Pressable
@@ -112,6 +117,8 @@ function Person({ person, ring, cellWidth, selected, dimmed, onPress }: PersonPr
 
 /** Fra gjennomsiktig til sidens bakgrunn, så det synes at det finnes flere til høyre. */
 function RightFade() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View pointerEvents="none" style={styles.fade}>
       <Svg width="100%" height="100%">
@@ -127,10 +134,12 @@ function RightFade() {
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', paddingHorizontal: spacing.page },
-  person: { alignItems: 'center', gap: 4 },
-  dimmed: { opacity: 0.45 },
-  name: { alignSelf: 'stretch', textAlign: 'center', paddingHorizontal: 2 },
-  fade: { position: 'absolute', top: 0, right: 0, bottom: 0, width: FADE_WIDTH },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    row: { flexDirection: 'row', paddingHorizontal: spacing.page },
+    person: { alignItems: 'center', gap: 4 },
+    dimmed: { opacity: 0.45 },
+    name: { alignSelf: 'stretch', textAlign: 'center', paddingHorizontal: 2 },
+    fade: { position: 'absolute', top: 0, right: 0, bottom: 0, width: FADE_WIDTH },
+  }),
+);

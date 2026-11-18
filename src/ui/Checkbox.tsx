@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
-import { colors } from './theme';
+import { makeStyles } from './makeStyles';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   checked: boolean;
@@ -9,23 +10,28 @@ type Props = {
 };
 
 /** Rund sjekkboks. Bare visning: trykket håndteres av raden rundt. */
-export function Checkbox({ checked, color = colors.primary }: Props) {
+export function Checkbox({ checked, color }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const fill = color ?? colors.primary;
   return (
-    <View style={[styles.box, checked && { backgroundColor: color, borderColor: color }]}>
-      {checked && <Ionicons name="checkmark" size={20} color={colors.onPrimary} />}
+    <View style={[styles.box, checked && { backgroundColor: fill, borderColor: fill }]}>
+      {checked && <Ionicons name="checkmark" size={20} color={colors.onRing} />}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  box: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 2.5,
-    borderColor: colors.checkboxBorder,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    box: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      borderWidth: 2.5,
+      borderColor: colors.checkboxBorder,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  }),
+);

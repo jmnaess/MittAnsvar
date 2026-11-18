@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
-import { colors, minTouch, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { minTouch, radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'text' | 'danger';
 
@@ -18,6 +20,8 @@ type Props = {
  * danger = rød, til handlinger som ikke kan angres (slett, logg ut av enheten).
  */
 export function Button({ title, onPress, variant = 'primary', disabled, small }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -44,19 +48,21 @@ export function Button({ title, onPress, variant = 'primary', disabled, small }:
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    minHeight: minTouch + 4,
-    borderRadius: radius.button,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  small: { minHeight: minTouch, paddingHorizontal: 14 },
-  secondary: { borderWidth: 1.5, borderColor: colors.borderStrong, backgroundColor: colors.surface },
-  secondaryPressed: { backgroundColor: colors.surfaceMuted },
-  text: { paddingHorizontal: 8 },
-  textPressed: { opacity: 0.6 },
-  danger: { backgroundColor: colors.danger },
-  disabled: { opacity: 0.5 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    base: {
+      minHeight: minTouch + 4,
+      borderRadius: radius.button,
+      paddingHorizontal: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    small: { minHeight: minTouch, paddingHorizontal: 14 },
+    secondary: { borderWidth: 1.5, borderColor: colors.borderStrong, backgroundColor: colors.surface },
+    secondaryPressed: { backgroundColor: colors.surfaceMuted },
+    text: { paddingHorizontal: 8 },
+    textPressed: { opacity: 0.6 },
+    danger: { backgroundColor: colors.danger },
+    disabled: { opacity: 0.5 },
+  }),
+);

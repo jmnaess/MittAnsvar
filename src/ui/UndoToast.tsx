@@ -1,6 +1,6 @@
 import { Text } from './Text';
 import { Toast } from './Toast';
-import { colors } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   /** F.eks. «Slettet: Rense sluk». */
@@ -14,6 +14,7 @@ type Props = {
 
 /** Banner nederst med en kort tekst og «Angre» i 5 sekunder. */
 export function UndoToast({ message, ...rest }: Props) {
+  const { colors } = useTheme();
   return (
     <Toast {...rest} visibleMs={5000}>
       <Text color={colors.toastText} numberOfLines={2}>{message}</Text>

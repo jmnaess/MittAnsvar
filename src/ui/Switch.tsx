@@ -1,6 +1,7 @@
 import { Switch as RNSwitch, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { colors, minTouch } from './theme';
+import { minTouch } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   value: boolean;
@@ -14,6 +15,7 @@ type Props = {
 
 /** Bryter i primary-farge. Med label: en rad med teksten til venstre. */
 export function Switch({ value, onValueChange, disabled, accessibilityLabel, label }: Props) {
+  const { colors } = useTheme();
   const toggle = (
     <RNSwitch
       value={value}

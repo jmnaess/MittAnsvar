@@ -1,9 +1,10 @@
 import { StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { colors } from './theme';
+import { useTheme } from './ThemeProvider';
 
 /** Tom liste: kort tittel og en forklaring om hva man kan gjøre. */
 export function EmptyState({ title, text }: { title: string; text?: string }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.wrapper}>
       <Text variant="sectionTitle" style={styles.center}>{title}</Text>

@@ -6,7 +6,7 @@ import { radius, spacing, type PersonColor } from './theme';
 
 type Props = {
   title: string;
-  /** Personens farger (personColor(avatar)), eller sharedColors for «Felles». */
+  /** Personens farger (useTheme().personColor(avatar)), eller sharedColors for «Felles». */
   color: PersonColor;
   /** Avatarnøkkel. Utelatt for «Felles». */
   avatar?: string;

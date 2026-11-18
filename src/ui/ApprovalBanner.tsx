@@ -3,7 +3,9 @@ import type { AvatarPhotoSource } from './Avatar';
 import { AvatarStack } from './AvatarStack';
 import { Button } from './Button';
 import { Text } from './Text';
-import { colors, radius, spacing } from './theme';
+import { makeStyles } from './makeStyles';
+import { radius, spacing } from './theme';
+import { useTheme } from './ThemeProvider';
 import { waitingText } from './waitingText';
 
 type Props = {
@@ -18,6 +20,8 @@ type Props = {
 
 /** Gult banner i «I dag» når barn har krysset av med lønn og venter på godkjenning. */
 export function ApprovalBanner({ people, count, total, onOpen }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.banner}>
       <AvatarStack people={people} size={32} />
@@ -32,14 +36,16 @@ export function ApprovalBanner({ people, count, total, onOpen }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.sunSoft,
-    borderRadius: radius.card,
-    padding: spacing.card,
-  },
-  text: { flex: 1, gap: 2 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    banner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: colors.sunSoft,
+      borderRadius: radius.card,
+      padding: spacing.card,
+    },
+    text: { flex: 1, gap: 2 },
+  }),
+);

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { colors, spacing } from './theme';
+import { spacing } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   title: string;
@@ -13,6 +14,7 @@ type Props = {
 
 /** Stor sidetittel (38 Fredoka) for skjermer uten navigasjonsheader, som «I dag». */
 export function PageHeader({ title, overline, right }: Props) {
+  const { colors } = useTheme();
   return (
     <View style={styles.header}>
       <View style={styles.text}>

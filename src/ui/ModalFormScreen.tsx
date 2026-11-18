@@ -2,7 +2,9 @@ import { router, Stack } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Text } from './Text';
-import { colors, spacing } from './theme';
+import { makeStyles } from './makeStyles';
+import { spacing } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   /** false = Lagre er grå (ugyldig skjema). Utelatt = ingen Lagre-knapp. */
@@ -31,6 +33,8 @@ type Props = {
  *   trykk på tomme flater lukker tastaturet.
  */
 export function ModalFormScreen({ canSave, saving, onSave, closeTitle = 'Avbryt', children }: Props) {
+  const styles = useStyles();
+
   function save() {
     Keyboard.dismiss();
     onSave?.();
@@ -66,6 +70,8 @@ export function ModalFormScreen({ canSave, saving, onSave, closeTitle = 'Avbryt'
 type HeaderButtonProps = { title: string; onPress: () => void; disabled?: boolean; bold?: boolean };
 
 function HeaderButton({ title, onPress, disabled, bold }: HeaderButtonProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -82,9 +88,11 @@ function HeaderButton({ title, onPress, disabled, bold }: HeaderButtonProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { backgroundColor: colors.background },
-  container: { padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
-  headerButton: { paddingHorizontal: 8 },
-  disabled: { opacity: 0.6 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    scroll: { backgroundColor: colors.background },
+    container: { padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
+    headerButton: { paddingHorizontal: 8 },
+    disabled: { opacity: 0.6 },
+  }),
+);

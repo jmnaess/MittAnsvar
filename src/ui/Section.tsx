@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { colors, spacing } from './theme';
+import { spacing } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   title: string;
@@ -14,6 +15,7 @@ type Props = {
 
 /** Seksjon på en side: tittel (20 Fredoka), valgfri forklaring og innhold med 10 px mellom. */
 export function Section({ title, description, right, children }: Props) {
+  const { colors } = useTheme();
   return (
     <View style={styles.section}>
       <View style={styles.header}>

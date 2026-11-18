@@ -10,7 +10,9 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { Text } from './Text';
-import { colors, fonts, minTouch, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { fonts, minTouch, radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = TextInputProps & {
   label?: string;
@@ -24,10 +26,12 @@ const KEYPADS_WITHOUT_RETURN = ['number-pad', 'numeric', 'decimal-pad', 'phone-p
 /**
  * TextInput med valgfri etikett over. Alle vanlige TextInput-props sendes videre.
  * «Ferdig» på tastaturet lukker det (returnKeyType done; enlinjefelt blurer da av seg selv).
- * Tekstfargen er fast, så teksten også synes når telefonen er i mørk modus.
+ * Farger og tastaturets utseende (iOS) følger temaet.
  */
 export function TextField({ label, code, style, ...inputProps }: Props) {
   const accessoryId = useId();
+  const { scheme, colors } = useTheme();
+  const styles = useStyles();
   const needsAccessory =
     Platform.OS === 'ios' && KEYPADS_WITHOUT_RETURN.includes(inputProps.keyboardType ?? '');
 
@@ -37,6 +41,9 @@ export function TextField({ label, code, style, ...inputProps }: Props) {
       <TextInput
         style={[styles.input, code && styles.code, style]}
         placeholderTextColor={colors.textMuted}
+        selectionColor={colors.primary}
+        cursorColor={colors.primary}
+        keyboardAppearance={scheme}
         returnKeyType="done"
         inputAccessoryViewID={needsAccessory ? accessoryId : undefined}
         accessibilityLabel={label}
@@ -55,27 +62,29 @@ export function TextField({ label, code, style, ...inputProps }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { gap: 8 },
-  input: {
-    minHeight: minTouch + 6,
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.row,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    color: colors.text,
-  },
-  code: { fontFamily: fonts.heading, fontSize: 24, letterSpacing: 4, textAlign: 'center' },
-  accessory: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: colors.surfaceMuted,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderStrong,
-  },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    wrapper: { gap: 8 },
+    input: {
+      minHeight: minTouch + 6,
+      borderWidth: 1.5,
+      borderColor: colors.borderStrong,
+      borderRadius: radius.row,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontFamily: fonts.regular,
+      fontSize: 16,
+      color: colors.text,
+    },
+    code: { fontFamily: fonts.heading, fontSize: 24, letterSpacing: 4, textAlign: 'center' },
+    accessory: {
+      alignItems: 'flex-end',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: colors.surfaceMuted,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderStrong,
+    },
+  }),
+);

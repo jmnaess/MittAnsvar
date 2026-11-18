@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
-import { colors, minTouch, spacing } from './theme';
+import { minTouch, spacing } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   /** Teksten når listen er sammenfoldet, f.eks. «4 til gjort i dag». */
@@ -14,6 +15,7 @@ type Props = {
 
 /** Liten rad som folder en liste ut og inn. Utfoldet står det «Vis færre». */
 export function ShowMoreRow({ label, expanded, onPress, accessibilityLabel }: Props) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}

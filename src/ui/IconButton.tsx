@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { Pressable } from 'react-native';
-import { colors, shadow } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   icon: ComponentProps<typeof Ionicons>['name'];
@@ -15,6 +15,7 @@ type Props = {
 
 /** Rund ikonknapp. 40 px får ekstra trykkflate (hitSlop) opp til 48. */
 export function IconButton({ icon, accessibilityLabel, onPress, size = 48, variant = 'primary', disabled }: Props) {
+  const { colors, shadow } = useTheme();
   const primary = variant === 'primary';
   return (
     <Pressable

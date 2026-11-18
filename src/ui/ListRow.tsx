@@ -2,7 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { colors, minTouch, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { minTouch, radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   title: string;
@@ -26,6 +28,8 @@ type Props = {
 export function ListRow({
   title, meta, left, right, badge, onPress, muted, accessibilityLabel, accessibilityHint,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const lines = (typeof meta === 'string' ? [meta] : (meta ?? [])).filter(Boolean) as string[];
   return (
     <Pressable
@@ -56,21 +60,23 @@ export function ListRow({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: minTouch + 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: radius.row,
-    backgroundColor: colors.surface,
-  },
-  pressed: { backgroundColor: colors.surfaceMuted },
-  muted: { backgroundColor: colors.surfaceMuted },
-  mutedPressed: { backgroundColor: colors.border },
-  text: { flex: 1, gap: 2 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  title: { flexShrink: 1 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: minTouch + 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: radius.row,
+      backgroundColor: colors.surface,
+    },
+    pressed: { backgroundColor: colors.surfaceMuted },
+    muted: { backgroundColor: colors.surfaceMuted },
+    mutedPressed: { backgroundColor: colors.border },
+    text: { flex: 1, gap: 2 },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+    title: { flexShrink: 1 },
+  }),
+);

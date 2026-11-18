@@ -6,7 +6,9 @@ import ReanimatedSwipeable, {
 import Animated, { useAnimatedReaction, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { Text } from './Text';
-import { colors, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = { children: ReactNode; onDelete: () => void };
 
@@ -85,6 +87,8 @@ type ActionProps = {
  * den skal stoppe ved kort sveip. Den røde bakgrunnen strekker seg til venstre når man drar lenger.
  */
 function DeleteAction({ translation, threshold, onThresholdChange, onPress }: ActionProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   useAnimatedReaction(
     () => -translation.value > threshold,
     (past, previous) => {
@@ -113,19 +117,21 @@ function DeleteAction({ translation, threshold, onThresholdChange, onPress }: Ac
   );
 }
 
-const styles = StyleSheet.create({
-  action: {
-    width: ACTION_WIDTH,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Ligger bak teksten og vokser mot venstre fra høyre kant.
-  fill: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
-    backgroundColor: colors.danger,
-    borderRadius: radius.row,
-  },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    action: {
+      width: ACTION_WIDTH,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    // Ligger bak teksten og vokser mot venstre fra høyre kant.
+    fill: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      right: 0,
+      backgroundColor: colors.danger,
+      borderRadius: radius.row,
+    },
+  }),
+);

@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
-import { colors, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   /** Ferdig formatert beløp («20 kr»), eller utelatt for jobber uten lønn. */
@@ -16,6 +18,8 @@ type Props = {
 
 /** Én ledig jobb i rutenettet: beløpet øverst, så tittel og hvem. Trykk = utført. */
 export function JobCard({ amount, title, who, busy, onPress, onLongPress, accessibilityHint }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -33,14 +37,16 @@ export function JobCard({ amount, title, who, busy, onPress, onLongPress, access
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    minHeight: 96,
-    backgroundColor: colors.jobBg,
-    borderRadius: radius.card,
-    padding: 14,
-    gap: 4,
-  },
-  pressed: { opacity: 0.6 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    card: {
+      flex: 1,
+      minHeight: 96,
+      backgroundColor: colors.jobBg,
+      borderRadius: radius.card,
+      padding: 14,
+      gap: 4,
+    },
+    pressed: { opacity: 0.6 },
+  }),
+);

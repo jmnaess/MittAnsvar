@@ -1,7 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
-import { colors, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   children: ReactNode;
@@ -16,6 +18,8 @@ type Props = {
 
 /** Mørkt banner nederst med innhold og «Angre». Felles for FeedbackToast og UndoToast. */
 export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   // onHide er en ny funksjon ved hver render. Med en ref starter nedtellingen bare på nytt
   // når resetKey endres, ikke ved hver render.
   const onHideRef = useRef(onHide);
@@ -42,25 +46,27 @@ export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs }
   );
 }
 
-const styles = StyleSheet.create({
-  toast: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderRadius: radius.card,
-    backgroundColor: colors.toastBg,
-    shadowColor: colors.toastBg,
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  content: { flex: 1, gap: 4 },
-  undo: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
-  disabled: { opacity: 0.5 },
-});
+const useStyles = makeStyles(({ colors, shadow }) =>
+  StyleSheet.create({
+    toast: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      bottom: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 16,
+      borderRadius: radius.card,
+      backgroundColor: colors.toastBg,
+      shadowColor: shadow.shadowColor,
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+    },
+    content: { flex: 1, gap: 4 },
+    undo: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
+    disabled: { opacity: 0.5 },
+  }),
+);

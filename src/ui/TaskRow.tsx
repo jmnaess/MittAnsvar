@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Checkbox } from './Checkbox';
 import { Text } from './Text';
-import { colors, minTouch, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { minTouch, radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   title: string;
@@ -34,6 +36,8 @@ export function TaskRow({
   title, meta, right, done = false, checkColor, disabled, muted, onPress, onLongPress,
   onCheckPress, checkAccessibilityLabel, accessibilityLabel, accessibilityHint,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const checkbox = <Checkbox checked={done} color={checkColor} />;
   return (
     <Pressable
@@ -80,22 +84,24 @@ export function TaskRow({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: minTouch + 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: radius.row,
-    backgroundColor: colors.surface,
-  },
-  pressed: { backgroundColor: colors.surfaceMuted },
-  muted: { backgroundColor: colors.surfaceMuted },
-  mutedPressed: { backgroundColor: colors.border },
-  text: { flex: 1, gap: 1 },
-  strike: { textDecorationLine: 'line-through' },
-  checkPressed: { opacity: 0.6 },
-  right: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: minTouch + 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: radius.row,
+      backgroundColor: colors.surface,
+    },
+    pressed: { backgroundColor: colors.surfaceMuted },
+    muted: { backgroundColor: colors.surfaceMuted },
+    mutedPressed: { backgroundColor: colors.border },
+    text: { flex: 1, gap: 1 },
+    strike: { textDecorationLine: 'line-through' },
+    checkPressed: { opacity: 0.6 },
+    right: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  }),
+);

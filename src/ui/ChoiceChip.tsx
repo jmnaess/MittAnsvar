@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
-import { colors, minTouch, radius } from './theme';
+import { makeStyles } from './makeStyles';
+import { minTouch, radius } from './theme';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   label: string;
@@ -16,6 +18,8 @@ type Props = {
  * Ikke det samme som Chip, som bare er en merkelapp.
  */
 export function ChoiceChip({ label, selected, onPress, disabled, role }: Props) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -38,17 +42,19 @@ export function ChoiceChip({ label, selected, onPress, disabled, role }: Props) 
   );
 }
 
-const styles = StyleSheet.create({
-  chip: {
-    minHeight: minTouch,
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
-    borderRadius: radius.button,
-    paddingHorizontal: 16,
-  },
-  selected: { borderColor: colors.primary, backgroundColor: colors.primary },
-  pressed: { backgroundColor: colors.surfaceMuted },
-  disabled: { opacity: 0.5 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    chip: {
+      minHeight: minTouch,
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: colors.borderStrong,
+      backgroundColor: colors.surface,
+      borderRadius: radius.button,
+      paddingHorizontal: 16,
+    },
+    selected: { borderColor: colors.primary, backgroundColor: colors.primary },
+    pressed: { backgroundColor: colors.surfaceMuted },
+    disabled: { opacity: 0.5 },
+  }),
+);

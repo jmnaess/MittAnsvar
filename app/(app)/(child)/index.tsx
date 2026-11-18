@@ -57,9 +57,26 @@ export default function ChildTodayScreen() {
   const { session } = useSession();
   const { data: tasks, error, isPending, refetch: refetchTasks } = useTodayTasks(householdId);
   const { data: done = [], refetch: refetchDone } = useTodayCompletions(householdId);
+  const today = toIsoDate(new Date());
+  const { upcoming, isPending: upcomingPending, refetch: refetchUpcoming } = useMemberUpcoming(
+    householdId,
+    me?.id ?? null,
+    today,
+    { windowDays: CHILD_UPCOMING_DAYS, hideFrequent: true },
+  );
+  // RLS: barnet får bare sine egne avkrysninger.
+  const { data: recent = [], refetch: refetchRecentQuery } = useRecentCompletions(householdId, today, !!me);
+  // Dra for å oppdatere, fokus og midnatt: også «Kommende» og «Gjort siste 3 dager».
+  const hasMe = !!me;
   const refetch = useCallback(
-    () => Promise.all([refetchTasks(), refetchDone()]),
-    [refetchTasks, refetchDone],
+    () =>
+      Promise.all([
+        refetchTasks(),
+        refetchDone(),
+        refetchUpcoming(),
+        hasMe ? refetchRecentQuery() : undefined,
+      ]),
+    [refetchTasks, refetchDone, refetchUpcoming, refetchRecentQuery, hasMe],
   );
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
@@ -88,14 +105,6 @@ export default function ChildTodayScreen() {
     [progressText(mine.length, mineDone.length), earnedLabel(balance)].filter(Boolean).join(' · ') ||
     undefined;
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
-
-  const today = toIsoDate(new Date());
-  const { upcoming, isPending: upcomingPending } = useMemberUpcoming(householdId, me?.id ?? null, today, {
-    windowDays: CHILD_UPCOMING_DAYS,
-    hideFrequent: true,
-  });
-  // RLS: barnet får bare sine egne avkrysninger.
-  const { data: recent = [] } = useRecentCompletions(householdId, today, !!me);
   const recentDays = me ? groupRecentByDay(recent, me.id, today) : [];
 
   function markDone(task: TodayTask) {

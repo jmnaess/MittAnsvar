@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import {
   archiveTask,
   createTask,
@@ -47,13 +48,14 @@ export function useUpcomingOccurrences(householdId: string, from: string, to: st
 /**
  * «Kommende» for én person (personvisningen i «I dag»): forekomster fra i morgen og windowDays
  * fram, gruppert med upcomingForMember. memberId null = ingen er valgt, og ingenting hentes.
+ * refetch (dra for å oppdatere) gjør heller ingenting når ingen er valgt.
  */
 export function useMemberUpcoming(
   householdId: string,
   memberId: string | null,
   today: string,
   { windowDays, hideFrequent = false }: { windowDays: number; hideFrequent?: boolean },
-): { upcoming: MemberUpcoming; isPending: boolean } {
+): { upcoming: MemberUpcoming; isPending: boolean; refetch: () => Promise<unknown> } {
   const { from, to } = upcomingWindow(today, windowDays);
   const enabled = memberId !== null;
   const occurrences = useUpcomingOccurrences(householdId, from, to, enabled);
@@ -66,7 +68,14 @@ export function useMemberUpcoming(
     memberId && occurrences.data && tasks.data
       ? upcomingForMember(occurrences.data, tasks.data, memberId, today, { windowDays, hideFrequent })
       : { repeating: [], groups: [] };
-  return { upcoming, isPending: occurrences.isPending || tasks.isPending };
+  // refetch fra useQuery hopper over enabled, så vi sjekker selv.
+  const refetchOccurrences = occurrences.refetch;
+  const refetchTasks = tasks.refetch;
+  const refetch = useCallback(
+    () => (enabled ? Promise.all([refetchOccurrences(), refetchTasks()]) : Promise.resolve()),
+    [enabled, refetchOccurrences, refetchTasks],
+  );
+  return { upcoming, isPending: occurrences.isPending || tasks.isPending, refetch };
 }
 
 export function useInvalidateTasks(householdId: string) {

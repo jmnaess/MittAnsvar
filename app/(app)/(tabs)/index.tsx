@@ -86,9 +86,31 @@ export default function TodayScreen() {
   const { session } = useSession();
   const { data: tasks, error, isPending, refetch: refetchTasks } = useTodayTasks(householdId);
   const { data: done = [], refetch: refetchDone } = useTodayCompletions(householdId);
+  /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const today = toIsoDate(new Date());
+  // Personvisningen. Hentes bare når en person er valgt.
+  const { upcoming, isPending: upcomingPending, refetch: refetchUpcoming } = useMemberUpcoming(
+    householdId,
+    focusedId,
+    today,
+    { windowDays: UPCOMING_DAYS },
+  );
+  const { data: recent = [], refetch: refetchRecentQuery } = useRecentCompletions(
+    householdId,
+    today,
+    focusedId !== null,
+  );
+  // Dra for å oppdatere, fokus og midnatt: også personvisningen når en person er valgt.
   const refetch = useCallback(
-    () => Promise.all([refetchTasks(), refetchDone()]),
-    [refetchTasks, refetchDone],
+    () =>
+      Promise.all([
+        refetchTasks(),
+        refetchDone(),
+        refetchUpcoming(),
+        focusedId !== null ? refetchRecentQuery() : undefined,
+      ]),
+    [refetchTasks, refetchDone, refetchUpcoming, refetchRecentQuery, focusedId],
   );
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
@@ -111,8 +133,6 @@ export default function TodayScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   // Pluss: velg «Oppgave i dag» eller «Ledig jobb».
   const [creating, setCreating] = useState(false);
-  /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
-  const [focusedId, setFocusedId] = useState<string | null>(null);
   /** Kort der alle utførte er foldet ut (seksjonsnøkler). Ny dag: alt foldes inn igjen. */
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   useEffect(() => setExpandedKeys(new Set()), [day]);
@@ -143,13 +163,6 @@ export default function TodayScreen() {
   const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
   // Bare avkrysning: en rad som utsettes, skal ikke se utført ut.
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
-  const today = toIsoDate(new Date());
-
-  // Personvisningen. Hentes bare når en person er valgt.
-  const { upcoming, isPending: upcomingPending } = useMemberUpcoming(householdId, focused?.id ?? null, today, {
-    windowDays: UPCOMING_DAYS,
-  });
-  const { data: recent = [] } = useRecentCompletions(householdId, today, !!focused);
   const recentDays = focused ? groupRecentByDay(recent, focused.id, today) : [];
 
   function markDone(task: TodayTask, memberId: string) {

@@ -101,6 +101,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `ShowMoreRow` | liten tekstrad med chevron som folder en liste ut og inn («4 til gjort i dag» / «Vis færre») |
 | `TaskRow` | sjekkboks, tittel, metalinje, merkelapper til høyre. `done`, `muted` (i hvite kort) |
 | `Checkbox` | sirkel 30, kant 2.5; avkrysset = fylt med ring-farge og hvit hake |
+| `CheckRow` | velg i en liste (forslag fra hjemprofilen): sjekkboks, tittel, metalinje. Avkrysset = valgt, ingen gjennomstreking |
 | `Chip` | merkelapp: `money`, `overdue`, `neutral` |
 | `Button` | `primary` (pille), `secondary` (kant), `text`, `danger` (slett). `small` i rader og bannere |
 | `IconButton` | rund ikonknapp, 40 eller 48 |

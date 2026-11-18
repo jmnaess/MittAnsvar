@@ -12,9 +12,10 @@ import {
   setMyAvatar,
   updateChild,
   updateHousehold,
+  type HouseholdChanges,
 } from './api';
 import { useSession } from '../auth/SessionProvider';
-import type { ChildInput, FeedbackTone, Member } from './types';
+import type { ChildInput, Member } from './types';
 
 // Nøkler for cachen. Etter en endring «invaliderer» vi nøkkelen, så dataene hentes på nytt.
 export const householdKeys = {
@@ -60,12 +61,15 @@ export function useCreateHousehold() {
   return useMutation({ mutationFn: createHousehold });
 }
 
-export function useUpdateHousehold(householdId: string) {
+/**
+ * refetch: false brukes i oppstarten. Der finnes ikke husstanden i cachen ennå, og henter vi den,
+ * bytter appen til fanene før oppstarten er ferdig (se useCreateHousehold).
+ */
+export function useUpdateHousehold(householdId: string, { refetch = true }: { refetch?: boolean } = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (changes: { name?: string; feedback_tone?: FeedbackTone }) =>
-      updateHousehold(householdId, changes),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: householdKeys.mine }),
+    mutationFn: (changes: HouseholdChanges) => updateHousehold(householdId, changes),
+    onSuccess: () => (refetch ? queryClient.invalidateQueries({ queryKey: householdKeys.mine }) : undefined),
   });
 }
 

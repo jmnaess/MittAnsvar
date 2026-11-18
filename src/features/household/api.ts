@@ -4,6 +4,7 @@ import { normalizeInviteCode } from './inviteCode';
 import type {
   ChildInput,
   FeedbackTone,
+  HomeProfile,
   Household,
   HouseholdType,
   HousingType,
@@ -38,10 +39,10 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<stri
 }
 
 /** Bare navn og tone kan endres her. Andre kolonner er stengt med kolonnerettigheter. */
-export async function updateHousehold(
-  id: string,
-  changes: { name?: string; feedback_tone?: FeedbackTone },
-): Promise<void> {
+/** Det voksne kan endre på husstanden: navn, tone og hjemprofilen. */
+export type HouseholdChanges = Partial<{ name: string; feedback_tone: FeedbackTone } & HomeProfile>;
+
+export async function updateHousehold(id: string, changes: HouseholdChanges): Promise<void> {
   unwrap(await supabase.from('households').update(changes).eq('id', id));
 }
 

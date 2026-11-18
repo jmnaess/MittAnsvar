@@ -6,6 +6,7 @@ export { AvatarStack } from './AvatarStack';
 export { Button, type ButtonVariant } from './Button';
 export { Card } from './Card';
 export { Checkbox } from './Checkbox';
+export { CheckRow } from './CheckRow';
 export { Chip, type ChipTone } from './Chip';
 export { ChoiceChip } from './ChoiceChip';
 export { ChoiceChips } from './ChoiceChips';

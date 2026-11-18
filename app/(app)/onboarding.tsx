@@ -8,6 +8,8 @@ import { ChildForm } from '../../src/features/household/components/ChildForm';
 import { HouseholdForm } from '../../src/features/household/components/HouseholdForm';
 import { JoinHouseholdForm } from '../../src/features/household/components/JoinHouseholdForm';
 import { MemberRow } from '../../src/features/household/components/MemberRow';
+import { emptyHomeProfile } from '../../src/features/household/homeProfile';
+import { HomeProfileFlow } from '../../src/features/templates/components/HomeProfileFlow';
 import {
   householdKeys,
   useAcceptInvite,
@@ -22,7 +24,8 @@ import { toNorwegianMessage } from '../../src/lib/errors';
 
 // Oppstart for en innlogget bruker uten husstand. Tre visninger på samme skjerm:
 //   choose: velg «Opprett husstand» eller «Bli med i en husstand»
-//   create: opprett husstand, deretter barn (bare «Familie med barn», kan hoppes over)
+//   create: opprett husstand, deretter barn (bare «Familie med barn») og om hjemmet
+//           (hjemprofil med forslag til årshjulet). Begge kan hoppes over.
 //   join:   skriv inn kode fra en annen voksen, navn og avatar
 // Når vi er ferdige, henter vi husstanden på nytt. Da bytter app/(app)/_layout.tsx til fanene.
 type Mode = 'choose' | 'create' | 'join';
@@ -61,10 +64,15 @@ function ChooseStep({ onChoose }: { onChoose: (mode: Mode) => void }) {
   );
 }
 
+// Opprett husstand → barn (bare familie) → om hjemmet. Barn og hjemmet kan hoppes over.
+type CreateStep =
+  | { kind: 'household' }
+  | { kind: 'children' | 'home'; householdId: string; input: CreateHouseholdInput };
+
 function CreateFlow({ onBack }: { onBack: () => void }) {
   const queryClient = useQueryClient();
   const createHousehold = useCreateHousehold();
-  const [householdId, setHouseholdId] = useState<string | null>(null);
+  const [step, setStep] = useState<CreateStep>({ kind: 'household' });
   const [finishing, setFinishing] = useState(false);
 
   const { session } = useSession();
@@ -79,12 +87,32 @@ function CreateFlow({ onBack }: { onBack: () => void }) {
 
   function handleCreate(input: CreateHouseholdInput) {
     createHousehold.mutate(input, {
-      onSuccess: (id) => (input.type === 'family' ? setHouseholdId(id) : finish()),
+      onSuccess: (householdId) =>
+        setStep({ kind: input.type === 'family' ? 'children' : 'home', householdId, input }),
     });
   }
 
-  if (householdId !== null) {
-    return <ChildrenStep householdId={householdId} finishing={finishing} onDone={finish} />;
+  if (step.kind === 'children') {
+    return (
+      <ChildrenStep
+        householdId={step.householdId}
+        finishing={finishing}
+        onDone={() => setStep({ ...step, kind: 'home' })}
+      />
+    );
+  }
+
+  if (step.kind === 'home') {
+    // Når finish() henter husstanden, bytter appen til fanene og denne skjermen forsvinner.
+    return (
+      <HomeProfileFlow
+        householdId={step.householdId}
+        householdType={step.input.type}
+        saved={emptyHomeProfile(step.input.housingType)}
+        variant="onboarding"
+        onDone={finish}
+      />
+    );
   }
 
   const busy = createHousehold.isPending || finishing;

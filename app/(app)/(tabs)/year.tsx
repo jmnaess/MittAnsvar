@@ -3,6 +3,7 @@ import { useCallback, useLayoutEffect, useState } from 'react';
 import { Alert, SectionList, StyleSheet, View } from 'react-native';
 import { Button, colors, IconButton, Message, spacing, Text } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
+import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { useArchiveTask, useTasks } from '../../../src/features/tasks/hooks';
 import type { Task } from '../../../src/features/tasks/types';
@@ -137,6 +138,13 @@ export default function YearScreen() {
               variant="secondary"
               onPress={chooseRecommended}
               disabled={activate.isPending}
+            />
+          )}
+          {isAdult && !hasAnyAnswer(household!) && (
+            <Button
+              title="Fortell om hjemmet for flere forslag"
+              variant="text"
+              onPress={() => router.push('/home-profile')}
             />
           )}
           {!isAdult && members.length > 0 && (

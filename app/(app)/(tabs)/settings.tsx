@@ -1,9 +1,11 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet } from 'react-native';
 import {
   Button,
   ChoiceChips,
   colors,
+  ListRow,
   Message,
   Section,
   spacing,
@@ -12,7 +14,8 @@ import {
 } from '../../../src/ui';
 import { deleteAccount, signOut } from '../../../src/features/auth/api';
 import { useSession } from '../../../src/features/auth/SessionProvider';
-import { useMyHousehold, useUpdateHousehold } from '../../../src/features/household/hooks';
+import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
+import { useMyHousehold, useMyMember, useUpdateHousehold } from '../../../src/features/household/hooks';
 import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
 import type { Household } from '../../../src/features/household/types';
 import { ReminderSettingsSection } from '../../../src/features/notifications/components/ReminderSettingsSection';
@@ -30,6 +33,7 @@ export default function SettingsScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <HouseholdSection household={household!} />
+      <HomeSection household={household!} />
       <Section title="Påminnelser">
         <ReminderSettingsSection userId={session!.user.id} />
       </Section>
@@ -90,6 +94,22 @@ function HouseholdSection({ household }: { household: Household }) {
 
       {update.error && <Message>{toNorwegianMessage(update.error)}</Message>}
     </>
+  );
+}
+
+/** «Hjemmet»: hjemprofilen. Bare voksne ser raden (barn kan lese profilen, men ikke endre den). */
+function HomeSection({ household }: { household: Household }) {
+  const me = useMyMember(household.id);
+  if (me?.role !== 'adult') return null;
+
+  return (
+    <Section title="Hjemmet" description="Svar på noen spørsmål om boligen, så foreslår vi vedlikehold.">
+      <ListRow
+        title="Om hjemmet"
+        meta={hasAnyAnswer(household) ? 'Endre svar og se nye forslag' : 'Ikke svart ennå'}
+        onPress={() => router.push('/home-profile')}
+      />
+    </Section>
   );
 }
 

@@ -69,6 +69,10 @@ export default function AppLayout() {
           options={{ headerShown: true, title: 'Ny årlig oppgave', presentation: 'modal' }}
         />
         <Stack.Screen
+          name="home-profile"
+          options={{ headerShown: true, title: 'Hjemmet', presentation: 'modal' }}
+        />
+        <Stack.Screen
           name="task/new"
           options={{ headerShown: true, title: 'Ny oppgave', presentation: 'modal' }}
         />

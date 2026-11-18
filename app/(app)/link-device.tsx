@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../src/components/Button';
-import { ChoiceChips } from '../../src/components/ChoiceChips';
-import { TextField } from '../../src/components/TextField';
-import { colors } from '../../src/components/theme';
+import { Button, ChoiceChips, colors, Message, spacing, Text, TextField } from '../../src/ui';
 import { signOutLocal } from '../../src/features/auth/api';
 import { QrScanner } from '../../src/features/devices/components/QrScanner';
 import { useRedeemLinkCode } from '../../src/features/devices/hooks';
@@ -49,8 +46,8 @@ export default function LinkDeviceScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <Text style={styles.title}>Koble til</Text>
-        <Text style={styles.text}>
+        <Text variant="pageTitle">Koble til</Text>
+        <Text>
           Be en voksen åpne deg under «Husstand» og trykke «Koble til enhet».
         </Text>
 
@@ -59,14 +56,14 @@ export default function LinkDeviceScreen() {
         {mode === 'scan' ? (
           <>
             <QrScanner onCode={submit} paused={redeem.isPending} />
-            {redeem.isPending && <Text style={styles.text}>Kobler til …</Text>}
+            {redeem.isPending && <Text>Kobler til …</Text>}
           </>
         ) : (
           <View style={styles.manual}>
             {/* TextField setter tekstfargen, så teksten også synes i mørk modus. */}
             <TextField
               label="Koden fra den voksnes mobil"
-              style={styles.input}
+              code
               value={typed}
               onChangeText={setTyped}
               placeholder="ABCD-EFGH"
@@ -85,9 +82,9 @@ export default function LinkDeviceScreen() {
           </View>
         )}
 
-        {redeem.error && <Text style={styles.error}>{toNorwegianMessage(redeem.error)}</Text>}
+        {redeem.error && <Message>{toNorwegianMessage(redeem.error)}</Message>}
 
-        <Button variant="link" title="Avbryt" onPress={() => signOutLocal()} />
+        <Button variant="text" title="Avbryt" onPress={() => signOutLocal()} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -95,10 +92,6 @@ export default function LinkDeviceScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 24, gap: 16 },
-  title: { fontSize: 28, fontWeight: '700', color: colors.text },
-  text: { fontSize: 16, color: colors.text },
+  container: { padding: spacing.page, gap: 16 },
   manual: { gap: 12 },
-  input: { fontSize: 22, letterSpacing: 4, textAlign: 'center' },
-  error: { color: colors.danger, fontSize: 15 },
 });

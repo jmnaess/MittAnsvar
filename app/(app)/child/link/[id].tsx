@@ -1,13 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { Button } from '../../../../src/components/Button';
-import { ModalFormScreen } from '../../../../src/components/ModalFormScreen';
-import { colors } from '../../../../src/components/theme';
 import { LinkCodeCard } from '../../../../src/features/devices/components/LinkCodeCard';
 import { useCreateLinkCode } from '../../../../src/features/devices/hooks';
 import { useMembers, useMyHousehold } from '../../../../src/features/household/hooks';
 import { toNorwegianMessage } from '../../../../src/lib/errors';
+import { Button, colors, Message, ModalFormScreen, Text } from '../../../../src/ui';
 
 /**
  * «Koble til enhet»: lager en kode med en gang skjermen åpnes, og viser den som QR-kode og tekst.
@@ -41,8 +38,8 @@ export default function LinkDeviceCodeScreen() {
   if (linked) {
     return (
       <ModalFormScreen closeTitle="Lukk">
-        <Text style={styles.done}>Koblet til! 🎉</Text>
-        <Text style={styles.text}>
+        <Text variant="pageTitle" color={colors.primary}>Koblet til! 🎉</Text>
+        <Text>
           {child.display_name} kan nå se og krysse av sine oppgaver på sin egen enhet.
         </Text>
         <Button title="Ferdig" onPress={() => router.back()} />
@@ -52,7 +49,7 @@ export default function LinkDeviceCodeScreen() {
 
   return (
     <ModalFormScreen closeTitle="Lukk">
-      <Text style={styles.text}>
+      <Text>
         På {child.display_name} sin enhet: åpne MittAnsvar, trykk «Jeg er et barn» og skann koden.
       </Text>
 
@@ -65,24 +62,17 @@ export default function LinkDeviceCodeScreen() {
       )}
 
       {!create.data && !create.isPending && !create.error && (
-        <Text style={styles.text}>Koden er utløpt.</Text>
+        <Text>Koden er utløpt.</Text>
       )}
-      {create.error && <Text style={styles.error}>{toNorwegianMessage(create.error)}</Text>}
+      {create.error && <Message>{toNorwegianMessage(create.error)}</Message>}
 
       <Button
-        variant="outline"
+        variant="secondary"
         title="Lag ny kode"
         onPress={newCode}
         disabled={create.isPending}
       />
-      <Text style={styles.muted}>Koden gjelder i 10 minutter og kan brukes én gang.</Text>
+      <Message tone="muted">Koden gjelder i 10 minutter og kan brukes én gang.</Message>
     </ModalFormScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  text: { fontSize: 16, color: colors.text },
-  done: { fontSize: 24, fontWeight: '700', color: colors.success },
-  muted: { fontSize: 14, color: colors.muted },
-  error: { color: colors.danger, fontSize: 15 },
-});

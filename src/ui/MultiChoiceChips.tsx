@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { Chip } from './Chip';
-import { colors } from './theme';
+import { StyleSheet, View } from 'react-native';
+import { ChoiceChip } from './ChoiceChip';
+import { Text } from './Text';
 
 type Option<T extends string | number> = { value: T; label: string };
 
@@ -21,10 +21,10 @@ export function MultiChoiceChips<T extends string | number>({ label, options, va
 
   return (
     <View style={styles.wrapper}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text variant="label">{label}</Text>}
       <View style={styles.row}>
         {options.map((option) => (
-          <Chip
+          <ChoiceChip
             key={option.value}
             label={option.label}
             selected={values.includes(option.value)}
@@ -39,7 +39,6 @@ export function MultiChoiceChips<T extends string | number>({ label, options, va
 }
 
 const styles = StyleSheet.create({
-  wrapper: { gap: 6 },
-  label: { fontSize: 15, color: colors.text, fontWeight: '500' },
+  wrapper: { gap: 8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

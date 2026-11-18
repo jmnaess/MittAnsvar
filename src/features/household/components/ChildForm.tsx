@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../components/Button';
-import { TextField } from '../../../components/TextField';
-import { colors } from '../../../components/theme';
+import { StyleSheet, View } from 'react-native';
+import { Button, Hint, TextField } from '../../../ui';
 import type { ChildInput } from '../types';
 import { AvatarPicker } from './AvatarPicker';
 
@@ -69,11 +67,11 @@ export function ChildFields({ form, disabled }: { form: ChildFormState; disabled
         maxLength={4}
         editable={!disabled}
       />
-      <Text style={form.birthYearInvalid ? styles.error : styles.hint}>
+      <Hint error={form.birthYearInvalid}>
         {form.birthYearInvalid
           ? `Skriv et årstall mellom ${thisYear - MAX_AGE} og ${thisYear}, eller la feltet stå tomt.`
           : 'Brukes senere til å foreslå oppgaver som passer alderen.'}
-      </Text>
+      </Hint>
     </View>
   );
 }
@@ -100,7 +98,5 @@ export function ChildForm({ submitLabel, busy, onSubmit }: Props) {
 }
 
 const styles = StyleSheet.create({
-  form: { gap: 14 },
-  hint: { fontSize: 13, color: colors.muted, marginTop: -8 },
-  error: { fontSize: 13, color: colors.danger, marginTop: -8 },
+  form: { gap: 16 },
 });

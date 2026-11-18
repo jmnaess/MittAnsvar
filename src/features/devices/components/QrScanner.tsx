@@ -1,8 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../components/Button';
-import { colors } from '../../../components/theme';
+import { Linking, StyleSheet, View } from 'react-native';
+import { Button, colors, radius, spacing, Text } from '../../../ui';
 import { parseLinkCode } from '../linkCode';
 
 type Props = {
@@ -26,7 +25,7 @@ export function QrScanner({ onCode, paused }: Props) {
   if (!permission.granted) {
     return (
       <View style={styles.box}>
-        <Text style={styles.text}>
+        <Text>
           {permission.canAskAgain
             ? 'Appen trenger kameraet for å lese QR-koden.'
             : 'Kameraet er slått av for appen. Slå det på i innstillingene, eller tast inn koden under.'}
@@ -34,7 +33,7 @@ export function QrScanner({ onCode, paused }: Props) {
         {permission.canAskAgain ? (
           <Button title="Skann QR-kode" onPress={requestPermission} />
         ) : (
-          <Button variant="outline" title="Åpne innstillinger" onPress={() => Linking.openSettings()} />
+          <Button variant="secondary" title="Åpne innstillinger" onPress={() => Linking.openSettings()} />
         )}
       </View>
     );
@@ -62,8 +61,7 @@ export function QrScanner({ onCode, paused }: Props) {
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 12, padding: 16, borderRadius: 12, backgroundColor: colors.selected },
-  text: { fontSize: 15, color: colors.text },
-  cameraFrame: { aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' },
+  box: { gap: 12, padding: spacing.card, borderRadius: radius.card, backgroundColor: colors.jobBg },
+  cameraFrame: { aspectRatio: 1, borderRadius: radius.card, overflow: 'hidden', backgroundColor: colors.cameraBg },
   camera: { flex: 1 },
 });

@@ -1,9 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../src/components/Button';
-import { ModalFormScreen } from '../../../src/components/ModalFormScreen';
-import { colors } from '../../../src/components/theme';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useArchiveTask, useTasks, useUpdateTask } from '../../../src/features/tasks/hooks';
@@ -11,6 +8,7 @@ import { isJob } from '../../../src/features/tasks/recurrence';
 import type { Task } from '../../../src/features/tasks/types';
 import { formatDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { Button, colors, Message, ModalFormScreen, Text } from '../../../src/ui';
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -25,7 +23,7 @@ export default function EditTaskScreen() {
   if (!task) {
     return (
       <ModalFormScreen>
-        <Text>Fant ikke oppgaven. Den kan være slettet.</Text>
+        <Message tone="muted">Fant ikke oppgaven. Den kan være slettet.</Message>
       </ModalFormScreen>
     );
   }
@@ -71,8 +69,8 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
 
   return (
     <ModalFormScreen canSave={!!form.value} saving={busy} onSave={save}>
-      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
-      <Text style={styles.due}>
+      {error && <Message>{toNorwegianMessage(error)}</Message>}
+      <Text variant="metaStrong" color={colors.textWarm}>
         {isJob(task)
           ? 'Ledig jobb'
           : task.next_due_on
@@ -85,7 +83,7 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
         canSetReward={me?.role === 'adult'}
         disabled={busy}
       />
-      <Text style={styles.hint}>Endrer du hvor ofte, beregnes neste gang på nytt fra i dag.</Text>
+      <Text variant="hint" color={colors.textMuted}>Endrer du hvor ofte, beregnes neste gang på nytt fra i dag.</Text>
       <View style={styles.delete}>
         <Button variant="danger" title="Slett oppgave" onPress={confirmDelete} disabled={busy} />
       </View>
@@ -94,8 +92,5 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
 }
 
 const styles = StyleSheet.create({
-  due: { fontSize: 15, color: colors.muted },
-  hint: { fontSize: 13, color: colors.muted },
-  error: { color: colors.danger, fontSize: 15 },
   delete: { marginTop: 16 },
 });

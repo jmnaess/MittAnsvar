@@ -1,7 +1,8 @@
 import { router, Stack } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-import { colors } from './theme';
+import { Keyboard, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Text } from './Text';
+import { colors, spacing } from './theme';
 
 type Props = {
   /** false = Lagre er grå (ugyldig skjema). Utelatt = ingen Lagre-knapp. */
@@ -49,6 +50,7 @@ export function ModalFormScreen({ canSave, saving, onSave, closeTitle = 'Avbryt'
         }}
       />
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.container}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustKeyboardInsets
@@ -71,9 +73,9 @@ function HeaderButton({ title, onPress, disabled, bold }: HeaderButtonProps) {
       hitSlop={10}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
-      style={styles.headerButton}
+      style={[styles.headerButton, disabled && styles.disabled]}
     >
-      <Text style={[styles.headerText, bold && styles.bold, disabled && styles.disabled]}>
+      <Text variant={bold ? 'bodyStrong' : 'body'} color={disabled ? colors.textMuted : colors.primary}>
         {title}
       </Text>
     </Pressable>
@@ -81,9 +83,8 @@ function HeaderButton({ title, onPress, disabled, bold }: HeaderButtonProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 16 },
+  scroll: { backgroundColor: colors.background },
+  container: { padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
   headerButton: { paddingHorizontal: 8 },
-  headerText: { fontSize: 17, color: colors.primary },
-  bold: { fontWeight: '600' },
-  disabled: { color: colors.muted, opacity: 0.6 },
+  disabled: { opacity: 0.6 },
 });

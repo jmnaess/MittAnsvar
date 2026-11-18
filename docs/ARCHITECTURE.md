@@ -102,10 +102,9 @@ src/
     notifications/ plan.ts + text.ts (rene, testes), schedule.ts (expo-notifications), settings.ts,
                   permissions.ts, hooks.ts, components/ (ReminderPrompt, ReminderSettingsSection)
                   __tests__/ (Jest: npm test)
-  ui/             designsystemet: theme.ts (tokens) og felles komponenter (Text, Card, TaskRow,
-                  Avatar …). Se docs/DESIGN.md
-  components/     eldre generiske komponenter (SwipeToDelete, UndoToast, skjemafelt …). Flyttes til
-                  ui/ i del 2 av designsteget
+  ui/             designsystemet: theme.ts (tokens), tabOptions.tsx (fanelinje og headere) og alle
+                  felles komponenter (Text, Card, TaskRow, ListRow, TextField, Sheet, Avatar …).
+                  Se docs/DESIGN.md
   types/database.ts               # generert, ikke rediger
 supabase/
   migrations/                     # SQL, én fil per endring

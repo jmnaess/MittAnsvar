@@ -35,8 +35,10 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 | moneyBg / moneyText | `#FFF1C2` / `#6E4D00` | lønn |
 | overdueBg / overdueText | `#FDE4E1` / `#A3271A` | forfalt |
 | jobBg / jobAmount / jobSub | `#E3F3F1` / `#0E4F4F` / `#33504D` | ledige jobber |
-| danger | `#A3271A` | feilmeldinger |
+| danger | `#A3271A` | feilmeldinger, «Slett»-knapper |
 | backdrop | `rgba(43,33,24,0.4)` | bak modaler |
+| toastBg / toastText / toastMuted / toastAction | `#2B2118` / `#FFFFFF` / `#D9CFC4` / `#F2B705` | banneret med «Angre» |
+| cameraBg | `#000000` | bak kameraet |
 
 Skygge (`shadow`): 0 2 10 `rgba(43,33,24,0.07)`, `elevation: 2` på Android.
 
@@ -82,7 +84,9 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | jobTitle | Nunito 800 | 15 | tittel på jobbkort |
 | body / bodyStrong | Nunito 400 / 700 | 16 | brødtekst, knapper |
 | meta / metaStrong | Nunito 400 / 600 | 14 | metatekst |
-| label | Nunito 700 | 13 | små etiketter, merkelapper |
+| label | Nunito 700 | 13 | små etiketter, merkelapper, feltetiketter |
+| hint | Nunito 400 | 13 | hjelpetekst under skjemafelt |
+| code | Fredoka | 32 | koder (koble til enhet) |
 | tab / tabSelected | Nunito 700 / 800 | 12 | fanetekst |
 
 ## Komponenter (`src/ui/`)
@@ -95,7 +99,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `TaskRow` | sjekkboks, tittel, metalinje, merkelapper til høyre. `done`, `muted` (i hvite kort) |
 | `Checkbox` | sirkel 30, kant 2.5; avkrysset = fylt med ring-farge og hvit hake |
 | `Chip` | merkelapp: `money`, `overdue`, `neutral` |
-| `Button` | `primary` (pille), `secondary` (kant), `text`. `small` i rader og bannere |
+| `Button` | `primary` (pille), `secondary` (kant), `text`, `danger` (slett). `small` i rader og bannere |
 | `IconButton` | rund ikonknapp, 40 eller 48 |
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
 | `AvatarStack` | overlappende avatarer (−10 px) |
@@ -104,7 +108,18 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `JobCard` / `JobGrid` | ledige jobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
-| `tabScreenOptions` | utseendet på fanelinjen og fane-headerne |
+| `ListRow` | rad i lister (Oppgaver, Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil |
+| `Section` | seksjon på en side: tittel, forklaring og innhold |
+| `Message` / `Hint` | feil, bekreftelse eller nøytral tekst / hjelpetekst under et felt |
+| `TextField` | tekstfelt med etikett. `code` gir stor, sentrert tekst |
+| `ChoiceChip`, `ChoiceChips`, `MultiChoiceChips` | valgknapper (ett eller flere valg). Valgt = fylt primary |
+| `Switch` | bryter i primary, med valgfri etikett |
+| `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |
+| `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
+| `SwipeToDelete` | dra raden mot venstre for «Slett» |
+| `Toast` / `UndoToast` | mørkt banner nederst med «Angre» |
+| `tabIcon` | Ionicons-ikon til fanene, fylt når valgt |
+| `tabScreenOptions`, `modalScreenOptions` | utseendet på fanelinjen og headerne (`tabOptions.tsx`) |
 
 Hjelpefunksjoner: `personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.

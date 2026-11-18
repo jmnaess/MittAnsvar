@@ -5,14 +5,18 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
   View,
   type TextInputProps,
 } from 'react-native';
-import { colors } from './theme';
+import { Text } from './Text';
+import { colors, fonts, minTouch, radius } from './theme';
 
-type Props = TextInputProps & { label?: string };
+type Props = TextInputProps & {
+  label?: string;
+  /** Stor, sentrert tekst med luft mellom tegnene, til koder («ABCD-EFGH», «123456»). */
+  code?: boolean;
+};
 
 // iOS' talltastatur har ingen returknapp. Da legger vi en «Ferdig»-linje over tastaturet.
 const KEYPADS_WITHOUT_RETURN = ['number-pad', 'numeric', 'decimal-pad', 'phone-pad'];
@@ -20,27 +24,29 @@ const KEYPADS_WITHOUT_RETURN = ['number-pad', 'numeric', 'decimal-pad', 'phone-p
 /**
  * TextInput med valgfri etikett over. Alle vanlige TextInput-props sendes videre.
  * «Ferdig» på tastaturet lukker det (returnKeyType done; enlinjefelt blurer da av seg selv).
+ * Tekstfargen er fast, så teksten også synes når telefonen er i mørk modus.
  */
-export function TextField({ label, style, ...inputProps }: Props) {
+export function TextField({ label, code, style, ...inputProps }: Props) {
   const accessoryId = useId();
   const needsAccessory =
     Platform.OS === 'ios' && KEYPADS_WITHOUT_RETURN.includes(inputProps.keyboardType ?? '');
 
   return (
     <View style={styles.wrapper}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text variant="label">{label}</Text>}
       <TextInput
-        style={[styles.input, style]}
-        placeholderTextColor="#999"
+        style={[styles.input, code && styles.code, style]}
+        placeholderTextColor={colors.textMuted}
         returnKeyType="done"
         inputAccessoryViewID={needsAccessory ? accessoryId : undefined}
+        accessibilityLabel={label}
         {...inputProps}
       />
       {needsAccessory && (
         <InputAccessoryView nativeID={accessoryId}>
           <View style={styles.accessory}>
             <Pressable onPress={Keyboard.dismiss} accessibilityRole="button" hitSlop={8}>
-              <Text style={styles.accessoryButton}>Ferdig</Text>
+              <Text variant="bodyStrong" color={colors.primary}>Ferdig</Text>
             </Pressable>
           </View>
         </InputAccessoryView>
@@ -50,24 +56,26 @@ export function TextField({ label, style, ...inputProps }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { gap: 6 },
-  label: { fontSize: 15, color: colors.text, fontWeight: '500' },
+  wrapper: { gap: 8 },
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    minHeight: minTouch + 6,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.row,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 14,
     paddingVertical: 12,
+    fontFamily: fonts.regular,
     fontSize: 16,
     color: colors.text,
   },
+  code: { fontFamily: fonts.heading, fontSize: 24, letterSpacing: 4, textAlign: 'center' },
   accessory: {
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#f1f1f1',
+    backgroundColor: colors.surfaceMuted,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderStrong,
   },
-  accessoryButton: { fontSize: 16, fontWeight: '600', color: colors.primary },
 });

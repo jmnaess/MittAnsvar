@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ChoiceChips } from '../../../components/ChoiceChips';
-import { MultiChoiceChips } from '../../../components/MultiChoiceChips';
-import { TextField } from '../../../components/TextField';
-import { colors } from '../../../components/theme';
+import { StyleSheet, View } from 'react-native';
+import { ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import { MONTH_NAMES } from '../../../lib/dates';
 import type { Member } from '../../household/types';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
@@ -93,9 +90,7 @@ export function YearlyTaskFields({ form, members, disabled }: Props) {
             maxLength={5}
             editable={!disabled}
           />
-          {form.rewardInvalid && (
-            <Text style={styles.error}>{`Lønnen må være mellom 1 og ${MAX_REWARD_NOK} kr.`}</Text>
-          )}
+          {form.rewardInvalid && <Hint error>{`Lønnen må være mellom 1 og ${MAX_REWARD_NOK} kr.`}</Hint>}
         </>
       )}
       <MultiChoiceChips
@@ -105,17 +100,15 @@ export function YearlyTaskFields({ form, members, disabled }: Props) {
         onChange={form.setMonths}
         disabled={disabled}
       />
-      <Text style={styles.hint}>
+      <Hint>
         {count > 1
           ? `Blir ${count} oppgaver, én i hver måned. Hele måneden er fristen.`
           : 'Hele måneden er fristen. Velg flere måneder for å gjøre den flere ganger i året.'}
-      </Text>
+      </Hint>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   form: { gap: 16 },
-  hint: { fontSize: 13, color: colors.muted, marginTop: -10 },
-  error: { fontSize: 13, color: colors.danger, marginTop: -10 },
 });

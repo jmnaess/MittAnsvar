@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { colors } from '../../../components/theme';
+import { colors, radius, shadow, Text } from '../../../ui';
 import { formatInviteCode } from '../../household/inviteCode';
 import { formatTimeLeft, linkCodeUrl } from '../linkCode';
 
@@ -18,12 +18,12 @@ export function LinkCodeCard({ code, expiresAt, onExpired }: Props) {
 
   return (
     <View style={styles.card}>
-      <QRCode value={linkCodeUrl(code)} size={220} />
-      <Text style={styles.or}>eller tast inn</Text>
-      <Text style={styles.code} selectable accessibilityLabel={`Kode ${code.split('').join(' ')}`}>
+      <QRCode value={linkCodeUrl(code)} size={220} color={colors.text} backgroundColor={colors.surface} />
+      <Text variant="meta" color={colors.textMuted} style={styles.or}>eller tast inn</Text>
+      <Text variant="code" selectable accessibilityLabel={`Kode ${code.split('').join(' ')}`}>
         {formatInviteCode(code)}
       </Text>
-      <Text style={styles.timer}>Gjelder i {formatTimeLeft(expiresAt, now)}</Text>
+      <Text variant="metaStrong" color={colors.textMuted}>Gjelder i {formatTimeLeft(expiresAt, now)}</Text>
     </View>
   );
 }
@@ -39,8 +39,6 @@ function useNow(): number {
 }
 
 const styles = StyleSheet.create({
-  card: { alignItems: 'center', gap: 8, padding: 24, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-  or: { fontSize: 14, color: colors.muted, marginTop: 8 },
-  code: { fontSize: 32, fontWeight: '700', letterSpacing: 4, color: colors.text },
-  timer: { fontSize: 15, color: colors.muted },
+  card: { alignItems: 'center', gap: 8, padding: 24, borderRadius: radius.card, backgroundColor: colors.surface, ...shadow },
+  or: { marginTop: 8 },
 });

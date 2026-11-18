@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { tabIcon } from '../../../src/components/tabIcon';
+import { tabIcon } from '../../../src/ui';
 import { tabScreenOptions } from '../../../src/ui/tabOptions';
 
 /**

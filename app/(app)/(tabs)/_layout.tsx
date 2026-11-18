@@ -1,9 +1,9 @@
 import { Tabs } from 'expo-router';
-import { tabIcon } from '../../../src/components/tabIcon';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { ReminderPrompt } from '../../../src/features/notifications/components/ReminderPrompt';
 import { useOpenTodayOnTap, useReminderSync } from '../../../src/features/notifications/hooks';
+import { tabIcon } from '../../../src/ui';
 import { tabScreenOptions } from '../../../src/ui/tabOptions';
 
 export default function TabsLayout() {

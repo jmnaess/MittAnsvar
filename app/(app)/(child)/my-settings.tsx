@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Avatar } from '../../../src/components/Avatar';
-import { Button } from '../../../src/components/Button';
-import { colors } from '../../../src/components/theme';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Avatar, Button, colors, Message, personColor, spacing, Text } from '../../../src/ui';
 import { signOutChildDevice } from '../../../src/features/devices/api';
 import { AvatarPicker } from '../../../src/features/household/components/AvatarPicker';
 import { useMyHousehold, useMyMember, useSetMyAvatar } from '../../../src/features/household/hooks';
@@ -45,13 +43,11 @@ export default function ChildSettingsScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <Avatar avatar={me.avatar} size={56} />
-        <View>
-          <Text style={styles.name}>{me.display_name}</Text>
-          <Text style={styles.muted}>Navnet kan en voksen endre.</Text>
-        </View>
+        <Avatar avatar={me.avatar} size={100} ring={personColor(me.avatar).ring} />
+        <Text variant="sectionTitle">{me.display_name}</Text>
+        <Text variant="meta" color={colors.textMuted}>Navnet kan en voksen endre.</Text>
       </View>
 
       <AvatarPicker
@@ -59,7 +55,7 @@ export default function ChildSettingsScreen() {
         onChange={(avatar) => avatar !== me.avatar && setAvatar.mutate(avatar)}
         disabled={setAvatar.isPending}
       />
-      {setAvatar.error && <Text style={styles.error}>{toNorwegianMessage(setAvatar.error)}</Text>}
+      {setAvatar.error && <Message>{toNorwegianMessage(setAvatar.error)}</Message>}
 
       <View style={styles.signOut}>
         <Button
@@ -68,17 +64,15 @@ export default function ChildSettingsScreen() {
           onPress={confirmSignOut}
           disabled={signingOut}
         />
-        {signOutError && <Text style={styles.error}>{signOutError}</Text>}
+        {signOutError && <Message>{signOutError}</Message>}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 20, backgroundColor: colors.background, flexGrow: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  name: { fontSize: 22, fontWeight: '700', color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
-  error: { color: colors.danger, fontSize: 15 },
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { padding: spacing.page, gap: spacing.section + 2, paddingBottom: 48 },
+  header: { alignItems: 'center', gap: 6 },
   signOut: { gap: 8, marginTop: 24 },
 });

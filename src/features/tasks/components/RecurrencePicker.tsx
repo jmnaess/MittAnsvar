@@ -1,8 +1,5 @@
-import { StyleSheet, Switch, Text, View } from 'react-native';
-import { ChoiceChips } from '../../../components/ChoiceChips';
-import { MultiChoiceChips } from '../../../components/MultiChoiceChips';
-import { TextField } from '../../../components/TextField';
-import { colors } from '../../../components/theme';
+import { StyleSheet, View } from 'react-native';
+import { ChoiceChips, colors, MultiChoiceChips, Switch, Text, TextField } from '../../../ui';
 import { MONTH_NAMES } from '../../../lib/dates';
 import {
   describeRecurrence,
@@ -111,7 +108,7 @@ export function RecurrencePicker({ value, onChange, disabled }: Props) {
                 maxLength={2}
                 editable={!disabled}
               />
-              <Text style={styles.hint}>Den 29.–31. blir siste dag i måneder som er kortere.</Text>
+              <Text variant="hint" color={colors.textMuted}>Den 29.–31. blir siste dag i måneder som er kortere.</Text>
             </>
           )}
 
@@ -158,27 +155,21 @@ export function RecurrencePicker({ value, onChange, disabled }: Props) {
       )}
 
       {value.mode === 'job' && (
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Kan gjøres flere ganger</Text>
-          <Switch
-            value={value.jobRepeats}
-            onValueChange={(jobRepeats) => set({ jobRepeats })}
-            disabled={disabled}
-            accessibilityLabel="Kan gjøres flere ganger"
-          />
-        </View>
+        <Switch
+          label="Kan gjøres flere ganger"
+          value={value.jobRepeats}
+          onValueChange={(jobRepeats) => set({ jobRepeats })}
+          disabled={disabled}
+          accessibilityLabel="Kan gjøres flere ganger"
+        />
       )}
 
-      {recurrence && <Text style={styles.summary}>{describeRecurrence(recurrence)}</Text>}
-      <Text style={styles.hint}>{HINTS[value.mode]}</Text>
+      {recurrence && <Text variant="bodyStrong" color={colors.primary}>{describeRecurrence(recurrence)}</Text>}
+      <Text variant="hint" color={colors.textMuted}>{HINTS[value.mode]}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: { gap: 12 },
-  summary: { fontSize: 16, fontWeight: '600', color: colors.text },
-  hint: { fontSize: 13, color: colors.muted },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { fontSize: 16, color: colors.text },
 });

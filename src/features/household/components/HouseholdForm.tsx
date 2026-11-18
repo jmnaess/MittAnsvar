@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button } from '../../../components/Button';
-import { ChoiceChips } from '../../../components/ChoiceChips';
-import { TextField } from '../../../components/TextField';
+import { Button, ChoiceChips, TextField } from '../../../ui';
 import type { CreateHouseholdInput } from '../api';
 import { HOUSEHOLD_TYPE_OPTIONS, HOUSING_TYPE_OPTIONS } from '../labels';
 import type { HouseholdType, HousingType } from '../types';

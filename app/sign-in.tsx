@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../src/components/Button';
+import { AvatarStack, Button, colors, Message, spacing, Text, TextField } from '../src/ui';
 import { sendCode, verifyCode } from '../src/features/auth/api';
 import { signInAsChild } from '../src/features/devices/api';
 import { toNorwegianMessage } from '../src/lib/errors';
@@ -64,17 +64,18 @@ export default function SignInScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={styles.title}>MittAnsvar</Text>
+        <View style={styles.brand}>
+          <AvatarStack avatars={['fox', 'cat', 'bear', 'frog']} size={48} />
+          <Text variant="pageTitle" style={styles.center}>MittAnsvar</Text>
+        </View>
 
         {step === 'email' ? (
           <>
-            <Text style={styles.label}>Logg inn med e-post. Vi sender deg en kode.</Text>
-            <TextInput
-              style={styles.input}
+            <TextField
+              label="Logg inn med e-post. Vi sender deg en kode."
               value={email}
               onChangeText={setEmail}
               placeholder="din@epost.no"
-              placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -90,19 +91,20 @@ export default function SignInScreen() {
               disabled={busy || !trimmedEmail.includes('@')}
             />
             <View style={styles.child}>
-              <Text style={styles.childText}>Har en voksen i familien laget en profil til deg?</Text>
-              <Button variant="outline" title="Jeg er et barn" onPress={handleChild} disabled={busy} />
+              <Text variant="meta" color={colors.textMuted} style={styles.center}>
+                Har en voksen i familien laget en profil til deg?
+              </Text>
+              <Button variant="secondary" title="Jeg er et barn" onPress={handleChild} disabled={busy} />
             </View>
           </>
         ) : (
           <>
-            <Text style={styles.label}>Skriv inn koden vi sendte til {trimmedEmail}.</Text>
-            <TextInput
-              style={[styles.input, styles.codeInput]}
+            <TextField
+              label={`Skriv inn koden vi sendte til ${trimmedEmail}.`}
+              code
               value={code}
               onChangeText={(text) => setCode(text.replace(/\D/g, ''))}
               placeholder="123456"
-              placeholderTextColor="#999"
               keyboardType="number-pad"
               maxLength={CODE_LENGTH}
               autoComplete="one-time-code"
@@ -116,9 +118,9 @@ export default function SignInScreen() {
               disabled={busy || code.length !== CODE_LENGTH}
             />
             <View style={styles.links}>
-              <Button variant="link" title="Send ny kode" onPress={handleResend} disabled={busy} />
+              <Button variant="text" title="Send ny kode" onPress={handleResend} disabled={busy} />
               <Button
-                variant="link"
+                variant="text"
                 title="Bruk en annen e-post"
                 onPress={handleChangeEmail}
                 disabled={busy}
@@ -127,32 +129,18 @@ export default function SignInScreen() {
           </>
         )}
 
-        {error && <Text style={styles.error}>{error}</Text>}
-        {info && <Text style={styles.info}>{info}</Text>}
+        {error && <Message>{error}</Message>}
+        {info && <Message tone="success">{info}</Message>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 12 },
-  label: { fontSize: 16, color: '#333' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    // Fast farge: ellers blir teksten hvit på hvit bakgrunn når telefonen er i mørk modus.
-    color: '#111',
-  },
-  codeInput: { fontSize: 24, letterSpacing: 8, textAlign: 'center' },
+  safe: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, justifyContent: 'center', padding: spacing.page, gap: 14 },
+  brand: { alignItems: 'center', gap: 12, marginBottom: 16 },
+  center: { textAlign: 'center' },
   child: { gap: 8, marginTop: 32 },
-  childText: { fontSize: 15, color: '#666', textAlign: 'center' },
   links: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  error: { color: '#b91c1c', fontSize: 15 },
-  info: { color: '#15803d', fontSize: 15 },
 });

@@ -1,10 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Avatar } from '../../../src/components/Avatar';
-import { Button } from '../../../src/components/Button';
-import { ModalFormScreen } from '../../../src/components/ModalFormScreen';
-import { colors } from '../../../src/components/theme';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useUnlinkDevice } from '../../../src/features/devices/hooks';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
@@ -13,6 +9,17 @@ import { RewardEventRow } from '../../../src/features/rewards/components/RewardE
 import { useBalance, useRecordPayout, useRewardHistory } from '../../../src/features/rewards/hooks';
 import { formatBalance } from '../../../src/features/rewards/format';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import {
+  Avatar,
+  Button,
+  Message,
+  ModalFormScreen,
+  personColor,
+  radius,
+  Section,
+  spacing,
+  Text,
+} from '../../../src/ui';
 
 /**
  * Barnets side (åpnes fra «Husstand»): saldo, siste avkrysninger med lønn og utbetalinger,
@@ -36,35 +43,38 @@ export default function EarningsScreen() {
   if (!child) return <ModalFormScreen closeTitle="Lukk">{null}</ModalFormScreen>;
 
   const isAdult = me?.role === 'adult';
+  const color = personColor(child.avatar);
 
   return (
     <ModalFormScreen closeTitle="Lukk">
-      <View style={styles.header}>
-        <Avatar avatar={child.avatar} size={48} />
+      {/* Saldoen i barnets egen farge, som seksjonen i «I dag». */}
+      <View style={[styles.header, { backgroundColor: color.tint }]}>
+        <Avatar avatar={child.avatar} size={48} ring={color.ring} />
         <View style={styles.headerText}>
-          <Text style={styles.name}>{child.display_name}</Text>
-          <Text style={styles.balance}>Saldo: {formatBalance(balanceRow)}</Text>
+          <Text variant="personName" color={color.ink}>{child.display_name}</Text>
+          <Text variant="jobAmount" color={color.ink}>{formatBalance(balanceRow)}</Text>
         </View>
       </View>
 
       {isAdult && payable > 0 && (
         <Button title="Registrer utbetaling" onPress={() => setPaying(true)} disabled={payout.isPending} />
       )}
-      {payout.error && <Text style={styles.error}>{toNorwegianMessage(payout.error)}</Text>}
-      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
+      {payout.error && <Message>{toNorwegianMessage(payout.error)}</Message>}
+      {error && <Message>{toNorwegianMessage(error)}</Message>}
 
-      <Text style={styles.sectionTitle}>Siste</Text>
-      {!isPending && history?.length === 0 && (
-        <Text style={styles.muted}>Ingen oppgaver med lønn ennå. Lønn setter du i oppgaveskjemaet.</Text>
-      )}
-      {history?.map((event) => <RewardEventRow key={`${event.kind}-${event.id}`} event={event} />)}
+      <Section title="Siste">
+        {!isPending && history?.length === 0 && (
+          <Message tone="muted">Ingen oppgaver med lønn ennå. Lønn setter du i oppgaveskjemaet.</Message>
+        )}
+        {history?.map((event) => <RewardEventRow key={`${event.kind}-${event.id}`} event={event} />)}
+      </Section>
 
       {isAdult && <DeviceSection child={child} householdId={householdId} />}
 
       {isAdult && (
-        <View style={styles.edit}>
+        <View>
           <Button
-            variant="outline"
+            variant="secondary"
             title="Endre profil"
             onPress={() => router.push({ pathname: '/child/[id]', params: { id: child.id } })}
           />
@@ -103,35 +113,29 @@ function DeviceSection({ child, householdId }: { child: Member; householdId: str
   }
 
   return (
-    <View style={styles.device}>
-      <Text style={styles.sectionTitle}>Egen enhet</Text>
-      <Text style={styles.muted}>
-        {linked
-          ? `📱 ${child.display_name} har koblet til sin egen enhet.`
-          : `${child.display_name} kan få appen på sin egen mobil eller nettbrett, uten e-post.`}
-      </Text>
+    <Section
+      title="Egen enhet"
+      description={
+        linked
+          ? `${child.display_name} har koblet til sin egen enhet.`
+          : `${child.display_name} kan få appen på sin egen mobil eller nettbrett, uten e-post.`
+      }
+    >
       {linked ? (
-        <Button variant="outline" title="Koble fra" onPress={confirmUnlink} disabled={unlink.isPending} />
+        <Button variant="secondary" title="Koble fra" onPress={confirmUnlink} disabled={unlink.isPending} />
       ) : (
         <Button
-          variant="outline"
+          variant="secondary"
           title="Koble til enhet"
           onPress={() => router.push({ pathname: '/child/link/[id]', params: { id: child.id } })}
         />
       )}
-      {unlink.error && <Text style={styles.error}>{toNorwegianMessage(unlink.error)}</Text>}
-    </View>
+      {unlink.error && <Message>{toNorwegianMessage(unlink.error)}</Message>}
+    </Section>
   );
 }
 
 const styles = StyleSheet.create({
-  device: { gap: 8, marginTop: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerText: { gap: 2 },
-  name: { fontSize: 20, fontWeight: '700', color: colors.text },
-  balance: { fontSize: 17, color: colors.text },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 8 },
-  muted: { fontSize: 14, color: colors.muted },
-  error: { color: colors.danger, fontSize: 15 },
-  edit: { marginTop: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: spacing.card, borderRadius: radius.section },
+  headerText: { flex: 1 },
 });

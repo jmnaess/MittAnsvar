@@ -1,11 +1,13 @@
 import { Stack } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../src/components/Button';
+import { StyleSheet, View } from 'react-native';
 import { signOutLocal } from '../../src/features/auth/api';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useMyHousehold } from '../../src/features/household/hooks';
 import { toNorwegianMessage } from '../../src/lib/errors';
+import { Button, colors, spacing, Text } from '../../src/ui';
+// Modalene (Ny oppgave, Opptjent …) får samme header som fanene.
+import { modalScreenOptions } from '../../src/ui/tabOptions';
 
 // Innloggede skjermer. Innlogging styres av Stack.Protected i app/_layout.tsx.
 // Her avgjør husstanden og typen bruker hva man ser:
@@ -35,7 +37,7 @@ export default function AppLayout() {
   const isAdultHome = !!household && !isChildDevice;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={modalScreenOptions}>
       <Stack.Protected guard={isAdultHome}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
@@ -106,6 +108,6 @@ function useSignOutWhenUnlinked(isChildDevice: boolean, hasHousehold: boolean, i
 }
 
 const styles = StyleSheet.create({
-  error: { flex: 1, justifyContent: 'center', padding: 24, gap: 16 },
-  errorText: { fontSize: 16, textAlign: 'center' },
+  error: { flex: 1, justifyContent: 'center', padding: spacing.page, gap: 16, backgroundColor: colors.background },
+  errorText: { textAlign: 'center' },
 });

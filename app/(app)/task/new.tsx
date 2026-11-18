@@ -1,11 +1,9 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
-import { ModalFormScreen } from '../../../src/components/ModalFormScreen';
-import { colors } from '../../../src/components/theme';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useCreateTask } from '../../../src/features/tasks/hooks';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { Message, ModalFormScreen } from '../../../src/ui';
 
 export default function NewTaskScreen() {
   // Skjermen er bare tilgjengelig med husstand (se app/(app)/_layout.tsx), så data finnes.
@@ -21,7 +19,7 @@ export default function NewTaskScreen() {
 
   return (
     <ModalFormScreen canSave={!!form.value} saving={createTask.isPending} onSave={save}>
-      {createTask.error && <Text style={styles.error}>{toNorwegianMessage(createTask.error)}</Text>}
+      {createTask.error && <Message>{toNorwegianMessage(createTask.error)}</Message>}
       <TaskFields
         form={form}
         members={members ?? []}
@@ -31,7 +29,3 @@ export default function NewTaskScreen() {
     </ModalFormScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  error: { color: colors.danger, fontSize: 15 },
-});

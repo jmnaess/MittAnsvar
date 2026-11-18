@@ -1,9 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../src/components/Button';
-import { colors } from '../../src/components/theme';
+import { AvatarStack, Button, colors, Message, spacing, Text } from '../../src/ui';
 import type { CreateHouseholdInput } from '../../src/features/household/api';
 import { ChildForm } from '../../src/features/household/components/ChildForm';
 import { HouseholdForm } from '../../src/features/household/components/HouseholdForm';
@@ -51,12 +50,13 @@ export default function OnboardingScreen() {
 function ChooseStep({ onChoose }: { onChoose: (mode: Mode) => void }) {
   return (
     <>
-      <Text style={styles.title}>Velkommen!</Text>
-      <Text style={styles.lead}>
+      <AvatarStack avatars={['fox', 'cat', 'bear', 'frog', 'rabbit']} size={48} max={5} />
+      <Text variant="pageTitle">Velkommen!</Text>
+      <Text>
         Lag en ny husstand, eller bli med i en som en annen voksen allerede har laget.
       </Text>
       <Button title="Opprett husstand" onPress={() => onChoose('create')} />
-      <Button variant="outline" title="Bli med i en husstand" onPress={() => onChoose('join')} />
+      <Button variant="secondary" title="Bli med i en husstand" onPress={() => onChoose('join')} />
     </>
   );
 }
@@ -90,15 +90,13 @@ function CreateFlow({ onBack }: { onBack: () => void }) {
   const busy = createHousehold.isPending || finishing;
   return (
     <>
-      <Text style={styles.title}>Opprett husstand</Text>
-      <Text style={styles.lead}>
+      <Text variant="pageTitle">Opprett husstand</Text>
+      <Text>
         Fortell litt om husstanden, så tilpasser vi forslagene til dere.
       </Text>
       <HouseholdForm busy={busy} onSubmit={handleCreate} />
-      {createHousehold.error && (
-        <Text style={styles.error}>{toNorwegianMessage(createHousehold.error)}</Text>
-      )}
-      <Button variant="link" title="Tilbake" onPress={onBack} disabled={busy} />
+      {createHousehold.error && <Message>{toNorwegianMessage(createHousehold.error)}</Message>}
+      <Button variant="text" title="Tilbake" onPress={onBack} disabled={busy} />
     </>
   );
 }
@@ -118,18 +116,16 @@ function JoinStep({ onBack }: { onBack: () => void }) {
 
   return (
     <>
-      <Text style={styles.title}>Bli med i en husstand</Text>
-      <Text style={styles.lead}>
+      <Text variant="pageTitle">Bli med i en husstand</Text>
+      <Text>
         Be en voksen i husstanden om en kode. De finner den under fanen Husstand, «Inviter voksen».
       </Text>
       <JoinHouseholdForm
         busy={acceptInvite.isPending}
         onSubmit={join}
       />
-      {acceptInvite.error && (
-        <Text style={styles.error}>{toNorwegianMessage(acceptInvite.error)}</Text>
-      )}
-      <Button variant="link" title="Tilbake" onPress={onBack} disabled={acceptInvite.isPending} />
+      {acceptInvite.error && <Message>{toNorwegianMessage(acceptInvite.error)}</Message>}
+      <Button variant="text" title="Tilbake" onPress={onBack} disabled={acceptInvite.isPending} />
     </>
   );
 }
@@ -150,14 +146,14 @@ function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
 
   return (
     <>
-      <Text style={styles.title}>Legg til barn</Text>
-      <Text style={styles.lead}>
+      <Text variant="pageTitle">Legg til barn</Text>
+      <Text>
         Barn får en profil med fornavn og avatar, ingen e-post eller konto. Du kan også gjøre dette
         senere i Innstillinger.
       </Text>
 
       {children.length > 0 && (
-        <View>
+        <View style={styles.children}>
           {children.map((child) => (
             <MemberRow key={child.id} member={child} />
           ))}
@@ -170,11 +166,11 @@ function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
         busy={addChild.isPending || finishing}
         onSubmit={handleAdd}
       />
-      {addChild.error && <Text style={styles.error}>{toNorwegianMessage(addChild.error)}</Text>}
+      {addChild.error && <Message>{toNorwegianMessage(addChild.error)}</Message>}
 
       <View style={styles.done}>
         <Button
-          variant="outline"
+          variant="secondary"
           title={children.length > 0 ? 'Ferdig' : 'Hopp over'}
           onPress={onDone}
           disabled={addChild.isPending || finishing}
@@ -187,9 +183,7 @@ function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
-  container: { padding: 24, gap: 16 },
-  title: { fontSize: 26, fontWeight: '700', color: colors.text },
-  lead: { fontSize: 16, color: '#333' },
-  error: { color: colors.danger, fontSize: 15 },
+  container: { padding: spacing.page, gap: 16, paddingBottom: 48 },
+  children: { gap: spacing.row },
   done: { marginTop: 8 },
 });

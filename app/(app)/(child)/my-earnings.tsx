@@ -1,8 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Avatar } from '../../../src/components/Avatar';
-import { colors } from '../../../src/components/theme';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Avatar, colors, Message, personColor, radius, Section, spacing, Text } from '../../../src/ui';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { RewardEventRow } from '../../../src/features/rewards/components/RewardEventRow';
 import { useBalances, useRewardHistory } from '../../../src/features/rewards/hooks';
@@ -30,33 +29,33 @@ function Earnings({ householdId, memberId, name, avatar }: Props) {
   const refetchBalances = balances.refetch;
   useFocusEffect(useCallback(() => { refetchBalances(); refetch(); }, [refetchBalances, refetch]));
 
+  const color = personColor(avatar);
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Avatar avatar={avatar} size={48} />
-        <View>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.balance}>Saldo: {formatBalance(balance)}</Text>
+    <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
+      {/* Saldoen i barnets egen farge, som seksjonen i «I dag». */}
+      <View style={[styles.header, { backgroundColor: color.tint }]}>
+        <Avatar avatar={avatar} size={48} ring={color.ring} />
+        <View style={styles.headerText}>
+          <Text variant="personName" color={color.ink}>{name}</Text>
+          <Text variant="jobAmount" color={color.ink}>{formatBalance(balance)}</Text>
         </View>
       </View>
 
-      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
+      {error && <Message>{toNorwegianMessage(error)}</Message>}
 
-      <Text style={styles.sectionTitle}>Siste</Text>
-      {!isPending && history?.length === 0 && (
-        <Text style={styles.muted}>Du har ikke tjent noe ennå. Se etter ledige jobber under «I dag».</Text>
-      )}
-      {history?.map((event) => <RewardEventRow key={`${event.kind}-${event.id}`} event={event} />)}
+      <Section title="Siste">
+        {!isPending && history?.length === 0 && (
+          <Message tone="muted">Du har ikke tjent noe ennå. Se etter ledige jobber under «I dag».</Message>
+        )}
+        {history?.map((event) => <RewardEventRow key={`${event.kind}-${event.id}`} event={event} />)}
+      </Section>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 12, backgroundColor: colors.background, flexGrow: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  name: { fontSize: 20, fontWeight: '700', color: colors.text },
-  balance: { fontSize: 17, color: colors.text },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 8 },
-  muted: { fontSize: 14, color: colors.muted },
-  error: { color: colors.danger, fontSize: 15 },
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { padding: spacing.page, gap: spacing.section, paddingBottom: 48 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: spacing.card, borderRadius: radius.section },
+  headerText: { flex: 1 },
 });

@@ -30,6 +30,13 @@ export const colors = {
   danger: '#A3271A',
   /** Mørk bakgrunn bak modaler. */
   backdrop: 'rgba(43,33,24,0.4)',
+  /** Banneret nederst etter avkrysning og sletting («Angre»). */
+  toastBg: '#2B2118',
+  toastText: '#FFFFFF',
+  toastMuted: '#D9CFC4',
+  toastAction: '#F2B705',
+  /** Bak kameraet før bildet kommer. */
+  cameraBg: '#000000',
 } as const;
 
 /** Myk skygge under kort (0 2 10 rgba(43,33,24,0.07)). elevation er Android. */
@@ -90,6 +97,10 @@ export const typography = {
   meta: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19 },
   metaStrong: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 19 },
   label: { fontFamily: fonts.bold, fontSize: 13, lineHeight: 17 },
+  /** Hjelpetekst under skjemafelt. */
+  hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  /** Store koder (koble til enhet). */
+  code: { fontFamily: fonts.heading, fontSize: 32, lineHeight: 40, letterSpacing: 4 },
   tab: { fontFamily: fonts.bold, fontSize: 12 },
   tabSelected: { fontFamily: fonts.extrabold, fontSize: 12 },
 } satisfies Record<string, TextStyle>;

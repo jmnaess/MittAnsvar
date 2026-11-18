@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../components/Button';
-import { colors } from '../../../components/theme';
+import { Button, Sheet, Text } from '../../../ui';
 import { useDismissReminderPrompt, useEnableReminders, useReminderPromptPending } from '../hooks';
 import { openSystemSettings } from '../permissions';
 
@@ -29,50 +27,28 @@ export function ReminderPrompt({ userId }: { userId: string }) {
     else setStep('blocked');
   }
 
+  // Lukkes bare med knappene (og tilbakeknappen på Android, som betyr «Ikke nå»).
+  if (step === 'blocked') {
+    return (
+      <Sheet visible={!!pending} title="Varsler er slått av" onClose={() => dismiss.mutate()}>
+        <Text>
+          Du kan slå dem på i telefonens innstillinger. Etterpå skrur du på påminnelser under
+          Innstillinger i appen.
+        </Text>
+        <Button title="Åpne innstillinger" onPress={() => openAndClose()} />
+        <Button variant="text" title="Lukk" onPress={() => dismiss.mutate()} />
+      </Sheet>
+    );
+  }
+
   return (
-    <Modal visible={!!pending} transparent animationType="fade" onRequestClose={() => dismiss.mutate()}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          {step === 'blocked' ? (
-            <>
-              <Text style={styles.title}>Varsler er slått av</Text>
-              <Text style={styles.text}>
-                Du kan slå dem på i telefonens innstillinger. Etterpå skrur du på påminnelser under
-                Innstillinger i appen.
-              </Text>
-              <Button title="Åpne innstillinger" onPress={() => openAndClose()} />
-              <Button variant="link" title="Lukk" onPress={() => dismiss.mutate()} />
-            </>
-          ) : (
-            <>
-              <Text style={styles.title}>Vil du få beskjed om dagens oppgaver?</Text>
-              <Text style={styles.text}>
-                Vi sender ett kort varsel om morgenen med det som skal gjøres. Du kan endre tidspunktet
-                eller slå det av under Innstillinger.
-              </Text>
-              <Button title="Ja takk" onPress={accept} disabled={step === 'busy'} />
-              <Button
-                variant="link"
-                title="Ikke nå"
-                onPress={() => dismiss.mutate()}
-                disabled={step === 'busy'}
-              />
-            </>
-          )}
-        </View>
-      </View>
-    </Modal>
+    <Sheet visible={!!pending} title="Vil du få beskjed om dagens oppgaver?">
+      <Text>
+        Vi sender ett kort varsel om morgenen med det som skal gjøres. Du kan endre tidspunktet
+        eller slå det av under Innstillinger.
+      </Text>
+      <Button title="Ja takk" onPress={accept} disabled={step === 'busy'} />
+      <Button variant="text" title="Ikke nå" onPress={() => dismiss.mutate()} disabled={step === 'busy'} />
+    </Sheet>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  sheet: { backgroundColor: colors.background, borderRadius: 12, padding: 20, gap: 12 },
-  title: { fontSize: 19, fontWeight: '700', color: colors.text },
-  text: { fontSize: 16, color: colors.text },
-});

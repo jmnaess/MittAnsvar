@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button } from '../../../components/Button';
-import { TextField } from '../../../components/TextField';
+import { Button, TextField } from '../../../ui';
 import type { AcceptInviteInput } from '../api';
 import { INVITE_CODE_LENGTH, normalizeInviteCode } from '../inviteCode';
 import { AvatarPicker } from './AvatarPicker';
@@ -32,6 +31,7 @@ export function JoinHouseholdForm({ busy, onSubmit }: Props) {
     <View style={styles.form}>
       <TextField
         label="Kode"
+        code
         value={code}
         onChangeText={setCode}
         placeholder="f.eks. ABCD-EFGH"

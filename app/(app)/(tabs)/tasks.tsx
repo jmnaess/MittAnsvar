@@ -1,10 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../src/components/Button';
-import { SwipeToDelete } from '../../../src/components/SwipeToDelete';
-import { UndoToast } from '../../../src/components/UndoToast';
-import { colors } from '../../../src/components/theme';
+import { FlatList, StyleSheet, View } from 'react-native';
+import { Button, colors, EmptyState, Message, spacing, SwipeToDelete, UndoToast } from '../../../src/ui';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { TaskRow } from '../../../src/features/tasks/components/TaskRow';
 import { useArchiveTask, useRestoreTask, useTasks } from '../../../src/features/tasks/hooks';
@@ -61,18 +58,17 @@ export default function TasksScreen() {
         contentContainerStyle={styles.container}
         data={tasks ?? []}
         keyExtractor={(task) => task.id}
+        ItemSeparatorComponent={Separator}
         {...pullToRefresh}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Button title="+ Ny oppgave" onPress={() => router.push('/task/new')} />
-            {(error || actionError) && (
-              <Text style={styles.error}>{actionError ?? toNorwegianMessage(error)}</Text>
-            )}
+            <Button title="Ny oppgave" onPress={() => router.push('/task/new')} />
+            {(error || actionError) && <Message>{actionError ?? toNorwegianMessage(error)}</Message>}
           </View>
         }
         ListEmptyComponent={
           isPending ? undefined : (
-            <Text style={styles.empty}>Ingen oppgaver ennå. Trykk «+ Ny oppgave» for å lage den første.</Text>
+            <EmptyState title="Ingen oppgaver ennå" text="Trykk «Ny oppgave» for å lage den første." />
           )
         }
         renderItem={({ item }) => {
@@ -99,11 +95,12 @@ export default function TasksScreen() {
   );
 }
 
+const Separator = () => <View style={styles.separator} />;
+
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
   // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-  container: { padding: 24, paddingBottom: 120 },
-  header: { gap: 12, marginBottom: 8 },
-  error: { color: colors.danger, fontSize: 15 },
-  empty: { color: colors.muted, fontSize: 15, marginTop: 16 },
+  container: { padding: spacing.page, paddingBottom: 120 },
+  header: { gap: 12, marginBottom: spacing.section },
+  separator: { height: spacing.row },
 });

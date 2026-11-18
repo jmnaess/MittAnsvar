@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ChoiceChips } from '../../../components/ChoiceChips';
-import { TextField } from '../../../components/TextField';
-import { colors } from '../../../components/theme';
+import { StyleSheet, View } from 'react-native';
+import { ChoiceChips, Hint, TextField } from '../../../ui';
 import type { Member } from '../../household/types';
 import { defaultRecurrenceForm, fromRecurrence, toRecurrence } from '../recurrence';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
@@ -108,7 +106,7 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
             onChange={form.setJobMemberIds}
             disabled={disabled}
           />
-          <Text style={styles.hint}>Velg ett eller flere barn, eller alle barna.</Text>
+          <Hint>Velg ett eller flere barn, eller alle barna.</Hint>
         </>
       ) : (
         <>
@@ -119,7 +117,7 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
             onChange={form.setAssignee}
             disabled={disabled}
           />
-          <Text style={styles.hint}>Felles betyr at hvem som helst kan gjøre den.</Text>
+          <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
         </>
       )}
       <RecurrencePicker value={form.recurrenceForm} onChange={form.setRecurrenceForm} disabled={disabled} />
@@ -134,11 +132,11 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
             maxLength={5}
             editable={!disabled}
           />
-          <Text style={form.rewardInvalid ? styles.error : styles.hint}>
+          <Hint error={form.rewardInvalid}>
             {form.rewardInvalid
               ? `Lønnen må være mellom 1 og ${MAX_REWARD_NOK} kr.`
               : 'Barn får beløpet når de gjør oppgaven. Voksne får ikke lønn.'}
-          </Text>
+          </Hint>
         </>
       )}
     </View>
@@ -147,6 +145,4 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
 
 const styles = StyleSheet.create({
   form: { gap: 16 },
-  hint: { fontSize: 13, color: colors.muted, marginTop: -10 },
-  error: { fontSize: 13, color: colors.danger, marginTop: -10 },
 });

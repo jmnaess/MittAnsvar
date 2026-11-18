@@ -1,7 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import { ChoiceChips } from '../../../components/ChoiceChips';
-import { colors } from '../../../components/theme';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ChoiceChips, colors, minTouch, radius, Switch, Text } from '../../../ui';
 import {
   useEnableReminders,
   usePermission,
@@ -41,15 +40,13 @@ export function ReminderSettingsSection({ userId }: { userId: string }) {
 
   return (
     <View style={styles.section}>
-      <View style={styles.row}>
-        <Text style={styles.label}>Daglig påminnelse</Text>
-        <Switch
-          value={on}
-          onValueChange={toggle}
-          accessibilityLabel="Daglig påminnelse"
-        />
-      </View>
-      <Text style={styles.muted}>
+      <Switch
+        label="Daglig påminnelse"
+        value={on}
+        onValueChange={toggle}
+        accessibilityLabel="Daglig påminnelse"
+      />
+      <Text variant="meta" color={colors.textMuted}>
         Ett varsel om dagen med det som forfaller, og månedsoppgaver den 1. og i siste uke.
         Gjelder bare deg, på denne telefonen.
       </Text>
@@ -59,7 +56,7 @@ export function ReminderSettingsSection({ userId }: { userId: string }) {
       {on && (
         <>
           <View style={styles.row}>
-            <Text style={styles.label}>Tidspunkt</Text>
+            <Text variant="bodyStrong">Tidspunkt</Text>
             <TimePicker
               hour={settings.hour}
               minute={settings.minute}
@@ -109,23 +106,27 @@ function TimePicker({ hour, minute, onChange }: TimePickerProps) {
   }
 
   return (
-    <Pressable onPress={open} style={styles.time} accessibilityRole="button">
-      <Text style={styles.timeText}>{`${pad(hour)}:${pad(minute)}`}</Text>
+    <Pressable
+      onPress={open}
+      style={styles.time}
+      accessibilityRole="button"
+      accessibilityLabel={`Tidspunkt ${pad(hour)}:${pad(minute)}. Endre`}
+    >
+      <Text variant="bodyStrong">{`${pad(hour)}:${pad(minute)}`}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   section: { gap: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { fontSize: 16, color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: minTouch },
   time: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    minHeight: minTouch,
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    borderRadius: radius.button,
+    paddingHorizontal: 16,
   },
-  timeText: { fontSize: 17, color: colors.text },
 });

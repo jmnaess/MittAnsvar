@@ -1,14 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../src/components/Button';
-import { ModalFormScreen } from '../../../src/components/ModalFormScreen';
-import { colors } from '../../../src/components/theme';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { JobFields, useJobForm } from '../../../src/features/tasks/components/JobForm';
 import { useArchiveTask, useTasks, useUpdateTask } from '../../../src/features/tasks/hooks';
 import type { Task } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { Button, Message, ModalFormScreen } from '../../../src/ui';
 
 /** Endre en ledig jobb fra «I dag» (langt trykk). Samme korte skjema som «Ny ledig jobb». */
 export default function EditJobScreen() {
@@ -24,7 +22,7 @@ export default function EditJobScreen() {
   if (!task) {
     return (
       <ModalFormScreen>
-        <Text>Fant ikke jobben. Den kan være gjort eller slettet.</Text>
+        <Message tone="muted">Fant ikke jobben. Den kan være gjort eller slettet.</Message>
       </ModalFormScreen>
     );
   }
@@ -67,7 +65,7 @@ function EditJobForm({ task, householdId, onArchived }: FormProps) {
 
   return (
     <ModalFormScreen canSave={!!form.value} saving={busy} onSave={save}>
-      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
+      {error && <Message>{toNorwegianMessage(error)}</Message>}
       <JobFields form={form} members={members ?? []} disabled={busy} />
       <View style={styles.delete}>
         <Button variant="danger" title="Slett jobb" onPress={confirmDelete} disabled={busy} />
@@ -77,6 +75,5 @@ function EditJobForm({ task, householdId, onArchived }: FormProps) {
 }
 
 const styles = StyleSheet.create({
-  error: { color: colors.danger, fontSize: 15 },
   delete: { marginTop: 16 },
 });

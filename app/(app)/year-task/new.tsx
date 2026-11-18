@@ -1,7 +1,4 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
-import { ModalFormScreen } from '../../../src/components/ModalFormScreen';
-import { colors } from '../../../src/components/theme';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import {
   useYearlyTaskForm,
@@ -9,6 +6,7 @@ import {
 } from '../../../src/features/tasks/components/YearlyTaskForm';
 import { useCreateTasks } from '../../../src/features/tasks/hooks';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { Message, ModalFormScreen } from '../../../src/ui';
 
 /**
  * «Ny årlig oppgave» fra «+» i årshjulet. Én oppgave per valgt måned, lagret i ett kall.
@@ -27,12 +25,8 @@ export default function NewYearlyTaskScreen() {
 
   return (
     <ModalFormScreen canSave={!!form.value} saving={createTasks.isPending} onSave={save}>
-      {createTasks.error && <Text style={styles.error}>{toNorwegianMessage(createTasks.error)}</Text>}
+      {createTasks.error && <Message>{toNorwegianMessage(createTasks.error)}</Message>}
       <YearlyTaskFields form={form} members={members ?? []} disabled={createTasks.isPending} />
     </ModalFormScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  error: { color: colors.danger, fontSize: 15 },
-});

@@ -1,9 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../src/components/Button';
-import { ModalFormScreen } from '../../../src/components/ModalFormScreen';
-import { colors } from '../../../src/components/theme';
+import { Alert, StyleSheet, View } from 'react-native';
 import { ChildFields, useChildForm } from '../../../src/features/household/components/ChildForm';
 import {
   useDeleteChild,
@@ -13,6 +10,7 @@ import {
 } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
+import { Button, Message, ModalFormScreen } from '../../../src/ui';
 
 export default function EditChildScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,7 +25,7 @@ export default function EditChildScreen() {
   if (!child) {
     return (
       <ModalFormScreen>
-        <Text>Fant ikke barneprofilen. Den kan være slettet.</Text>
+        <Message tone="muted">Fant ikke barneprofilen. Den kan være slettet.</Message>
       </ModalFormScreen>
     );
   }
@@ -75,7 +73,7 @@ function EditChildForm({ child, householdId, onDeleted }: FormProps) {
 
   return (
     <ModalFormScreen canSave={!!form.value} saving={busy} onSave={save}>
-      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
+      {error && <Message>{toNorwegianMessage(error)}</Message>}
       <ChildFields form={form} disabled={busy} />
       <View style={styles.delete}>
         <Button variant="danger" title="Slett barn" onPress={confirmDelete} disabled={busy} />
@@ -85,6 +83,5 @@ function EditChildForm({ child, householdId, onDeleted }: FormProps) {
 }
 
 const styles = StyleSheet.create({
-  error: { color: colors.danger, fontSize: 15 },
   delete: { marginTop: 16 },
 });

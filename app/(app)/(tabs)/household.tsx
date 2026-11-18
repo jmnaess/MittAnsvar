@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
-import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../src/components/Button';
-import { colors } from '../../../src/components/theme';
+import { Alert, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Button, colors, Message, Section, spacing, Text } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { InviteRow } from '../../../src/features/household/components/InviteRow';
 import { MemberRow } from '../../../src/features/household/components/MemberRow';
@@ -30,16 +29,16 @@ export default function HouseholdScreen() {
   const balanceOf = (memberId: string) => balances?.find((b) => b.member_id === memberId);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
       <Section title="Medlemmer">
-        {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
+        {error && <Message>{toNorwegianMessage(error)}</Message>}
         {members?.map((member) => (
           <MemberRow
             key={member.id}
             member={member}
             extra={
               member.role === 'child'
-                ? `Opptjent: ${formatBalance(balanceOf(member.id))}${member.auth_user_id ? ' · 📱 Egen enhet' : ''}`
+                ? `Opptjent: ${formatBalance(balanceOf(member.id))}${member.auth_user_id ? ' · Egen enhet' : ''}`
                 : undefined
             }
             accessibilityHint="Se opptjening, registrer utbetaling og koble til enhet"
@@ -51,21 +50,12 @@ export default function HouseholdScreen() {
           />
         ))}
         {isAdult && (
-          <Button variant="outline" title="Legg til barn" onPress={() => router.push('/child/new')} />
+          <Button variant="secondary" title="Legg til barn" onPress={() => router.push('/child/new')} />
         )}
       </Section>
 
       {isAdult && <InviteSection household={household!} members={members ?? []} />}
     </ScrollView>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
   );
 }
 
@@ -100,19 +90,16 @@ function InviteSection({ household, members }: { household: Household; members: 
   const nameOf = (memberId: string) => members.find((m) => m.id === memberId)?.display_name;
 
   return (
-    <Section title="Inviter voksen">
-      <Text style={styles.muted}>
-        Den andre voksne får en kode som gjelder i 48 timer. De laster ned appen, logger inn og
-        skriver inn koden.
-      </Text>
+    <Section
+      title="Inviter voksen"
+      description="Den andre voksne får en kode som gjelder i 48 timer. De laster ned appen, logger inn og skriver inn koden."
+    >
       <Button title="Inviter voksen" onPress={invite} disabled={createInvite.isPending} />
-      {createInvite.error && (
-        <Text style={styles.error}>{toNorwegianMessage(createInvite.error)}</Text>
-      )}
+      {createInvite.error && <Message>{toNorwegianMessage(createInvite.error)}</Message>}
 
       {invites && invites.length > 0 && (
         <View style={styles.invites}>
-          <Text style={styles.subTitle}>Aktive invitasjoner</Text>
+          <Text variant="rowTitle">Aktive invitasjoner</Text>
           {invites.map((inv) => (
             <InviteRow
               key={inv.id}
@@ -122,25 +109,19 @@ function InviteSection({ household, members }: { household: Household; members: 
               onRevoke={() => confirmRevoke(inv.id)}
             />
           ))}
-          <Text style={styles.muted}>
+          <Message tone="muted">
             Koden vises bare én gang. Har du mistet den, trekker du den tilbake og lager en ny.
-          </Text>
+          </Message>
         </View>
       )}
-      {error && <Text style={styles.error}>{toNorwegianMessage(error)}</Text>}
-      {revokeInvite.error && (
-        <Text style={styles.error}>{toNorwegianMessage(revokeInvite.error)}</Text>
-      )}
+      {error && <Message>{toNorwegianMessage(error)}</Message>}
+      {revokeInvite.error && <Message>{toNorwegianMessage(revokeInvite.error)}</Message>}
     </Section>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 28 },
-  section: { gap: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  subTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
-  invites: { gap: 6, marginTop: 8 },
-  muted: { fontSize: 14, color: colors.muted },
-  error: { color: colors.danger, fontSize: 15 },
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
+  invites: { gap: spacing.row, marginTop: 8 },
 });

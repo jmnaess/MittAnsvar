@@ -1,8 +1,7 @@
 import { router, useNavigation } from 'expo-router';
 import { useCallback, useLayoutEffect, useState } from 'react';
-import { Alert, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../src/components/Button';
-import { colors } from '../../../src/components/theme';
+import { Alert, SectionList, StyleSheet, View } from 'react-native';
+import { Button, colors, IconButton, Message, spacing, Text } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { useArchiveTask, useTasks } from '../../../src/features/tasks/hooks';
@@ -49,15 +48,14 @@ export default function YearScreen() {
     navigation.setOptions({
       headerRight: isAdult
         ? () => (
-            <Pressable
-              onPress={() => router.push('/year-task/new')}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Ny årlig oppgave"
-              style={styles.addButton}
-            >
-              <Text style={styles.addText}>+</Text>
-            </Pressable>
+            <View style={styles.addButton}>
+              <IconButton
+                icon="add"
+                size={40}
+                accessibilityLabel="Ny årlig oppgave"
+                onPress={() => router.push('/year-task/new')}
+              />
+            </View>
           )
         : undefined,
     });
@@ -129,30 +127,31 @@ export default function YearScreen() {
       {...pullToRefresh}
       ListHeaderComponent={
         <View style={styles.header}>
-          <Text style={styles.intro}>
+          <Text variant="meta" color={colors.textMuted}>
             Faste oppgaver gjennom året. Slå på det som passer, eller lag egne med +. Når
             måneden kommer, dukker de opp under «Denne måneden» i «I dag».
           </Text>
           {isAdult && notActive.length > 0 && (
             <Button
               title="Velg anbefalte"
-              variant="outline"
+              variant="secondary"
               onPress={chooseRecommended}
               disabled={activate.isPending}
             />
           )}
           {!isAdult && members.length > 0 && (
-            <Text style={styles.muted}>Bare voksne kan endre årshjulet.</Text>
+            <Message tone="muted">Bare voksne kan endre årshjulet.</Message>
           )}
-          {(loadError || actionError) && (
-            <Text style={styles.error}>{actionError ?? toNorwegianMessage(loadError)}</Text>
-          )}
+          {(loadError || actionError) && <Message>{actionError ?? toNorwegianMessage(loadError)}</Message>}
         </View>
       }
-      renderSectionHeader={({ section }) => <Text style={styles.month}>{section.title}</Text>}
+      renderSectionHeader={({ section }) => (
+        <Text variant="sectionTitle" accessibilityRole="header" style={styles.month}>{section.title}</Text>
+      )}
+      ItemSeparatorComponent={Separator}
       renderSectionFooter={({ section }) =>
         section.data.length === 0 && !templates.isPending ? (
-          <Text style={styles.muted}>Ingenting denne måneden.</Text>
+          <Message tone="muted">Ingenting denne måneden.</Message>
         ) : null
       }
       renderItem={({ item }) => {
@@ -186,14 +185,13 @@ export default function YearScreen() {
   );
 }
 
+const Separator = () => <View style={styles.separator} />;
+
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 24, paddingBottom: 48 },
-  header: { gap: 12, marginBottom: 8 },
-  intro: { fontSize: 15, color: colors.text },
-  month: { fontSize: 20, fontWeight: '700', color: colors.text, marginTop: 24, marginBottom: 4 },
-  muted: { fontSize: 15, color: colors.muted },
-  error: { color: colors.danger, fontSize: 15 },
-  addButton: { paddingHorizontal: 16 },
-  addText: { fontSize: 28, lineHeight: 32, color: colors.primary },
+  container: { padding: spacing.page, paddingBottom: 48 },
+  header: { gap: 12 },
+  month: { marginTop: spacing.section + 6, marginBottom: spacing.row },
+  separator: { height: spacing.row },
+  addButton: { paddingHorizontal: 12 },
 });

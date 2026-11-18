@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../../../src/components/Button';
-import { ChoiceChips } from '../../../src/components/ChoiceChips';
-import { TextField } from '../../../src/components/TextField';
-import { colors } from '../../../src/components/theme';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
+import {
+  Button,
+  ChoiceChips,
+  colors,
+  Message,
+  Section,
+  spacing,
+  Text,
+  TextField,
+} from '../../../src/ui';
 import { deleteAccount, signOut } from '../../../src/features/auth/api';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMyHousehold, useUpdateHousehold } from '../../../src/features/household/hooks';
@@ -18,22 +24,17 @@ export default function SettingsScreen() {
   const { session } = useSession();
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.flex}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <HouseholdSection household={household!} />
       <Section title="Påminnelser">
         <ReminderSettingsSection userId={session!.user.id} />
       </Section>
       <AccountSection />
     </ScrollView>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
   );
 }
 
@@ -69,13 +70,13 @@ function HouseholdSection({ household }: { household: Household }) {
           onPress={saveName}
           disabled={update.isPending || !nameChanged || trimmed === ''}
         />
-        {saved && <Text style={styles.success}>Navnet er lagret.</Text>}
+        {saved && <Message tone="success">Navnet er lagret.</Message>}
       </Section>
 
-      <Section title="Tilbakemeldinger">
-        <Text style={styles.muted}>
-          Etter en fullført oppgave viser vi en kort tekst. Velg hva slags.
-        </Text>
+      <Section
+        title="Tilbakemeldinger"
+        description="Etter en fullført oppgave viser vi en kort tekst. Velg hva slags."
+      >
         <ChoiceChips
           options={FEEDBACK_TONE_OPTIONS}
           // Vis det brukeren trykket på mens lagringen pågår.
@@ -87,7 +88,7 @@ function HouseholdSection({ household }: { household: Household }) {
         />
       </Section>
 
-      {update.error && <Text style={styles.error}>{toNorwegianMessage(update.error)}</Text>}
+      {update.error && <Message>{toNorwegianMessage(update.error)}</Message>}
     </>
   );
 }
@@ -133,20 +134,16 @@ function AccountSection() {
 
   return (
     <Section title="Konto">
-      <Text style={styles.muted}>Innlogget som</Text>
-      <Text style={styles.email}>{session?.user.email}</Text>
-      <Button variant="outline" title="Logg ut" onPress={confirmSignOut} disabled={busy} />
+      <Text variant="meta" color={colors.textMuted}>Innlogget som</Text>
+      <Text variant="bodyStrong" style={styles.email}>{session?.user.email}</Text>
+      <Button variant="secondary" title="Logg ut" onPress={confirmSignOut} disabled={busy} />
       <Button variant="danger" title="Slett konto" onPress={confirmDeleteAccount} disabled={busy} />
     </Section>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 28 },
-  section: { gap: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  muted: { fontSize: 14, color: colors.muted },
-  email: { fontSize: 17, fontWeight: '600', marginBottom: 8 },
-  success: { color: colors.success, fontSize: 15 },
-  error: { color: colors.danger, fontSize: 15 },
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
+  email: { marginTop: -8, marginBottom: 4 },
 });

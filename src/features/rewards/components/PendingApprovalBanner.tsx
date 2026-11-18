@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { ApprovalBanner, Avatar, Button, colors, radius, spacing, Text } from '../../../ui';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ApprovalBanner, Avatar, Button, colors, Message, radius, Sheet, spacing, Text } from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
 import type { Member } from '../../household/types';
 import { formatKroner } from '../../tasks/reward';
@@ -41,15 +41,10 @@ export function PendingApprovalBanner({ householdId, members }: Props) {
         total={formatKroner(total)}
         onOpen={() => setOpen(true)}
       />
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Lukk">
-          {/* Trykk inne i boksen skal ikke lukke den. */}
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <PendingApprovalList householdId={householdId} pending={pending} memberOf={memberOf} />
-            <Button title="Lukk" variant="text" onPress={() => setOpen(false)} />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <Sheet visible={open} onClose={() => setOpen(false)}>
+        <PendingApprovalList householdId={householdId} pending={pending} memberOf={memberOf} />
+        <Button title="Lukk" variant="text" onPress={() => setOpen(false)} />
+      </Sheet>
     </>
   );
 }
@@ -124,14 +119,12 @@ function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
         })}
       </ScrollView>
 
-      {error && <Text variant="meta" color={colors.danger}>{toNorwegianMessage(error)}</Text>}
+      {error && <Message>{toNorwegianMessage(error)}</Message>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'center', padding: spacing.page },
-  sheet: { backgroundColor: colors.background, borderRadius: radius.section, padding: spacing.page, gap: 8, maxHeight: '85%' },
   list: { gap: 12, flexShrink: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flex: { flex: 1 },

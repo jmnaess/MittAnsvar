@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { colors } from './theme';
+import { Text } from './Text';
+import { colors, radius } from './theme';
 
 type Props = { children: ReactNode; onDelete: () => void };
 
@@ -26,14 +27,12 @@ export function SwipeToDelete({ children, onDelete }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Slett"
         >
-          <Text style={styles.text}>Slett</Text>
+          <Text variant="bodyStrong" color={colors.onPrimary}>Slett</Text>
         </Pressable>
       )}
     >
-      {/* Egen bakgrunn, så «Slett» ikke synes gjennom raden. Skjermlesere kan ikke sveipe,
-          så de får «Slett» som handling på raden i stedet. */}
+      {/* Skjermlesere kan ikke sveipe, så de får «Slett» som handling på raden i stedet. */}
       <View
-        style={styles.row}
         accessibilityActions={[{ name: 'delete', label: 'Slett' }]}
         onAccessibilityAction={(e) => e.nativeEvent.actionName === 'delete' && onDelete()}
       >
@@ -44,12 +43,12 @@ export function SwipeToDelete({ children, onDelete }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { backgroundColor: colors.background },
   action: {
     backgroundColor: colors.danger,
     justifyContent: 'center',
     alignItems: 'center',
     width: 88,
+    marginLeft: 8,
+    borderRadius: radius.row,
   },
-  text: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

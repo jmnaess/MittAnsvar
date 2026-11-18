@@ -1,4 +1,4 @@
-import { MultiChoiceChips } from '../../../components/MultiChoiceChips';
+import { MultiChoiceChips } from '../../../ui';
 import type { Member } from '../../household/types';
 
 // MultiChoiceChips trenger en verdi for «alle barna». Tom liste kan ikke vises som et valg.

@@ -1,6 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../../components/theme';
 import { formatDate, formatMonthYear } from '../../../lib/dates';
+import { colors, ListRow, Text } from '../../../ui';
 import { describeRecurrence, isJob, isMonthTask } from '../recurrence';
 import { formatKroner } from '../reward';
 import type { Task } from '../types';
@@ -25,39 +24,14 @@ export function TaskRow({ task, assigneeName, onPress }: Props) {
         : formatDate(task.next_due_on);
 
   return (
-    <Pressable
+    <ListRow
+      title={task.title}
+      meta={[assigneeName, describeRecurrence(task), task.reward_nok && formatKroner(task.reward_nok)]
+        .filter(Boolean)
+        .join(' · ')}
+      right={due ? <Text variant="metaStrong" color={colors.textWarm}>{due}</Text> : undefined}
       onPress={onPress}
-      accessibilityRole="button"
       accessibilityHint="Endre eller slette"
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-    >
-      <View style={styles.text}>
-        <Text style={styles.title}>{task.title}</Text>
-        <Text style={styles.detail}>
-          {[assigneeName, describeRecurrence(task), task.reward_nok && formatKroner(task.reward_nok)]
-            .filter(Boolean)
-            .join(' · ')}
-        </Text>
-      </View>
-      {due && <Text style={styles.due}>{due}</Text>}
-      <Text style={styles.chevron}>›</Text>
-    </Pressable>
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  text: { flex: 1, gap: 2 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  detail: { fontSize: 14, color: colors.muted },
-  due: { fontSize: 14, color: colors.text },
-  chevron: { fontSize: 24, color: colors.muted },
-  pressed: { opacity: 0.6 },
-});

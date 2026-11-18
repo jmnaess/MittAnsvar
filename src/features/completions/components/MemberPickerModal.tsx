@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text } from 'react-native';
-import { Avatar } from '../../../components/Avatar';
-import { Button } from '../../../components/Button';
-import { colors } from '../../../components/theme';
+import { Pressable, StyleSheet } from 'react-native';
+import { Avatar, Button, colors, minTouch, personColor, radius, Sheet, Text } from '../../../ui';
 import type { Member } from '../../household/types';
 
 type Props = {
@@ -31,58 +29,49 @@ export function MemberPickerModal({ taskTitle, members, preselectedId, meId, onP
   const selected = members.find((m) => m.id === selectedId);
 
   return (
-    <Modal visible={taskTitle !== null} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Lukk">
-        {/* Trykk inne i boksen skal ikke lukke den. */}
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <Text style={styles.title}>Hvem gjorde «{taskTitle}»?</Text>
-          {members.map((member) => {
-            const isSelected = confirm && member.id === selectedId;
-            return (
-              <Pressable
-                key={member.id}
-                onPress={() => (confirm ? setSelectedId(member.id) : onPick(member))}
-                style={({ pressed }) => [styles.row, isSelected && styles.selected, pressed && styles.pressed]}
-                accessibilityRole={confirm ? 'radio' : 'button'}
-                accessibilityState={confirm ? { selected: isSelected } : undefined}
-              >
-                <Avatar avatar={member.avatar} size={36} />
-                <Text style={styles.name}>
-                  {member.display_name}
-                  {member.id === meId ? ' (meg)' : ''}
-                </Text>
-              </Pressable>
-            );
-          })}
-          {confirm && (
-            <Button
-              title="Kryss av"
-              onPress={() => selected && onPick(selected)}
-              disabled={!selected}
-            />
-          )}
-          <Pressable onPress={onClose} style={styles.cancel} accessibilityRole="button">
-            <Text style={styles.cancelText}>Avbryt</Text>
+    <Sheet visible={taskTitle !== null} title={`Hvem gjorde «${taskTitle}»?`} onClose={onClose}>
+      {members.map((member) => {
+        const isSelected = confirm && member.id === selectedId;
+        const color = personColor(member.avatar);
+        return (
+          <Pressable
+            key={member.id}
+            onPress={() => (confirm ? setSelectedId(member.id) : onPick(member))}
+            style={({ pressed }) => [
+              styles.row,
+              isSelected && { backgroundColor: color.tint, borderColor: color.ring },
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole={confirm ? 'radio' : 'button'}
+            accessibilityState={confirm ? { selected: isSelected } : undefined}
+          >
+            <Avatar avatar={member.avatar} size={32} />
+            <Text variant="rowTitle" color={isSelected ? color.ink : colors.text}>
+              {member.display_name}
+              {member.id === meId ? ' (meg)' : ''}
+            </Text>
           </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        );
+      })}
+      {confirm && (
+        <Button title="Kryss av" onPress={() => selected && onPick(selected)} disabled={!selected} />
+      )}
+      <Button variant="text" title="Avbryt" onPress={onClose} />
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    padding: 24,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: minTouch + 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.row,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.surface,
   },
-  sheet: { backgroundColor: colors.background, borderRadius: 12, padding: 20, gap: 4 },
-  title: { fontSize: 17, fontWeight: '600', color: colors.text, marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 8 },
-  selected: { backgroundColor: colors.selected },
-  pressed: { opacity: 0.6 },
-  name: { fontSize: 16, color: colors.text },
-  cancel: { alignItems: 'center', paddingTop: 12 },
-  cancelText: { fontSize: 16, color: colors.primary },
+  pressed: { opacity: 0.7 },
 });

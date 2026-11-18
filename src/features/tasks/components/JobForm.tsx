@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
-import { TextField } from '../../../components/TextField';
-import { colors } from '../../../components/theme';
+import { StyleSheet, View } from 'react-native';
+import { Hint, Switch, TextField } from '../../../ui';
 import type { Member } from '../../household/types';
 import { toJobInput } from '../job';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
@@ -60,9 +59,7 @@ export function JobFields({ form, members, disabled }: Props) {
         maxLength={5}
         editable={!disabled}
       />
-      {form.rewardInvalid && (
-        <Text style={styles.error}>{`Lønnen må være mellom 1 og ${MAX_REWARD_NOK} kr.`}</Text>
-      )}
+      {form.rewardInvalid && <Hint error>{`Lønnen må være mellom 1 og ${MAX_REWARD_NOK} kr.`}</Hint>}
       <JobMembersPicker
         label="For hvem?"
         members={members}
@@ -70,28 +67,22 @@ export function JobFields({ form, members, disabled }: Props) {
         onChange={form.setMemberIds}
         disabled={disabled}
       />
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Kan gjøres flere ganger</Text>
-        <Switch
-          value={form.repeats}
-          onValueChange={form.setRepeats}
-          disabled={disabled}
-          accessibilityLabel="Kan gjøres flere ganger"
-        />
-      </View>
-      <Text style={styles.hint}>
+      <Switch
+        label="Kan gjøres flere ganger"
+        value={form.repeats}
+        onValueChange={form.setRepeats}
+        disabled={disabled}
+        accessibilityLabel="Kan gjøres flere ganger"
+      />
+      <Hint>
         {form.repeats
           ? 'Blir liggende under «Ledige jobber» etter at den er gjort.'
           : 'Forsvinner når et barn har gjort den.'}
-      </Text>
+      </Hint>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   form: { gap: 16 },
-  hint: { fontSize: 13, color: colors.muted, marginTop: -10 },
-  error: { fontSize: 13, color: colors.danger, marginTop: -10 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { fontSize: 16, color: colors.text },
 });

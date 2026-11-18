@@ -1,4 +1,5 @@
 import { contrastRatio } from '../contrast';
+import { familyStripLayout, RING_MAX, SCROLL_RING, shortName } from '../familyStripLayout';
 import { jobColumns } from '../jobGrid';
 import { colors, personColors, sharedColors } from '../theme';
 import { waitingText } from '../waitingText';
@@ -16,6 +17,46 @@ describe('waitingText', () => {
 describe('jobColumns', () => {
   it('full bredde for én, side om side for to og tre, tre i bredden ellers', () => {
     expect([0, 1, 2, 3, 4, 7].map(jobColumns)).toEqual([1, 1, 2, 3, 3, 3]);
+  });
+});
+
+describe('familyStripLayout', () => {
+  // 390 px skjerm − 2 × 20 px sidepadding.
+  const width = 350;
+
+  it('få personer: største ring, og hver får maks 72 px', () => {
+    expect(familyStripLayout(2, width)).toEqual({ ring: RING_MAX, cellWidth: 72, scrolls: false });
+  });
+
+  it('seks personer: ringen krymper så alle får plass på én rad', () => {
+    // 350 / 6 = 58,3 per person, ring = 58 − 8 = 50.
+    const layout = familyStripLayout(6, width);
+    expect(layout.scrolls).toBe(false);
+    expect(layout.ring).toBe(50);
+    expect(layout.cellWidth * 6).toBeLessThanOrEqual(width);
+  });
+
+  it('seks personer på en smal skjerm: fortsatt én rad', () => {
+    const layout = familyStripLayout(6, 320 - 40);
+    expect(layout.scrolls).toBe(false);
+    expect(layout.cellWidth * 6).toBeLessThanOrEqual(280);
+  });
+
+  it('sju eller flere: fast størrelse, og raden kan sveipes', () => {
+    const scrolling = { ring: SCROLL_RING, cellWidth: 64, scrolls: true };
+    expect(familyStripLayout(7, width)).toEqual(scrolling);
+    expect(familyStripLayout(7, 768 - 40)).toEqual(scrolling);
+  });
+});
+
+describe('shortName', () => {
+  it('ett navn som det er, ellers fornavn og forbokstav med punktum', () => {
+    expect(shortName('Leah')).toBe('Leah');
+    expect(shortName('John Martin')).toBe('John M.');
+    expect(shortName('Ola Nordmann Hansen')).toBe('Ola N.');
+    expect(shortName('  Kari  ')).toBe('Kari');
+    expect(shortName('Anne-Marie hansen')).toBe('Anne-Marie H.');
+    expect(shortName('Leah Ødegård')).toBe('Leah Ø.');
   });
 });
 

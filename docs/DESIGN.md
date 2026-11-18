@@ -105,7 +105,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `IconButton` | rund ikonknapp, 40 eller 48 |
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
 | `AvatarStack` | overlappende avatarer (−10 px) |
-| `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle |
+| `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle. Opptil seks: én rad, ringen (maks 56 px) regnes ut fra antall og skjermbredde (`familyStripLayout.ts`). Sju eller flere: raden kan sveipes og falmer mot høyre. Navn: «Leah», «John M.», uten «…» |
 | `ApprovalBanner` | gult banner: hvem som venter, antall og sum, knappen «Se» |
 | `JobCard` / `JobGrid` | ledige jobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |

@@ -1,5 +1,16 @@
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Avatar } from './Avatar';
+import { familyStripLayout, RING_EXTRA, shortName } from './familyStripLayout';
 import { Text } from './Text';
 import { colors, personColor, spacing } from './theme';
 
@@ -13,48 +24,113 @@ type Props = {
   onSelect: (id: string | null) => void;
 };
 
-/** Alle i husstanden øverst i «I dag». Trykk viser bare den personen, trykk igjen viser alle. */
+/** Hvor bred falmingen mot høyre kant er når raden kan sveipes. */
+const FADE_WIDTH = 48;
+
+/**
+ * Alle i husstanden øverst i «I dag». Trykk viser bare den personen, trykk igjen viser alle.
+ * Opptil seks: alle på én rad, størrelsen regnes ut fra antall og skjermbredde (ring maks 56 px).
+ * Sju eller flere: raden kan sveipes, og den falmer mot høyre til man er helt ute.
+ */
 export function FamilyStrip({ people, selectedId, onSelect }: Props) {
+  const { width } = useWindowDimensions();
+  const layout = familyStripLayout(people.length, width - 2 * spacing.page);
+  const [atEnd, setAtEnd] = useState(false);
+
+  const cells = people.map((p) => (
+    <Person
+      key={p.id}
+      person={p}
+      ring={layout.ring}
+      cellWidth={layout.cellWidth}
+      selected={p.id === selectedId}
+      dimmed={selectedId !== null && p.id !== selectedId}
+      onPress={() => onSelect(p.id === selectedId ? null : p.id)}
+    />
+  ));
+
+  if (!layout.scrolls) {
+    return <View style={styles.row} accessibilityRole="tablist">{cells}</View>;
+  }
+
+  function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    setAtEnd(contentOffset.x + layoutMeasurement.width >= contentSize.width - 1);
+  }
+
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-      accessibilityRole="tablist"
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+        accessibilityRole="tablist"
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+      >
+        {cells}
+      </ScrollView>
+      {!atEnd && <RightFade />}
+    </View>
+  );
+}
+
+type PersonProps = {
+  person: FamilyStripPerson;
+  ring: number;
+  cellWidth: number;
+  selected: boolean;
+  dimmed: boolean;
+  onPress: () => void;
+};
+
+function Person({ person, ring, cellWidth, selected, dimmed, onPress }: PersonProps) {
+  const name = shortName(person.name);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      accessibilityLabel={person.name}
+      accessibilityHint={selected ? 'Vis alle' : `Vis bare oppgavene til ${name}`}
+      style={[styles.person, { width: cellWidth }, dimmed && styles.dimmed]}
     >
-      {people.map((p) => {
-        const selected = p.id === selectedId;
-        const dimmed = selectedId !== null && !selected;
-        return (
-          <Pressable
-            key={p.id}
-            onPress={() => onSelect(selected ? null : p.id)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
-            accessibilityLabel={p.name}
-            accessibilityHint={selected ? 'Vis alle' : `Vis bare oppgavene til ${p.name}`}
-            style={[styles.person, dimmed && styles.dimmed]}
-          >
-            {/* Avatar 44 + 3 px luft + 3 px ring = 56 px. */}
-            <Avatar avatar={p.avatar} size={44} ring={personColor(p.avatar).ring} />
-            <Text
-              variant="label"
-              color={selected ? colors.text : colors.textMuted}
-              numberOfLines={1}
-              style={styles.name}
-            >
-              {p.name}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+      <Avatar avatar={person.avatar} size={ring - RING_EXTRA} ring={personColor(person.avatar).ring} />
+      {/* «Leah» eller «John M.». Et langt navn kuttes rett av, uten «…». */}
+      <Text
+        variant="label"
+        color={selected ? colors.text : colors.textMuted}
+        numberOfLines={1}
+        ellipsizeMode="clip"
+        style={styles.name}
+      >
+        {name}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** Fra gjennomsiktig til sidens bakgrunn, så det synes at det finnes flere til høyre. */
+function RightFade() {
+  return (
+    <View pointerEvents="none" style={styles.fade}>
+      <Svg width="100%" height="100%">
+        <Defs>
+          <LinearGradient id="familyStripFade" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={colors.background} stopOpacity={0} />
+            <Stop offset="1" stopColor={colors.background} stopOpacity={1} />
+          </LinearGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#familyStripFade)" />
+      </Svg>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { gap: 14, paddingHorizontal: spacing.page },
-  person: { alignItems: 'center', gap: 4, width: 64 },
+  row: { flexDirection: 'row', paddingHorizontal: spacing.page },
+  person: { alignItems: 'center', gap: 4 },
   dimmed: { opacity: 0.45 },
-  name: { maxWidth: 64 },
+  name: { alignSelf: 'stretch', textAlign: 'center', paddingHorizontal: 2 },
+  fade: { position: 'absolute', top: 0, right: 0, bottom: 0, width: FADE_WIDTH },
 });

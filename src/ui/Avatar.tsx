@@ -8,7 +8,8 @@ export type AvatarSize = 22 | 32 | 44 | 48 | 100;
 
 type Props = {
   avatar: string;
-  size?: AvatarSize;
+  /** En av AvatarSize. FamilyStrip regner ut sin egen ut fra antall og skjermbredde. */
+  size?: AvatarSize | (number & {});
   /** Ring rundt avataren (personens ring-farge). Ringen ligger utenpå, med 3 px luft. */
   ring?: string;
   /** Hvit kant, brukes når avatarer overlapper (AvatarStack). */

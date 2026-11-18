@@ -388,7 +388,7 @@ Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_b
 - Husstanden kan endre kopien fritt, og senere endringer i malen påvirker ikke eksisterende oppgaver.
 - **Deaktivering** = arkivere oppgaven (`archived_at`).
 
-Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype og boligtype, og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 16.
+Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, boligtype og hjemprofilen (`requires`, se `templates/requires.ts`), og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 16.
 
 ### `feedback_messages`
 | Kolonne | Type | Merknad |

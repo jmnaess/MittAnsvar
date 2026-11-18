@@ -12,6 +12,23 @@ export type Invite = Pick<Tables['invites']['Row'], 'id' | 'created_by' | 'expir
 export type HouseholdType = Enums['household_type'];
 export type HousingType = Enums['housing_type'];
 export type FeedbackTone = Enums['feedback_tone'];
+export type SewageType = Enums['sewage_type'];
+
+/** Ja/nei-spørsmålene i hjemprofilen. null = ikke svart. */
+export const HOME_PROFILE_FLAGS = [
+  'has_garden',
+  'has_car',
+  'has_cabin',
+  'has_air_heat_pump',
+  'has_fireplace',
+  'has_balanced_ventilation',
+  'has_hydronic_heating',
+  'has_private_well',
+] as const;
+export type HomeProfileFlag = (typeof HOME_PROFILE_FLAGS)[number];
+
+/** Hjemprofilen: boligtype, ja/nei-spørsmålene og avløp. Kolonner på households. */
+export type HomeProfile = Pick<Household, 'housing_type' | HomeProfileFlag | 'sewage_type'>;
 
 /** Det brukeren fyller ut for et barn. birth_year er valgfritt (null). */
 export type ChildInput = {

@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AvatarStack, Button, colors, Message, spacing, Text } from '../../src/ui';
+import { AvatarStack, Button, makeStyles, Message, spacing, Text, useTheme } from '../../src/ui';
 import type { CreateHouseholdInput } from '../../src/features/household/api';
 import { ChildForm } from '../../src/features/household/components/ChildForm';
 import { HouseholdForm } from '../../src/features/household/components/HouseholdForm';
@@ -32,6 +32,7 @@ import { toNorwegianMessage } from '../../src/lib/errors';
 type Mode = 'choose' | 'create' | 'join';
 
 export default function OnboardingScreen() {
+  const styles = useStyles();
   const [mode, setMode] = useState<Mode>('choose');
   const back = () => setMode('choose');
 
@@ -69,6 +70,8 @@ function ChooseStep({ onChoose }: { onChoose: (mode: Mode) => void }) {
 // Utlogging og sletting også her: en bruker uten husstand (f.eks. etter en sletting som
 // stoppet halvveis) skal kunne komme seg ut eller fullføre slettingen.
 function AccountFooter() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { session } = useSession();
   const { busy, confirmSignOut, confirmDeleteAccount } = useAccountActions();
 
@@ -178,6 +181,7 @@ function JoinStep({ onBack }: { onBack: () => void }) {
 type ChildrenStepProps = { householdId: string; finishing: boolean; onDone: () => void };
 
 function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
+  const styles = useStyles();
   const { data: members } = useMembers(householdId);
   const addChild = useAddChild(householdId);
   // Ny key etter hvert barn gir et tomt skjema til neste.
@@ -225,11 +229,13 @@ function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  container: { padding: spacing.page, gap: 16, paddingBottom: 48 },
-  children: { gap: spacing.row },
-  done: { marginTop: 8 },
-  account: { marginTop: spacing.section, alignItems: 'center' },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    flex: { flex: 1 },
+    container: { padding: spacing.page, gap: 16, paddingBottom: 48 },
+    children: { gap: spacing.row },
+    done: { marginTop: 8 },
+    account: { marginTop: spacing.section, alignItems: 'center' },
+  }),
+);

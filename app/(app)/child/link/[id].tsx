@@ -4,13 +4,14 @@ import { LinkCodeCard } from '../../../../src/features/devices/components/LinkCo
 import { useCreateLinkCode } from '../../../../src/features/devices/hooks';
 import { useMembers, useMyHousehold } from '../../../../src/features/household/hooks';
 import { toNorwegianMessage } from '../../../../src/lib/errors';
-import { Button, colors, Message, ModalFormScreen, Text } from '../../../../src/ui';
+import { Button, Message, ModalFormScreen, Text, useTheme } from '../../../../src/ui';
 
 /**
  * «Koble til enhet»: lager en kode med en gang skjermen åpnes, og viser den som QR-kode og tekst.
  * Medlemslisten hentes hvert 3. sekund. Når barnet er koblet, vises «Koblet til!».
  */
 export default function LinkDeviceCodeScreen() {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: household } = useMyHousehold();
   const householdId = household!.id;

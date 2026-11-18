@@ -224,17 +224,3 @@ export const themes: Record<Scheme, Theme> = {
 export function personColorIn(theme: Theme, avatarKey: string | null | undefined): PersonColor {
   return (avatarKey && theme.personColors[avatarKey]) || theme.sharedColors;
 }
-
-// --- Midlertidig, under ombyggingen til useTheme(). Fjernes i siste steg. ---
-/** @deprecated Bruk useTheme().colors. */
-export const colors = lightColors;
-/** @deprecated Bruk useTheme().shadow. */
-export const shadow = lightShadow;
-/** @deprecated Bruk useTheme().personColor(). */
-export const personColors = lightPersonColors;
-/** @deprecated Bruk useTheme().sharedColors. */
-export const sharedColors = lightSharedColors;
-/** @deprecated Bruk useTheme().personColor(). */
-export function personColor(avatarKey: string | null | undefined): PersonColor {
-  return personColorIn(themes.light, avatarKey);
-}

@@ -4,14 +4,16 @@ import { ScrollView, StyleSheet } from 'react-native';
 import {
   Button,
   ChoiceChips,
-  colors,
   ListRow,
+  makeStyles,
   Message,
   Section,
   spacing,
   Text,
   TextField,
+  useTheme,
 } from '../../../src/ui';
+import { AppearanceSection } from '../../../src/features/appearance/AppearanceSection';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useAccountActions } from '../../../src/features/auth/useAccountActions';
 import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
@@ -22,6 +24,7 @@ import { ReminderSettingsSection } from '../../../src/features/notifications/com
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 export default function SettingsScreen() {
+  const styles = useStyles();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const { session } = useSession();
@@ -37,6 +40,7 @@ export default function SettingsScreen() {
       <Section title="Påminnelser">
         <ReminderSettingsSection userId={session!.user.id} />
       </Section>
+      <AppearanceSection />
       <AccountSection />
     </ScrollView>
   );
@@ -114,6 +118,8 @@ function HomeSection({ household }: { household: Household }) {
 }
 
 function AccountSection() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const { session } = useSession();
   const { busy, confirmSignOut, confirmDeleteAccount } = useAccountActions();
 
@@ -127,8 +133,10 @@ function AccountSection() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
-  email: { marginTop: -8, marginBottom: 4 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    flex: { flex: 1, backgroundColor: colors.background },
+    container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
+    email: { marginTop: -8, marginBottom: 4 },
+  }),
+);

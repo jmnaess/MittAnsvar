@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Alert, ScrollView, Share, StyleSheet, View } from 'react-native';
-import { Button, colors, Message, Section, spacing, Text } from '../../../src/ui';
+import { Button, makeStyles, Message, Section, spacing, Text, useTheme } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { InviteRow } from '../../../src/features/household/components/InviteRow';
 import { MemberRow } from '../../../src/features/household/components/MemberRow';
@@ -18,6 +18,7 @@ import type { Household, Member } from '../../../src/features/household/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 export default function HouseholdScreen() {
+  const styles = useStyles();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const { session } = useSession();
@@ -66,6 +67,7 @@ export default function HouseholdScreen() {
 }
 
 function InviteSection({ household, members }: { household: Household; members: Member[] }) {
+  const styles = useStyles();
   const { data: invites, error } = useActiveInvites(household.id);
   const createInvite = useCreateInvite(household.id);
   const revokeInvite = useRevokeInvite(household.id);
@@ -126,8 +128,10 @@ function InviteSection({ household, members }: { household: Household; members: 
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
-  invites: { gap: spacing.row, marginTop: 8 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    flex: { flex: 1, backgroundColor: colors.background },
+    container: { padding: spacing.page, gap: spacing.section + 10, paddingBottom: 48 },
+    invites: { gap: spacing.row, marginTop: 8 },
+  }),
+);

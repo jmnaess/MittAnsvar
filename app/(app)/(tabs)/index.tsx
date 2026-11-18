@@ -47,17 +47,16 @@ import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
   Card,
-  colors,
   EmptyState,
   FamilyStrip,
   IconButton,
+  makeStyles,
   PageHeader,
-  personColor,
   SectionCard,
-  sharedColors,
   spacing,
   Text,
   UndoToast,
+  useTheme,
 } from '../../../src/ui';
 
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
@@ -80,6 +79,8 @@ type PostponedToast = { taskId: string; message: string };
  * endre) og «Gjort siste 3 dager». Bare visning.
  */
 export default function TodayScreen() {
+  const { colors, personColor, sharedColors } = useTheme();
+  const styles = useStyles();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
@@ -488,9 +489,11 @@ export default function TodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-  container: { paddingBottom: 120, gap: spacing.section },
-  body: { paddingHorizontal: spacing.page, gap: spacing.section },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    flex: { flex: 1, backgroundColor: colors.background },
+    // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
+    container: { paddingBottom: 120, gap: spacing.section },
+    body: { paddingHorizontal: spacing.page, gap: spacing.section },
+  }),
+);

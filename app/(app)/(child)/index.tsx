@@ -33,13 +33,13 @@ import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
-  colors,
   EmptyState,
+  makeStyles,
   PageHeader,
-  personColor,
   SectionCard,
   spacing,
   Text,
+  useTheme,
 } from '../../../src/ui';
 
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
@@ -51,6 +51,8 @@ type Toast = { completionId: string; title: string; message: string | null; rewa
  * «Gjort siste 3 dager». Bare visning.
  */
 export default function ChildTodayScreen() {
+  const { colors, personColor } = useTheme();
+  const styles = useStyles();
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
   const me = useMyMember(householdId);
@@ -224,8 +226,10 @@ export default function ChildTodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  container: { paddingBottom: 120, gap: spacing.section },
-  body: { paddingHorizontal: spacing.page, gap: spacing.section },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    flex: { flex: 1, backgroundColor: colors.background },
+    container: { paddingBottom: 120, gap: spacing.section },
+    body: { paddingHorizontal: spacing.page, gap: spacing.section },
+  }),
+);

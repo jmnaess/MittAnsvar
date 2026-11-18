@@ -8,7 +8,7 @@ import { isJob } from '../../../src/features/tasks/recurrence';
 import type { Task } from '../../../src/features/tasks/types';
 import { formatDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
-import { Button, colors, Message, ModalFormScreen, Text } from '../../../src/ui';
+import { Button, Message, ModalFormScreen, Text, useTheme } from '../../../src/ui';
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,6 +36,7 @@ export default function EditTaskScreen() {
 type FormProps = { task: Task; householdId: string; onArchived: () => void };
 
 function EditTaskForm({ task, householdId, onArchived }: FormProps) {
+  const { colors } = useTheme();
   const { data: members } = useMembers(householdId);
   const updateTask = useUpdateTask(householdId);
   const archiveTask = useArchiveTask(householdId);

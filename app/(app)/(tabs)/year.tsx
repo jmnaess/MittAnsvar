@@ -1,7 +1,7 @@
 import { router, useNavigation } from 'expo-router';
 import { useCallback, useLayoutEffect, useState } from 'react';
 import { Alert, SectionList, StyleSheet, View } from 'react-native';
-import { Button, colors, IconButton, Message, spacing, Text } from '../../../src/ui';
+import { Button, IconButton, makeStyles, Message, spacing, Text, useTheme } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
@@ -26,6 +26,8 @@ import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
  * Voksne lager nye med «+» øverst til høyre (én eller flere måneder).
  */
 export default function YearScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
@@ -201,13 +203,18 @@ export default function YearScreen() {
   );
 }
 
-const Separator = () => <View style={styles.separator} />;
+function Separator() {
+  const styles = useStyles();
+  return <View style={styles.separator} />;
+}
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  container: { padding: spacing.page, paddingBottom: 48 },
-  header: { gap: 12 },
-  month: { marginTop: spacing.section + 6, marginBottom: spacing.row },
-  separator: { height: spacing.row },
-  addButton: { paddingHorizontal: 12 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    flex: { flex: 1, backgroundColor: colors.background },
+    container: { padding: spacing.page, paddingBottom: 48 },
+    header: { gap: 12 },
+    month: { marginTop: spacing.section + 6, marginBottom: spacing.row },
+    separator: { height: spacing.row },
+    addButton: { paddingHorizontal: 12 },
+  }),
+);

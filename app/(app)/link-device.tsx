@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, ChoiceChips, colors, Message, spacing, Text, TextField } from '../../src/ui';
+import {
+  Button,
+  ChoiceChips,
+  makeStyles,
+  Message,
+  spacing,
+  Text,
+  TextField,
+  useTheme,
+} from '../../src/ui';
 import { signOutLocal } from '../../src/features/auth/api';
 import { QrScanner } from '../../src/features/devices/components/QrScanner';
 import { useRedeemLinkCode } from '../../src/features/devices/hooks';
@@ -24,6 +33,7 @@ const MODE_OPTIONS: { value: Mode; label: string }[] = [
  * Når koden er godtatt, hentes husstanden på nytt og layouten viser barnets faner.
  */
 export default function LinkDeviceScreen() {
+  const styles = useStyles();
   const redeem = useRedeemLinkCode();
   const [mode, setMode] = useState<Mode>('scan');
   const [typed, setTyped] = useState('');
@@ -90,8 +100,10 @@ export default function LinkDeviceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  container: { padding: spacing.page, gap: 16 },
-  manual: { gap: 12 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    container: { padding: spacing.page, gap: 16 },
+    manual: { gap: 12 },
+  }),
+);

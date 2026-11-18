@@ -1,7 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Button, colors, EmptyState, Message, spacing, SwipeToDelete, UndoToast } from '../../../src/ui';
+import {
+  Button,
+  EmptyState,
+  makeStyles,
+  Message,
+  spacing,
+  SwipeToDelete,
+  UndoToast,
+  useTheme,
+} from '../../../src/ui';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
 import { TaskRow } from '../../../src/features/tasks/components/TaskRow';
@@ -18,6 +27,7 @@ import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
  * bekreftelse, og banneret viser «Angre» i noen sekunder.
  */
 export default function TasksScreen() {
+  const styles = useStyles();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const { data: tasks, error, isPending, refetch } = useTasks(household!.id);
@@ -107,12 +117,17 @@ export default function TasksScreen() {
   );
 }
 
-const Separator = () => <View style={styles.separator} />;
+function Separator() {
+  const styles = useStyles();
+  return <View style={styles.separator} />;
+}
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
-  // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-  container: { padding: spacing.page, paddingBottom: 120 },
-  header: { gap: 12, marginBottom: spacing.section },
-  separator: { height: spacing.row },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    flex: { flex: 1, backgroundColor: colors.background },
+    // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
+    container: { padding: spacing.page, paddingBottom: 120 },
+    header: { gap: 12, marginBottom: spacing.section },
+    separator: { height: spacing.row },
+  }),
+);

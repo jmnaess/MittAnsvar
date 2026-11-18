@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AvatarStack, Button, colors, Message, spacing, Text, TextField } from '../src/ui';
+import {
+  AvatarStack,
+  Button,
+  makeStyles,
+  Message,
+  spacing,
+  Text,
+  TextField,
+  useTheme,
+} from '../src/ui';
 import { sendCode, verifyCode } from '../src/features/auth/api';
 import { signInAsChild } from '../src/features/devices/api';
 import { toNorwegianMessage } from '../src/lib/errors';
@@ -11,6 +20,8 @@ const CODE_LENGTH = 6;
 // Trinn 1: skriv e-post og få kode. Trinn 2: skriv koden.
 // Ved vellykket innlogging bytter rotlayouten til fanene av seg selv.
 export default function SignInScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -136,11 +147,13 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, justifyContent: 'center', padding: spacing.page, gap: 14 },
-  brand: { alignItems: 'center', gap: 12, marginBottom: 16 },
-  center: { textAlign: 'center' },
-  child: { gap: 8, marginTop: 32 },
-  links: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-});
+const useStyles = makeStyles(({ colors }) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, justifyContent: 'center', padding: spacing.page, gap: 14 },
+    brand: { alignItems: 'center', gap: 12, marginBottom: 16 },
+    center: { textAlign: 'center' },
+    child: { gap: 8, marginTop: 32 },
+    links: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  }),
+);

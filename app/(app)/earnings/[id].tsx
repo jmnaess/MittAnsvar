@@ -21,11 +21,11 @@ import {
   Button,
   Message,
   ModalFormScreen,
-  personColor,
   radius,
   Section,
   spacing,
   Text,
+  useTheme,
 } from '../../../src/ui';
 
 /**
@@ -33,6 +33,7 @@ import {
  * «Registrer utbetaling», og barnets egen enhet (koble til / koble fra).
  */
 export default function EarningsScreen() {
+  const { personColor } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: household } = useMyHousehold();
   const householdId = household!.id;

@@ -102,6 +102,20 @@ export async function rejectCompletion(completionId: string): Promise<void> {
   unwrap(await supabase.rpc('reject_completion', { p_completion_id: completionId }));
 }
 
+/**
+ * Endre godkjenning i ettertid (godkjent ↔ ikke godkjent). Fristen og en engangsjobb følger
+ * med når det er den siste avkrysningen. Et beløp som er betalt ut, kan ikke trekkes tilbake
+ * (reward_already_paid). Alt sjekkes i databasen.
+ */
+export async function setCompletionStatus(
+  completionId: string,
+  status: 'approved' | 'rejected',
+): Promise<void> {
+  unwrap(
+    await supabase.rpc('set_completion_status', { p_completion_id: completionId, p_status: status }),
+  );
+}
+
 /** En voksen registrerer at barnet har fått pengene. Maks godkjent saldo (sjekkes i databasen). */
 export async function recordPayout(memberId: string, amountNok: number): Promise<void> {
   unwrap(await supabase.rpc('record_payout', { p_member_id: memberId, p_amount_nok: amountNok }));

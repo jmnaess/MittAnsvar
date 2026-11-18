@@ -7,6 +7,7 @@ import {
   listRewardHistory,
   recordPayout,
   rejectCompletion,
+  setCompletionStatus,
   type MemberBalance,
 } from './api';
 
@@ -81,4 +82,14 @@ export function useApproveCompletions(householdId: string) {
 export function useRejectCompletion(householdId: string) {
   const onSettled = useInvalidateAfterReview(householdId);
   return useMutation({ mutationFn: rejectCompletion, onSettled });
+}
+
+/** Endre godkjenning i ettertid. Kan flytte fristen og en jobb, så også oppgavene hentes. */
+export function useSetCompletionStatus(householdId: string) {
+  const onSettled = useInvalidateAfterReview(householdId);
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'approved' | 'rejected' }) =>
+      setCompletionStatus(id, status),
+    onSettled,
+  });
 }

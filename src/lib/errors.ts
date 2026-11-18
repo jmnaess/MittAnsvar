@@ -72,6 +72,8 @@ const KNOWN: Record<string, string> = {
   // Utbetaling og godkjenning
   amount_exceeds_balance: 'Beløpet kan ikke være større enn det som er godkjent.',
   not_pending: 'Denne er allerede godkjent eller avvist.',
+  reward_already_paid: 'Beløpet er allerede betalt ut, så det kan ikke trekkes tilbake.',
+  status_not_changeable: 'Statusen kan ikke endres. Last inn på nytt og prøv igjen.',
   // Postgres
   '23503': 'Personen du valgte, finnes ikke lenger i husstanden.',
   '23505': 'Dette finnes allerede.',

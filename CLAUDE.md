@@ -48,3 +48,4 @@ AI, chat, bilder, kalenderintegrasjoner, widgets.
 - All ny UI skal bruke komponentene i src/ui og tokens i src/ui/theme.ts. Ingen hardkodede
   farger eller fontstørrelser i skjermfiler. Se docs/DESIGN.md.
 - Forklar kort hva du gjør og hvorfor – utvikleren lærer underveis.
+- Svar alltid på norsk bokmål.

@@ -7,8 +7,9 @@ import type { RewardEvent } from '../api';
 /**
  * Én linje i historikken: «Henge opp vask  +15 kr» eller «Utbetalt  −20 kr».
  * Steg 10b: «Venter» som merkelapp, eller «Ikke godkjent» med gjennomstreket beløp (teller ikke).
+ * onPress: en voksen kan trykke for å endre godkjenning (utelatt = bare visning).
  */
-export function RewardEventRow({ event }: { event: RewardEvent }) {
+export function RewardEventRow({ event, onPress }: { event: RewardEvent; onPress?: () => void }) {
   const earned = event.kind === 'earned';
   const pending = earned && event.status === 'pending';
   const rejected = earned && event.status === 'rejected';
@@ -16,6 +17,8 @@ export function RewardEventRow({ event }: { event: RewardEvent }) {
     <ListRow
       title={earned ? event.title : 'Utbetalt'}
       meta={formatDateTime(event.at)}
+      onPress={onPress}
+      accessibilityHint={onPress ? 'Endre godkjenning' : undefined}
       badge={
         pending ? <Chip label="Venter" tone="money" /> : rejected ? <Chip label="Ikke godkjent" tone="overdue" /> : undefined
       }

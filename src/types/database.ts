@@ -497,6 +497,9 @@ isOneToOne: false
 "reject_completion":
 { Args: { "p_completion_id": string }; Returns: undefined
                            },
+"set_completion_status":
+{ Args: { "p_completion_id": string,"p_status": Database["public"]['Enums']["completion_status"] }; Returns: undefined
+                           },
 "set_my_avatar":
 { Args: { "p_avatar": string }; Returns: undefined
                            },

@@ -6,8 +6,15 @@ import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/h
 import type { Member } from '../../../src/features/household/types';
 import { PayoutModal } from '../../../src/features/rewards/components/PayoutModal';
 import { RewardEventRow } from '../../../src/features/rewards/components/RewardEventRow';
-import { useBalance, useRecordPayout, useRewardHistory } from '../../../src/features/rewards/hooks';
+import type { RewardEvent } from '../../../src/features/rewards/api';
+import {
+  useBalance,
+  useRecordPayout,
+  useRewardHistory,
+  useSetCompletionStatus,
+} from '../../../src/features/rewards/hooks';
 import { formatBalance } from '../../../src/features/rewards/format';
+import { formatKroner } from '../../../src/features/tasks/reward';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import {
   Avatar,
@@ -37,6 +44,7 @@ export default function EarningsScreen() {
   const pending = balanceRow?.pending_nok ?? 0;
   const { data: history, error, isPending } = useRewardHistory(householdId, id);
   const payout = useRecordPayout(householdId);
+  const changeStatus = useSetCompletionStatus(householdId);
   const [paying, setPaying] = useState(false);
 
   const child = members?.find((m) => m.id === id && m.role === 'child');
@@ -44,6 +52,33 @@ export default function EarningsScreen() {
 
   const isAdult = me?.role === 'adult';
   const color = personColor(child.avatar);
+
+  // En voksen kan endre godkjenning i ettertid. Ventende avkrysninger behandles i «I dag».
+  function confirmChange(event: Extract<RewardEvent, { kind: 'earned' }>) {
+    const toApproved = event.status === 'rejected';
+    const amount = formatKroner(event.amount);
+    Alert.alert(
+      toApproved ? 'Endre til godkjent?' : 'Endre til ikke godkjent?',
+      toApproved
+        ? `${amount} legges til saldoen igjen.`
+        : `${amount} trekkes fra saldoen. Var det siste gang oppgaven ble gjort, regnes den som ikke gjort.`,
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Endre',
+          style: toApproved ? 'default' : 'destructive',
+          onPress: () =>
+            changeStatus.mutate({ id: event.id, status: toApproved ? 'approved' : 'rejected' }),
+        },
+      ],
+    );
+  }
+
+  function onPressFor(event: RewardEvent) {
+    if (!isAdult || event.kind !== 'earned' || event.status === 'pending') return undefined;
+    if (changeStatus.isPending) return undefined;
+    return () => confirmChange(event);
+  }
 
   return (
     <ModalFormScreen closeTitle="Lukk">
@@ -66,7 +101,10 @@ export default function EarningsScreen() {
         {!isPending && history?.length === 0 && (
           <Message tone="muted">Ingen oppgaver med lønn ennå. Lønn setter du i oppgaveskjemaet.</Message>
         )}
-        {history?.map((event) => <RewardEventRow key={`${event.kind}-${event.id}`} event={event} />)}
+        {changeStatus.error && <Message>{toNorwegianMessage(changeStatus.error)}</Message>}
+        {history?.map((event) => (
+          <RewardEventRow key={`${event.kind}-${event.id}`} event={event} onPress={onPressFor(event)} />
+        ))}
       </Section>
 
       {isAdult && <DeviceSection child={child} householdId={householdId} />}

@@ -362,6 +362,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"recent_completions": {
+                  Row: {
+                    "completed_at": string,"completed_by_member_id": string,"completed_on": string,"household_id": string,"id": string,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_id": string,"title": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "task_completions_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "task_completions_member_fk"
+      columns: ["household_id","completed_by_member_id"]
+isOneToOne: false
+      referencedRelation: "member_balances"
+      referencedColumns: ["household_id","member_id"]
+    },{
+      foreignKeyName: "task_completions_member_fk"
+      columns: ["household_id","completed_by_member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["household_id","id"]
+    },{
+      foreignKeyName: "task_completions_task_fk"
+      columns: ["household_id","task_id"]
+isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["household_id","id"]
+    },{
+      foreignKeyName: "task_completions_task_fk"
+      columns: ["household_id","task_id"]
+isOneToOne: false
+      referencedRelation: "today_tasks"
+      referencedColumns: ["household_id","id"]
+    }
+                  ]
                 },"today_completions": {
                   Row: {
                     "assigned_member_id": string | null,"completed_at": string,"completed_by_member_id": string,"household_id": string,"id": string,"is_latest": boolean | null,"job_member_ids": (string)[],"recorded_by": string | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_id": string,"title": string

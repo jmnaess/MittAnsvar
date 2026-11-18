@@ -6,12 +6,15 @@ import { useSession } from '../../../src/features/auth/SessionProvider';
 import { chooseCompletionAction } from '../../../src/features/completions/chooseDoer';
 import type { TodayCompletion } from '../../../src/features/completions/api';
 import { DoneActionsSheet } from '../../../src/features/completions/components/DoneActionsSheet';
+import { RecentDoneCard } from '../../../src/features/completions/components/RecentDoneCard';
 import { DoneList } from '../../../src/features/completions/components/DoneList';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
 import { progressText, reassignCandidates } from '../../../src/features/completions/doneToday';
+import { groupRecentByDay } from '../../../src/features/completions/recent';
 import {
   useCompleteTask,
   useReassignCompletion,
+  useRecentCompletions,
   useRemoveCompletion,
   useTodayCompletions,
   useUndoCompletion,
@@ -26,11 +29,18 @@ import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskShee
 import { TaskActionsSheet } from '../../../src/features/tasks/components/TaskActionsSheet';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
+import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
 import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY, type TodaySection } from '../../../src/features/tasks/groupToday';
-import { usePostponeTask, useTodayTasks, useUndoPostpone } from '../../../src/features/tasks/hooks';
+import {
+  useMemberUpcoming,
+  usePostponeTask,
+  useTodayTasks,
+  useUndoPostpone,
+} from '../../../src/features/tasks/hooks';
 import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
 import type { TodayTask } from '../../../src/features/tasks/types';
+import { UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatDate, formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
@@ -65,6 +75,9 @@ type PostponedToast = { taskId: string; message: string };
  * «I dag»: dato og tittel, alle i husstanden (trykk for å vise bare én), godkjenningsbanner for
  * voksne, én seksjon per person i personens farge, «Felles», «Denne måneden» og «Ledige jobber».
  * Voksne legger ut jobber med «+» og endrer dem med langt trykk.
+ *
+ * Personvisning (én person valgt): personens kort, «Kommende» (8 uker, voksne kan trykke for å
+ * endre) og «Gjort siste 3 dager». Bare visning.
  */
 export default function TodayScreen() {
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
@@ -131,6 +144,13 @@ export default function TodayScreen() {
   // Bare avkrysning: en rad som utsettes, skal ikke se utført ut.
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
   const today = toIsoDate(new Date());
+
+  // Personvisningen. Hentes bare når en person er valgt.
+  const { upcoming, isPending: upcomingPending } = useMemberUpcoming(householdId, focused?.id ?? null, today, {
+    windowDays: UPCOMING_DAYS,
+  });
+  const { data: recent = [] } = useRecentCompletions(householdId, today, !!focused);
+  const recentDays = focused ? groupRecentByDay(recent, focused.id, today) : [];
 
   function markDone(task: TodayTask, memberId: string) {
     setActionError(null);
@@ -363,6 +383,22 @@ export default function TodayScreen() {
             />
           )}
           {sections.map(renderSection)}
+          {focused && (
+            <>
+              <UpcomingCard
+                upcoming={upcoming}
+                showReward={focused.role === 'child'}
+                loading={upcomingPending}
+                emptyText="Ingenting planlagt de neste ukene."
+                onOpen={
+                  isAdult
+                    ? (task) => router.push({ pathname: '/task/[id]', params: { id: task.id } })
+                    : undefined
+                }
+              />
+              <RecentDoneCard days={recentDays} checkColor={personColor(focused.avatar).ring} />
+            </>
+          )}
         </View>
       </ScrollView>
 

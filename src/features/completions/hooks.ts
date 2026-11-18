@@ -3,6 +3,7 @@ import { useInvalidateRewards } from '../rewards/hooks';
 import { useInvalidateTasks } from '../tasks/hooks';
 import {
   completeTask,
+  listRecentCompletions,
   listTodayCompletions,
   reassignCompletion,
   removeCompletion,
@@ -25,6 +26,19 @@ export function useTodayCompletions(householdId: string) {
   return useQuery({
     queryKey: ['tasks', householdId, 'today-completions'],
     queryFn: () => listTodayCompletions(householdId),
+  });
+}
+
+/**
+ * Avkrysninger de tre siste dagene («Gjort siste 3 dager»). Under ['tasks', householdId] som
+ * dagens, så den hentes på nytt ved endringer. today i nøkkelen gjør at den hentes på nytt ved
+ * midnatt. Hentes bare når enabled (en person er valgt).
+ */
+export function useRecentCompletions(householdId: string, today: string, enabled = true) {
+  return useQuery({
+    queryKey: ['tasks', householdId, 'recent-completions', today],
+    queryFn: () => listRecentCompletions(householdId),
+    enabled,
   });
 }
 

@@ -62,6 +62,23 @@ export async function reassignCompletion(completionId: string, memberId: string)
 /** En avkrysning fra i dag (viewet today_completions), med tittel og ansvarlig fra oppgaven. */
 export type TodayCompletion = Database['public']['Views']['today_completions']['Row'];
 
+/** En avkrysning fra i går til for tre dager siden (viewet recent_completions). */
+export type RecentCompletion = Database['public']['Views']['recent_completions']['Row'];
+
+/**
+ * Avkrysninger de tre siste dagene (ikke i dag), uten avviste. RLS gjør at barn bare ser sine
+ * egne. Til «Gjort siste 3 dager» i personvisningen.
+ */
+export async function listRecentCompletions(householdId: string): Promise<RecentCompletion[]> {
+  return unwrap(
+    await supabase
+      .from('recent_completions')
+      .select('*')
+      .eq('household_id', householdId)
+      .order('completed_at', { ascending: false }),
+  );
+}
+
 /**
  * Dagens avkrysninger i husstandens tidssone, uten avviste. RLS gjør at barn bare ser sine egne.
  * Eldste først, så de står i den rekkefølgen de ble gjort.

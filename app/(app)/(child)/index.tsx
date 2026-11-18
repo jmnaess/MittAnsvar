@@ -5,9 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import type { TodayCompletion } from '../../../src/features/completions/api';
 import { DoneList } from '../../../src/features/completions/components/DoneList';
+import { RecentDoneCard } from '../../../src/features/completions/components/RecentDoneCard';
 import { progressText } from '../../../src/features/completions/doneToday';
+import { groupRecentByDay } from '../../../src/features/completions/recent';
 import {
   useCompleteTask,
+  useRecentCompletions,
   useTodayCompletions,
   useUndoCompletion,
 } from '../../../src/features/completions/hooks';
@@ -18,10 +21,12 @@ import { useBalance } from '../../../src/features/rewards/hooks';
 import { childTodaySections, MINE_KEY } from '../../../src/features/tasks/childToday';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
+import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
 import { JOBS_KEY } from '../../../src/features/tasks/groupToday';
-import { useTodayTasks } from '../../../src/features/tasks/hooks';
+import { useMemberUpcoming, useTodayTasks } from '../../../src/features/tasks/hooks';
 import { formatKroner } from '../../../src/features/tasks/reward';
 import type { TodayTask } from '../../../src/features/tasks/types';
+import { CHILD_UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
@@ -42,6 +47,8 @@ type Toast = { completionId: string; title: string; message: string | null; rewa
 /**
  * «I dag» på barnets egen enhet: «Mine oppgaver i dag» i barnets egen farge, og «Ledige jobber».
  * Barnet krysser alltid av for seg selv, med ett trykk. Langt trykk gjør ingenting.
+ * Nederst: «Kommende» (2 uker, uten hyppige oppgaver, som barnet ser hver dag uansett) og
+ * «Gjort siste 3 dager». Bare visning.
  */
 export default function ChildTodayScreen() {
   const { data: household } = useMyHousehold();
@@ -81,6 +88,15 @@ export default function ChildTodayScreen() {
     [progressText(mine.length, mineDone.length), earnedLabel(balance)].filter(Boolean).join(' · ') ||
     undefined;
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
+
+  const today = toIsoDate(new Date());
+  const { upcoming, isPending: upcomingPending } = useMemberUpcoming(householdId, me?.id ?? null, today, {
+    windowDays: CHILD_UPCOMING_DAYS,
+    hideFrequent: true,
+  });
+  // RLS: barnet får bare sine egne avkrysninger.
+  const { data: recent = [] } = useRecentCompletions(householdId, today, !!me);
+  const recentDays = me ? groupRecentByDay(recent, me.id, today) : [];
 
   function markDone(task: TodayTask) {
     if (!me) return;
@@ -129,7 +145,7 @@ export default function ChildTodayScreen() {
         refreshControl={<RefreshControl {...pullToRefresh} tintColor={colors.primary} />}
       >
         <PageHeader
-          overline={formatWeekdayDate(toIsoDate(new Date()))}
+          overline={formatWeekdayDate(today)}
           title={me ? `Hei, ${me.display_name}!` : 'I dag'}
           right={me ? <Avatar avatar={me.avatar} size={48} ring={color.ring} /> : undefined}
         />
@@ -169,6 +185,18 @@ export default function ChildTodayScreen() {
           )}
 
           <TodayJobsSection jobs={jobs} whoOf={(job) => ((job.job_member_ids ?? []).length === 0 ? 'Alle barna' : 'Til deg')} busyId={busyId} onPress={markDone} />
+
+          {me && (
+            <>
+              <UpcomingCard
+                upcoming={upcoming}
+                showReward
+                loading={upcomingPending}
+                emptyText="Ingenting nytt de neste to ukene."
+              />
+              <RecentDoneCard days={recentDays} checkColor={color.ring} />
+            </>
+          )}
         </View>
       </ScrollView>
 

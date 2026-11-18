@@ -10,6 +10,10 @@ A family responsibility and household task management app for parents and childr
   og kommer tilbake på den nye datoen, med «Angre» rett etterpå.
 - **Færre utførte synlige:** hvert kort viser de 2 sist utførte og fremdrift («3 av 7»).
   Resten ligger bak «4 til gjort i dag», som kan foldes ut. Ved midnatt er «I dag» tom igjen.
+- **Personvisning:** trykk på en person i familieraden. Da vises personens kort, «Kommende»
+  (8 uker, gruppert per uke, daglige og ukentlige oppgaver én gang) og «Gjort siste 3 dager».
+  Voksne kan trykke på en kommende oppgave for å endre den. Barnet ser det samme for seg selv
+  på egen enhet, men «Kommende» viser bare 2 uker og ikke de hyppige oppgavene.
 
 ## Kom i gang
 

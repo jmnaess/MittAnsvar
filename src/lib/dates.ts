@@ -92,6 +92,37 @@ export function formatDate(isoDate: string): string {
   return `${WEEKDAY_SHORT[isoWeekday(year, month, day) - 1]} ${day}. ${MONTH_SHORT[month - 1]}`;
 }
 
+/** '2026-11-16' → 'Mandag' */
+export function weekdayName(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const weekday = WEEKDAY_NAMES[isoWeekday(year, month, day) - 1];
+  return `${weekday[0].toUpperCase()}${weekday.slice(1)}`;
+}
+
+/** Mandagen i ISO-uken: '2026-11-18' (onsdag) → '2026-11-16' */
+export function startOfIsoWeek(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return addDays(isoDate, 1 - isoWeekday(year, month, day));
+}
+
+/** ISO-ukenummer (uke 1 er uken med årets første torsdag): '2026-11-18' → 47, '2027-01-01' → 53 */
+export function isoWeekNumber(isoDate: string): number {
+  const thursday = addDays(startOfIsoWeek(isoDate), 3); // torsdagen bestemmer året
+  const [year, month, day] = thursday.split('-').map(Number);
+  const dayOfYear = (Date.UTC(year, month - 1, day) - Date.UTC(year, 0, 1)) / 86_400_000;
+  return Math.floor(dayOfYear / 7) + 1;
+}
+
+/** Uken som starter på mandagen: '2026-11-23' → '23.–29. nov.', '2026-11-30' → '30. nov.–6. des.' */
+export function formatWeekRange(monday: string): string {
+  const sunday = addDays(monday, 6);
+  const [, m1, d1] = monday.split('-').map(Number);
+  const [, m2, d2] = sunday.split('-').map(Number);
+  return m1 === m2
+    ? `${d1}.–${d2}. ${MONTH_SHORT[m2 - 1]}`
+    : `${d1}. ${MONTH_SHORT[m1 - 1]}–${d2}. ${MONTH_SHORT[m2 - 1]}`;
+}
+
 /** '2026-11-18' → 'Onsdag 18. november' (overskriften i «I dag»). */
 export function formatWeekdayDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);

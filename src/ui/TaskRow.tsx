@@ -15,7 +15,8 @@ type Props = {
   disabled?: boolean;
   /** Raden ligger i et hvitt kort: bruk surfaceMuted som bakgrunn. */
   muted?: boolean;
-  onPress: () => void;
+  /** Utelatt = bare visning (f.eks. «Gjort siste 3 dager»). */
+  onPress?: () => void;
   onLongPress?: () => void;
   /**
    * Satt: sjekkboksen får sitt eget trykk (f.eks. «Merke som ikke gjort?»), og resten av raden
@@ -38,9 +39,9 @@ export function TaskRow({
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
-      disabled={disabled}
+      disabled={disabled || (!onPress && !onLongPress)}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: done, disabled: !!disabled }}
+      accessibilityState={{ checked: done, disabled: !!disabled || (!onPress && !onLongPress) }}
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityHint={accessibilityHint}
       style={({ pressed }) => [

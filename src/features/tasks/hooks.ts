@@ -12,6 +12,7 @@ import {
   updateTask,
 } from './api';
 import type { TaskInput } from './types';
+import { upcomingForMember, upcomingWindow, type MemberUpcoming } from './upcoming';
 
 // Begge listene ligger under ['tasks', householdId]. Da holder det å invalidere den
 // nøkkelen for å hente både oversikten og «I dag» på nytt.
@@ -41,6 +42,31 @@ export function useUpcomingOccurrences(householdId: string, from: string, to: st
     queryFn: () => listUpcomingOccurrences(householdId, from, to),
     enabled,
   });
+}
+
+/**
+ * «Kommende» for én person (personvisningen i «I dag»): forekomster fra i morgen og windowDays
+ * fram, gruppert med upcomingForMember. memberId null = ingen er valgt, og ingenting hentes.
+ */
+export function useMemberUpcoming(
+  householdId: string,
+  memberId: string | null,
+  today: string,
+  { windowDays, hideFrequent = false }: { windowDays: number; hideFrequent?: boolean },
+): { upcoming: MemberUpcoming; isPending: boolean } {
+  const { from, to } = upcomingWindow(today, windowDays);
+  const enabled = memberId !== null;
+  const occurrences = useUpcomingOccurrences(householdId, from, to, enabled);
+  const tasks = useQuery({
+    queryKey: taskKeys.list(householdId),
+    queryFn: () => listTasks(householdId),
+    enabled,
+  });
+  const upcoming =
+    memberId && occurrences.data && tasks.data
+      ? upcomingForMember(occurrences.data, tasks.data, memberId, today, { windowDays, hideFrequent })
+      : { repeating: [], groups: [] };
+  return { upcoming, isPending: occurrences.isPending || tasks.isPending };
 }
 
 export function useInvalidateTasks(householdId: string) {

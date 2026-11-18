@@ -17,7 +17,7 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
     ├──* invites                      feedback_messages (global, les-bare)
     └──* link_tokens                  invite_attempts, link_attempts (per auth-bruker, stengt)
 
-View: today_tasks (tasks), today_completions (task_completions + tasks), member_balances (members + task_completions + payouts)
+View: today_tasks (tasks), today_completions (task_completions + tasks), recent_completions (task_completions + tasks), member_balances (members + task_completions + payouts)
 ```
 
 ### Enum-typer
@@ -140,6 +140,8 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 «I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden», og jobber i «Ledige jobber».
 
 **View `today_completions`** (`security_invoker = true`, så RLS på `task_completions` og `tasks` gjelder): dagens avkrysninger (`completed_on = private.household_today(household_id)`), uten avviste. Med tittel, `assigned_member_id`, `recurrence_type` og `job_member_ids` (hvem en jobb kan flyttes til) fra oppgaven, også når oppgaven er arkivert (en ledig jobb som er gjort). `is_latest`: ingen nyere avkrysning på samme oppgave, samme regel som `undo_completion`. «I dag» viser radene som utført nederst i hvert kort. Appen angrer ved trykk bare når `is_latest`, innen 10 minutter, og for barn bare det de selv registrerte (`recorded_by`); serveren sjekker det samme i `undo_completion`. Voksne kan i tillegg rette hele dagen: trykk på sirkelen gir «Merke som ikke gjort?» (`remove_completion`), og trykk på raden gir valg mellom «Ikke gjort» og «Endre hvem som gjorde det» (`reassign_completion`). Testes i `today_completions.test.sql`.
+
+**View `recent_completions`** (`security_invoker = true`, som `today_completions`): avkrysninger fra i går til og med tre dager siden (`completed_on between household_today - 3 and household_today - 1`), uten avviste. Med tittel og `recurrence_type` fra oppgaven, også når den er arkivert. Brukes i personvisningen i «I dag» («Gjort siste 3 dager»), der appen filtrerer på `completed_by_member_id` og grupperer per dag. RLS på `task_completions` gjør at barn bare ser sin egen historikk, så viewet trenger ingen security definer. «Kommende» i samme visning bruker `get_upcoming_occurrences` (8 uker for voksne, 2 uker på barnets enhet). Testes i `recent_completions.test.sql`.
 
 ### `payouts` (utbetalinger, steg 9)
 | Kolonne | Type | Merknad |
@@ -428,6 +430,7 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
 | today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
 | today_completions (view) | som task_completions: voksen alt, barn bare egne | – | – | – |
+| recent_completions (view) | som task_completions: voksen alt, barn bare egne | – | – | – |
 | task_completions | voksen i husstanden, eller barnet som gjorde den (steg 10a) | – (RPC `complete_task`) | – | – (RPC `undo_completion`) |
 | payouts | voksen i husstanden, eller barnet som fikk den (steg 10a) | – (RPC `record_payout`) | – | – |
 | member_balances (view) | voksen: alle barna; barn: bare seg selv (filter i viewet + RLS på tabellene under) | – | – | – |

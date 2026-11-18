@@ -40,7 +40,7 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
   const updateTask = useUpdateTask(householdId);
   const archiveTask = useArchiveTask(householdId);
   const me = useMyMember(householdId);
-  const form = useTaskForm(task);
+  const form = useTaskForm(members ?? [], task);
 
   const busy = updateTask.isPending || archiveTask.isPending;
   const error = updateTask.error ?? archiveTask.error;

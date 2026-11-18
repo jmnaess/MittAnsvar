@@ -1,31 +1,33 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { toIsoDate } from '../../../lib/dates';
-import { ChoiceChips, Hint, TextField } from '../../../ui';
+import { ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import type { Member } from '../../household/types';
+import { allAdults, nextAssignees, SHARED, toTaskInputs } from '../assignees';
 import { defaultRecurrenceForm, fromRecurrence, sameWhen, toRecurrence } from '../recurrence';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
 import type { TaskInput } from '../types';
 import { RecurrencePicker } from './RecurrencePicker';
-
-// ChoiceChips trenger en verdi for «felles». null kan ikke brukes som nøkkel.
-const SHARED = 'shared';
 
 /** En oppgave som endres: det som ble lagret, og fristen (for eldre engangsoppgaver uten dato). */
 type Initial = TaskInput & { next_due_on: string | null };
 
 /**
  * Tilstanden i oppgaveskjemaet. Skilt fra feltene, så modalen kan ha Lagre i headeren.
- * value er null så lenge skjemaet ikke er gyldig. Ledige jobber har eget skjema (JobForm).
+ * Ledige jobber har eget skjema (JobForm).
+ *
+ * Ny oppgave: flere kan velges, og values har én oppgave per valgt person (eller én for
+ * «Felles»). Endre oppgave: bare én person, den oppgaven gjelder, og value er den ene.
+ * values og value er null så lenge skjemaet ikke er gyldig.
  */
-export function useTaskForm(initial?: Initial) {
+export function useTaskForm(members: Member[], initial?: Initial) {
   // Enhetens dato når skjemaet åpnes. I dag og I morgen regnes fra den.
   const [today] = useState(() => toIsoDate(new Date()));
   const [initialWhen] = useState(() =>
     initial ? fromRecurrence(initial, today) : defaultRecurrenceForm(today),
   );
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [assignee, setAssignee] = useState(initial?.assigned_member_id ?? SHARED);
+  const [assignees, setAssignees] = useState<string[]>([initial?.assigned_member_id ?? SHARED]);
   const [recurrenceForm, setRecurrenceForm] = useState(initialWhen);
   // Tekst, fordi det skrives i et felt. Tom = ingen lønn.
   const [reward, setReward] = useState(initial?.reward_nok ? String(initial.reward_nok) : '');
@@ -39,29 +41,31 @@ export function useTaskForm(initial?: Initial) {
     schedule = { ...schedule, once_on: initial.once_on };
   }
 
-  const value: TaskInput | null =
+  const values: TaskInput[] | null =
     trimmedTitle.length > 0 && schedule && rewardNok !== undefined
-      ? {
-          title: trimmedTitle,
-          assigned_member_id: assignee === SHARED ? null : assignee,
-          job_member_ids: [],
-          reward_nok: rewardNok,
-          ...schedule,
-        }
+      ? toTaskInputs(
+          { title: trimmedTitle, job_member_ids: [], reward_nok: rewardNok, ...schedule },
+          assignees,
+          members,
+        )
       : null;
 
   return {
     today,
+    /** Ny oppgave: flervalg. Endre: én person. */
+    multiple: !initial,
     title,
     setTitle,
-    assignee,
-    setAssignee,
+    assignees,
+    setAssignees,
     recurrenceForm,
     setRecurrenceForm,
     reward,
     setReward,
     rewardInvalid: rewardNok === undefined,
-    value,
+    values,
+    /** Den ene oppgaven når en eksisterende endres. */
+    value: values?.[0] ?? null,
   };
 }
 
@@ -70,7 +74,7 @@ export type TaskFormState = ReturnType<typeof useTaskForm>;
 type Props = {
   form: TaskFormState;
   members: Member[];
-  /** «Lønn (kr)» vises bare for voksne, og bare når ansvarlig er et barn eller «Felles». */
+  /** «Lønn (kr)» vises bare for voksne, og skjules når alle valgte er voksne. */
   canSetReward: boolean;
   /** false = uten «Når?» («Oppgave i dag» fra «I dag»). Skjemaet står da på I dag. */
   showWhen?: boolean;
@@ -84,16 +88,17 @@ export function TaskFields({ form, members, canSetReward, showWhen = true, disab
     ...members.map((m) => ({ value: m.id, label: m.display_name })),
   ];
 
-  // Voksne får aldri lønn, så feltet skjules når en voksen har ansvaret.
-  const assigneeIsAdult = members.some((m) => m.id === form.assignee && m.role === 'adult');
-  const showReward = canSetReward && !assigneeIsAdult;
+  // Voksne får aldri lønn, så feltet skjules når alle valgte er voksne. Er noen barn, vises
+  // det, og beløpet fjernes på de voksnes oppgaver (toTaskInputs).
+  const onlyAdults = allAdults(form.assignees, members);
+  const showReward = canSetReward && !onlyAdults;
 
-  // Tøm beløpet når en voksen blir ansvarlig, så det ikke lagres i det skjulte.
+  // Tøm beløpet når bare voksne er valgt, så det ikke lagres i det skjulte.
   // Effekt i stedet for i onChange, så det også gjelder gamle oppgaver og medlemmer som lastes sent.
   const { reward, setReward } = form;
   useEffect(() => {
-    if (assigneeIsAdult && reward !== '') setReward('');
-  }, [assigneeIsAdult, reward, setReward]);
+    if (onlyAdults && reward !== '') setReward('');
+  }, [onlyAdults, reward, setReward]);
 
   return (
     <View style={styles.form}>
@@ -114,14 +119,33 @@ export function TaskFields({ form, members, canSetReward, showWhen = true, disab
           disabled={disabled}
         />
       )}
-      <ChoiceChips
-        label="Hvem har ansvaret?"
-        options={assigneeOptions}
-        value={form.assignee}
-        onChange={form.setAssignee}
-        disabled={disabled}
-      />
-      <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
+      {form.multiple ? (
+        <>
+          <MultiChoiceChips
+            label="Hvem har ansvaret?"
+            options={assigneeOptions}
+            values={form.assignees}
+            onChange={(next) => form.setAssignees(nextAssignees(form.assignees, next))}
+            disabled={disabled}
+          />
+          <Hint>
+            {form.assignees.length > 1
+              ? `Lager ${form.assignees.length} oppgaver, én til hver. De krysses av hver for seg.`
+              : 'Velg én eller flere. Felles betyr at hvem som helst kan gjøre den.'}
+          </Hint>
+        </>
+      ) : (
+        <>
+          <ChoiceChips
+            label="Hvem har ansvaret?"
+            options={assigneeOptions}
+            value={form.assignees[0]}
+            onChange={(id) => form.setAssignees([id])}
+            disabled={disabled}
+          />
+          <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
+        </>
+      )}
       {showReward && (
         <>
           <TextField

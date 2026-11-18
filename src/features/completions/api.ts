@@ -1,5 +1,6 @@
 import { ApiError, unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
+import type { Database } from '../../types/database';
 
 export type CompletionResult = {
   completionId: string;
@@ -35,4 +36,21 @@ export async function completeTask(taskId: string, memberId: string): Promise<Co
 /** Angrer en avkrysning (bare den siste på oppgaven, innen 10 minutter). Fristen går tilbake. */
 export async function undoCompletion(completionId: string): Promise<void> {
   unwrap(await supabase.rpc('undo_completion', { p_completion_id: completionId }));
+}
+
+/** En avkrysning fra i dag (viewet today_completions), med tittel og ansvarlig fra oppgaven. */
+export type TodayCompletion = Database['public']['Views']['today_completions']['Row'];
+
+/**
+ * Dagens avkrysninger i husstandens tidssone, uten avviste. RLS gjør at barn bare ser sine egne.
+ * Eldste først, så de står i den rekkefølgen de ble gjort.
+ */
+export async function listTodayCompletions(householdId: string): Promise<TodayCompletion[]> {
+  return unwrap(
+    await supabase
+      .from('today_completions')
+      .select('*')
+      .eq('household_id', householdId)
+      .order('completed_at'),
+  );
 }

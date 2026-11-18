@@ -2,7 +2,14 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCompleteTask, useUndoCompletion } from '../../../src/features/completions/hooks';
+import { useSession } from '../../../src/features/auth/SessionProvider';
+import type { TodayCompletion } from '../../../src/features/completions/api';
+import { DoneList } from '../../../src/features/completions/components/DoneList';
+import {
+  useCompleteTask,
+  useTodayCompletions,
+  useUndoCompletion,
+} from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { earnedLabel } from '../../../src/features/rewards/format';
@@ -38,7 +45,13 @@ export default function ChildTodayScreen() {
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
   const me = useMyMember(householdId);
-  const { data: tasks, error, isPending, refetch } = useTodayTasks(householdId);
+  const { session } = useSession();
+  const { data: tasks, error, isPending, refetch: refetchTasks } = useTodayTasks(householdId);
+  const { data: done = [], refetch: refetchDone } = useTodayCompletions(householdId);
+  const refetch = useCallback(
+    () => Promise.all([refetchTasks(), refetchDone()]),
+    [refetchTasks, refetchDone],
+  );
   const pullToRefresh = usePullToRefresh(refetch);
   const balance = useBalance(householdId, me?.id ?? '');
   const complete = useCompleteTask(householdId);
@@ -50,8 +63,10 @@ export default function ChildTodayScreen() {
   // Hent på nytt når fanen vises: en voksen kan ha lagt ut en ny jobb.
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
-  const sections = me ? childTodaySections(tasks ?? [], me.id) : [];
-  const mine = sections.find((s) => s.key === MINE_KEY)?.data ?? [];
+  const sections = me ? childTodaySections(tasks ?? [], me.id, done) : [];
+  const mineSection = sections.find((s) => s.key === MINE_KEY);
+  const mine = mineSection?.data ?? [];
+  const mineDone = mineSection?.done ?? [];
   const jobs = sections.find((s) => s.key === JOBS_KEY)?.data ?? [];
   const nothingToDo = !isPending && !!me && sections.length === 0;
   const color = personColor(me?.avatar);
@@ -75,6 +90,15 @@ export default function ChildTodayScreen() {
         onError: (e) => setActionError(toNorwegianMessage(e)),
       },
     );
+  }
+
+  // Trykk på en utført rad (innen 10 minutter, se DoneList): angre den.
+  function undoDone(completion: TodayCompletion) {
+    setActionError(null);
+    undo.mutate(completion.id, {
+      onSuccess: () => setToast((t) => (t?.completionId === completion.id ? null : t)),
+      onError: (e) => setActionError(toNorwegianMessage(e)),
+    });
   }
 
   function handleUndo() {
@@ -106,7 +130,7 @@ export default function ChildTodayScreen() {
           )}
           {nothingToDo && <EmptyState title="Ingenting å gjøre i dag 🎉" />}
 
-          {mine.length > 0 && (
+          {me && (mine.length > 0 || mineDone.length > 0) && (
             <SectionCard title="Mine oppgaver i dag" color={color} right={earnedLabel(balance)}>
               {mine.map((task) => (
                 <TodayTaskRow
@@ -117,6 +141,18 @@ export default function ChildTodayScreen() {
                   onPress={() => markDone(task)}
                 />
               ))}
+              <DoneList
+                done={mineDone}
+                // Barnets egen id: da står det ikke «Gjort av» på det barnet selv har gjort.
+                sectionKey={me.id}
+                allDone={mine.length === 0}
+                nameOf={() => undefined}
+                checkColor={color.ring}
+                isAdult={false}
+                userId={session?.user.id}
+                undoingId={undo.isPending ? undo.variables : undefined}
+                onUndo={undoDone}
+              />
             </SectionCard>
           )}
 

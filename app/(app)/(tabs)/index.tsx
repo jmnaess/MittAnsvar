@@ -4,8 +4,14 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { chooseCompletionAction } from '../../../src/features/completions/chooseDoer';
+import type { TodayCompletion } from '../../../src/features/completions/api';
+import { DoneList } from '../../../src/features/completions/components/DoneList';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
-import { useCompleteTask, useUndoCompletion } from '../../../src/features/completions/hooks';
+import {
+  useCompleteTask,
+  useTodayCompletions,
+  useUndoCompletion,
+} from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
@@ -51,7 +57,12 @@ export default function TodayScreen() {
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
   const { session } = useSession();
-  const { data: tasks, error, isPending, refetch } = useTodayTasks(householdId);
+  const { data: tasks, error, isPending, refetch: refetchTasks } = useTodayTasks(householdId);
+  const { data: done = [], refetch: refetchDone } = useTodayCompletions(householdId);
+  const refetch = useCallback(
+    () => Promise.all([refetchTasks(), refetchDone()]),
+    [refetchTasks, refetchDone],
+  );
   const pullToRefresh = usePullToRefresh(refetch);
   const { data: members = [] } = useMembers(householdId);
   const { data: balances = [] } = useBalances(householdId);
@@ -71,10 +82,13 @@ export default function TodayScreen() {
   const me = members.find((m) => m.auth_user_id === session?.user.id);
   const isAdult = me?.role === 'adult';
   // Voksne ser alltid «Ledige jobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
-  const allSections = groupTodayByMember(tasks ?? [], members, { showEmptyJobs: isAdult && !isPending });
+  const allSections = groupTodayByMember(tasks ?? [], members, {
+    showEmptyJobs: isAdult && !isPending,
+    done,
+  });
   const focused = members.find((m) => m.id === focusedId);
   const sections = focused ? allSections.filter((s) => s.key === focused.id) : allSections;
-  const nothingToDo = !isPending && sections.every((s) => s.data.length === 0);
+  const nothingToDo = !isPending && sections.every((s) => s.data.length === 0 && s.done.length === 0);
 
   const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
@@ -109,6 +123,15 @@ export default function TodayScreen() {
 
   const pickDoer = (task: TodayTask) => setPicking({ task, members, preselectedId: null });
 
+  // Trykk på en utført rad (innen 10 minutter, se DoneList): angre den.
+  function undoDone(completion: TodayCompletion) {
+    setActionError(null);
+    undo.mutate(completion.id, {
+      onSuccess: () => setToast((t) => (t?.completionId === completion.id ? null : t)),
+      onError: (e) => setActionError(toNorwegianMessage(e)),
+    });
+  }
+
   function handleUndo() {
     if (!toast) return;
     undo.mutate(toast.completionId, {
@@ -121,7 +144,7 @@ export default function TodayScreen() {
   }
 
   function renderRows(section: TodaySection, checkColor: string, muted = false) {
-    return section.data.map((task) => (
+    const open = section.data.map((task) => (
       <TodayTaskRow
         key={task.id}
         task={task}
@@ -133,6 +156,22 @@ export default function TodayScreen() {
         onLongPress={() => pickDoer(task)}
       />
     ));
+    return (
+      <>
+        {open}
+        <DoneList
+          done={section.done}
+          sectionKey={section.key}
+          allDone={section.data.length === 0}
+          nameOf={(id) => nameOf(id)}
+          checkColor={checkColor}
+          isAdult={isAdult}
+          userId={session?.user.id}
+          undoingId={undo.isPending ? undo.variables : undefined}
+          onUndo={undoDone}
+        />
+      </>
+    );
   }
 
   function renderSection(section: TodaySection) {

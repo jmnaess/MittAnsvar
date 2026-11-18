@@ -1,3 +1,4 @@
+import type { TodayCompletion } from '../../completions/api';
 import type { Member } from '../../household/types';
 import { groupTodayByMember, JOBS_KEY } from '../groupToday';
 import type { TodayTask } from '../types';
@@ -43,5 +44,15 @@ describe('groupTodayByMember', () => {
       ['leah', ['v']],
       [JOBS_KEY, ['j']],
     ]);
+  });
+
+  it('legger dagens avkrysninger i personens kort, og viser kortet selv uten oppgaver igjen', () => {
+    const gjort = { id: 'c', assigned_member_id: 'leah', completed_by_member_id: 'leah', recurrence_type: 'calendar' } as TodayCompletion;
+    const felles = { id: 'f', assigned_member_id: null, completed_by_member_id: 'leah', recurrence_type: 'calendar' } as TodayCompletion;
+    const sections = groupTodayByMember([], [leah], { done: [gjort, felles] });
+    expect(sections.map((s) => s.key)).toEqual(['leah', 'shared']);
+    expect(sections[0].data).toEqual([]);
+    expect(sections[0].done.map((c) => c.id)).toEqual(['c']);
+    expect(sections[1].done.map((c) => c.id)).toEqual(['f']);
   });
 });

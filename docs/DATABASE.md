@@ -17,7 +17,7 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
     ├──* invites                      feedback_messages (global, les-bare)
     └──* link_tokens                  invite_attempts, link_attempts (per auth-bruker, stengt)
 
-View: today_tasks (tasks), member_balances (members + task_completions + payouts)
+View: today_tasks (tasks), today_completions (task_completions + tasks), member_balances (members + task_completions + payouts)
 ```
 
 ### Enum-typer
@@ -135,6 +135,8 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 - `is_overdue`: `due_by < i dag`. Alltid `false` for jobber (`coalesce`), fordi de ikke har frist.
 
 «I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden», og jobber i «Ledige jobber».
+
+**View `today_completions`** (`security_invoker = true`, så RLS på `task_completions` og `tasks` gjelder): dagens avkrysninger (`completed_on = private.household_today(household_id)`), uten avviste. Med tittel, `assigned_member_id` og `recurrence_type` fra oppgaven, også når oppgaven er arkivert (en ledig jobb som er gjort). `is_latest`: ingen nyere avkrysning på samme oppgave, samme regel som `undo_completion`. «I dag» viser radene som utført nederst i hvert kort. Appen angrer ved trykk bare når `is_latest`, innen 10 minutter, og for barn bare det de selv registrerte (`recorded_by`); serveren sjekker det samme i `undo_completion`. Testes i `today_completions.test.sql`.
 
 ### `payouts` (utbetalinger, steg 9)
 | Kolonne | Type | Merknad |
@@ -401,6 +403,7 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 | members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year`. Barn: bare egen avatar via RPC `set_my_avatar` | voksen, bare `role = 'child'` |
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
 | today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
+| today_completions (view) | som task_completions: voksen alt, barn bare egne | – | – | – |
 | task_completions | voksen i husstanden, eller barnet som gjorde den (steg 10a) | – (RPC `complete_task`) | – | – (RPC `undo_completion`) |
 | payouts | voksen i husstanden, eller barnet som fikk den (steg 10a) | – (RPC `record_payout`) | – | – |
 | member_balances (view) | voksen: alle barna; barn: bare seg selv (filter i viewet + RLS på tabellene under) | – | – | – |

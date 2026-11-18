@@ -15,6 +15,8 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 - Trykkflater er minst **44 × 44**.
 - **Forfalt** vises som merkelapp (`Chip tone="overdue"`) til høyre på raden, **aldri med dato**.
 - Utført rad: tittelen gjennomstreket i `textMuted`, sjekkboksen fylt med personens ring-farge.
+  I «I dag» står dagens utførte nederst i kortet, med «Gjort av …» når en annen enn den ansvarlige
+  gjorde det. Trykk angrer innen 10 minutter. Har kortet ingenting igjen: «Alt er gjort i dag!».
 - Personfarger styres av avatarnøkkelen (`personColor(member.avatar)`), aldri av navn eller rolle.
 - Bare lys modus. `app.json` har `userInterfaceStyle: "light"`.
 
@@ -116,7 +118,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `Switch` | bryter i primary, med valgfri etikett |
 | `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |
 | `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
-| `SwipeToDelete` | dra raden mot venstre for «Slett» |
+| `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
 | `Toast` / `UndoToast` | mørkt banner nederst med «Angre» |
 | `tabIcon` | Ionicons-ikon til fanene, fylt når valgt |
 | `tabScreenOptions`, `modalScreenOptions` | utseendet på fanelinjen og headerne (`tabOptions.tsx`) |

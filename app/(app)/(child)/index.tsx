@@ -26,7 +26,7 @@ import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCar
 import { JOBS_KEY } from '../../../src/features/tasks/groupToday';
 import { useMemberUpcoming, useTodayTasks } from '../../../src/features/tasks/hooks';
 import { formatKroner } from '../../../src/features/tasks/reward';
-import type { TodayTask } from '../../../src/features/tasks/types';
+import type { Task } from '../../../src/features/tasks/types';
 import { CHILD_UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
@@ -48,7 +48,7 @@ type Toast = { completionId: string; title: string; message: string | null; rewa
  * «I dag» på barnets egen enhet: «Mine oppgaver i dag» i barnets egen farge, og «Ledige jobber».
  * Barnet krysser alltid av for seg selv, med ett trykk. Langt trykk gjør ingenting.
  * Nederst: «Kommende» (2 uker, uten hyppige oppgaver, som barnet ser hver dag uansett) og
- * «Gjort siste 3 dager». Bare visning.
+ * «Gjort siste 3 dager». Den nærmeste forekomsten i «Kommende» kan krysses av tidlig.
  */
 export default function ChildTodayScreen() {
   const { colors, personColor } = useTheme();
@@ -109,7 +109,8 @@ export default function ChildTodayScreen() {
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
   const recentDays = me ? groupRecentByDay(recent, me.id, today) : [];
 
-  function markDone(task: TodayTask) {
+  // Fra «I dag», «Ledige jobber» og sirkelen i «Kommende» (gjort før fristen).
+  function markDone(task: Pick<Task, 'id' | 'title'>) {
     if (!me) return;
     setActionError(null);
     complete.mutate(
@@ -202,6 +203,9 @@ export default function ChildTodayScreen() {
               <UpcomingCard
                 upcoming={upcoming}
                 showReward
+                onComplete={markDone}
+                busyId={busyId}
+                checkColor={color.ring}
                 loading={upcomingPending}
                 emptyText="Ingenting nytt de neste to ukene."
               />

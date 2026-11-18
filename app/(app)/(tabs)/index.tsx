@@ -39,7 +39,7 @@ import {
 } from '../../../src/features/tasks/hooks';
 import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
-import type { TodayTask } from '../../../src/features/tasks/types';
+import type { Task, TodayTask } from '../../../src/features/tasks/types';
 import { UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatDate, formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
@@ -61,8 +61,14 @@ import {
 
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
 
+/** Det som trengs for å krysse av: fra «I dag» (TodayTask) eller «Kommende» (Task). */
+type Completable = Pick<
+  Task,
+  'id' | 'title' | 'recurrence_type' | 'assigned_member_id' | 'job_member_ids' | 'reward_nok'
+>;
+
 /** «Hvem gjorde det?»: hvilke personer som kan velges, og om en er forhåndsvalgt. */
-type Picking = { task: TodayTask; members: Member[]; preselectedId: string | null };
+type Picking = { task: Completable; members: Member[]; preselectedId: string | null };
 
 /** En voksen retter en utført rad: valgene først, så personvelgeren ved «Endre hvem». */
 type Fixing = { completion: TodayCompletion; step: 'menu' | 'pick' };
@@ -76,7 +82,7 @@ type PostponedToast = { taskId: string; message: string };
  * Voksne legger ut jobber med «+» og endrer dem med langt trykk.
  *
  * Personvisning (én person valgt): personens kort, «Kommende» (8 uker, voksne kan trykke for å
- * endre) og «Gjort siste 3 dager». Bare visning.
+ * endre, og sirkelen krysser av den nærmeste forekomsten tidlig) og «Gjort siste 3 dager».
  */
 export default function TodayScreen() {
   const { colors, personColor, sharedColors } = useTheme();
@@ -167,7 +173,7 @@ export default function TodayScreen() {
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
   const recentDays = focused ? groupRecentByDay(recent, focused.id, today) : [];
 
-  function markDone(task: TodayTask, memberId: string) {
+  function markDone(task: Completable, memberId: string) {
     setActionError(null);
     complete.mutate(
       { taskId: task.id, memberId },
@@ -189,7 +195,8 @@ export default function TodayScreen() {
   }
 
   // Som regel ett trykk. Ved lønn eller åpne jobber spør vi hvem som gjorde det (se chooseDoer.ts).
-  function handlePress(task: TodayTask) {
+  // Også sirkelen i «Kommende»: da er oppgaven gjort før fristen.
+  function handlePress(task: Completable) {
     const action = chooseCompletionAction(task, me, members);
     if (action.kind === 'direct') markDone(task, action.memberId);
     if (action.kind === 'pick') {
@@ -403,6 +410,9 @@ export default function TodayScreen() {
               <UpcomingCard
                 upcoming={upcoming}
                 showReward={focused.role === 'child'}
+                onComplete={handlePress}
+                busyId={busyId}
+                checkColor={personColor(focused.avatar).ring}
                 loading={upcomingPending}
                 emptyText="Ingenting planlagt de neste ukene."
                 onOpen={

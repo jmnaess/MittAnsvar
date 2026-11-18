@@ -11,11 +11,14 @@ export function upcomingWindow(today: string, days: number): { from: string; to:
   return { from: addDays(today, 1), to: addDays(today, days) };
 }
 
-/** En forekomst med dato. key er unik også når samme oppgave kommer flere ganger. */
-export type UpcomingItem = { key: string; task: Task; dueOn: string };
+/**
+ * En forekomst med dato. key er unik også når samme oppgave kommer flere ganger.
+ * checkable: raden får sirkel og kan krysses av tidlig (se canCompleteEarly).
+ */
+export type UpcomingItem = { key: string; task: Task; dueOn: string; checkable: boolean };
 
-/** En hyppig oppgave, vist én gang («Hver dag») med neste dato. */
-export type RepeatingItem = { task: Task; nextOn: string };
+/** En hyppig oppgave, vist én gang («Hver dag») med neste dato. checkable som over. */
+export type RepeatingItem = { task: Task; nextOn: string; checkable: boolean };
 
 /** «Denne uken», «Neste uke» eller «Uke 50 · 7.–13. des.». */
 export type UpcomingGroup = { key: string; title: string; items: UpcomingItem[] };
@@ -28,6 +31,21 @@ export type MemberUpcoming = { repeating: RepeatingItem[]; groups: UpcomingGroup
  */
 export function isFrequent(count: number, windowDays: number): boolean {
   return count >= Math.max(2, Math.floor(windowDays / 7));
+}
+
+/** Hver dag (kalender eller intervall). */
+function isDaily(task: Task): boolean {
+  return task.recurrence_unit === 'day' && task.recurrence_every === 1;
+}
+
+/**
+ * Kan forekomsten krysses av tidlig fra «Kommende»? Bare den nærmeste, altså den som er
+ * oppgavens frist (next_due_on). Står oppgaven i «I dag» (frist i dag eller forfalt), er ingen
+ * kommende forekomst lik fristen, og man krysser av i «I dag» som vanlig.
+ * Daglige oppgaver aldri: morgendagens forekomst gjør man ikke i dag.
+ */
+export function canCompleteEarly(task: Task, dueOn: string): boolean {
+  return task.next_due_on === dueOn && !isDaily(task);
 }
 
 function weekTitle(monday: string, today: string): string {
@@ -66,10 +84,14 @@ export function upcomingForMember(
     const task = taskById.get(taskId)!;
     const sorted = [...dates].sort();
     if (isFrequent(sorted.length, windowDays)) {
-      if (!hideFrequent) repeating.push({ task, nextOn: sorted[0] });
+      if (!hideFrequent) {
+        repeating.push({ task, nextOn: sorted[0], checkable: canCompleteEarly(task, sorted[0]) });
+      }
       continue;
     }
-    for (const dueOn of sorted) items.push({ key: `${taskId}:${dueOn}`, task, dueOn });
+    for (const dueOn of sorted) {
+      items.push({ key: `${taskId}:${dueOn}`, task, dueOn, checkable: canCompleteEarly(task, dueOn) });
+    }
   }
 
   repeating.sort((a, b) => a.nextOn.localeCompare(b.nextOn) || a.task.title.localeCompare(b.task.title));

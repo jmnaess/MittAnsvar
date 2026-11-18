@@ -1,6 +1,7 @@
 import { addDays } from '../../../lib/dates';
 import type { Occurrence, Task } from '../types';
 import {
+  canCompleteEarly,
   CHILD_UPCOMING_DAYS,
   isFrequent,
   UPCOMING_DAYS,
@@ -49,7 +50,7 @@ describe('upcomingForMember', () => {
   it('viser en daglig oppgave én gang, med neste dato', () => {
     const daily = task({ id: 'd', title: 'Re opp sengen' });
     const result = run(every('d', 1), [daily]);
-    expect(result.repeating).toEqual([{ task: daily, nextOn: '2026-11-19' }]);
+    expect(result.repeating).toEqual([{ task: daily, nextOn: '2026-11-19', checkable: false }]);
     expect(result.groups).toEqual([]);
   });
 
@@ -135,5 +136,74 @@ describe('upcomingForMember', () => {
     ];
     const tasks = [task({ id: 'z', title: 'Å' }), task({ id: 'a', title: 'B' }), task({ id: 'y', title: 'C' })];
     expect(run(occ, tasks).groups[0].items.map((i) => i.task.id)).toEqual(['y', 'a', 'z']);
+  });
+});
+
+describe('canCompleteEarly', () => {
+  it('bare forekomsten som er oppgavens frist', () => {
+    const t = task({ next_due_on: '2026-11-21', recurrence_unit: 'week', recurrence_every: 1 });
+    expect(canCompleteEarly(t, '2026-11-21')).toBe(true);
+    expect(canCompleteEarly(t, '2026-11-28')).toBe(false);
+  });
+
+  it('aldri daglige oppgaver, verken kalender eller intervall', () => {
+    for (const recurrence_type of ['calendar', 'interval'] as const) {
+      const t = task({ recurrence_type, recurrence_unit: 'day', recurrence_every: 1, next_due_on: '2026-11-19' });
+      expect(canCompleteEarly(t, '2026-11-19')).toBe(false);
+    }
+  });
+
+  it('annenhver dag er ikke daglig', () => {
+    const t = task({ recurrence_unit: 'day', recurrence_every: 2, next_due_on: '2026-11-19' });
+    expect(canCompleteEarly(t, '2026-11-19')).toBe(true);
+  });
+
+  it('aldri uten frist (jobb eller utført engangsoppgave)', () => {
+    expect(canCompleteEarly(task({ next_due_on: null }), '2026-11-19')).toBe(false);
+  });
+});
+
+describe('upcomingForMember: sirkel for tidlig avkrysning', () => {
+  const checkable = (result: ReturnType<typeof run>) =>
+    result.groups.flatMap((g) => g.items.map((i) => [i.dueOn, i.checkable]));
+
+  it('første forekomst får sirkel, senere forekomster av samme oppgave ikke', () => {
+    const t = task({ id: 'b', recurrence_unit: 'week', recurrence_every: 2, next_due_on: '2026-11-19' });
+    expect(checkable(run(every('b', 14), [t]))).toEqual([
+      ['2026-11-19', true],
+      ['2026-12-03', false],
+      ['2026-12-17', false],
+      ['2026-12-31', false],
+    ]);
+  });
+
+  it('oppgave med frist i dag (står i «I dag») gir ingen sirkel', () => {
+    const t = task({ id: 'b', recurrence_unit: 'week', recurrence_every: 2, next_due_on: TODAY });
+    expect(checkable(run(every('b', 14), [t])).every(([, c]) => c === false)).toBe(true);
+  });
+
+  it('forfalt oppgave gir ingen sirkel', () => {
+    const t = task({ id: 'b', recurrence_unit: 'week', recurrence_every: 2, next_due_on: '2026-11-10' });
+    expect(checkable(run(every('b', 14), [t])).every(([, c]) => c === false)).toBe(true);
+  });
+
+  it('engangsoppgave fram i tid får sirkel', () => {
+    const t = task({ id: 'o', recurrence_type: 'once', next_due_on: '2026-11-25' });
+    expect(checkable(run([{ task_id: 'o', due_on: '2026-11-25' }], [t]))).toEqual([['2026-11-25', true]]);
+  });
+
+  it('hyppig ukentlig oppgave får sirkel når neste dato er fristen', () => {
+    const t = task({ id: 'w', recurrence_unit: 'week', recurrence_every: 1, next_due_on: '2026-11-19' });
+    expect(run(every('w', 7), [t]).repeating[0].checkable).toBe(true);
+  });
+
+  it('hyppig ukentlig oppgave med frist i dag får ikke sirkel', () => {
+    const t = task({ id: 'w', recurrence_unit: 'week', recurrence_every: 1, next_due_on: TODAY });
+    expect(run(every('w', 7), [t]).repeating[0].checkable).toBe(false);
+  });
+
+  it('hyppig daglig oppgave får aldri sirkel', () => {
+    const t = task({ id: 'd', recurrence_unit: 'day', recurrence_every: 1, next_due_on: '2026-11-19' });
+    expect(run(every('d', 1), [t]).repeating[0].checkable).toBe(false);
   });
 });

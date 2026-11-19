@@ -5,9 +5,9 @@ import { focusSections } from '../tasks/groupToday';
 import { buildUpcoming, CHILD_UPCOMING_DAYS, type MemberUpcoming, type UpcomingTask } from '../tasks/upcoming';
 
 /**
- * «Kommende» på familieskjermen følger barnets regler: 2 uker, uten hyppige oppgaver. En felles
- * skjerm skal være kort og rolig, og de hyppige står uansett i «I dag». Vinduet i
- * get_family_board er like langt.
+ * «Kommende» på familieskjermen: 2 uker, som på barnets enhet. Ukentlige og andre hyppige
+ * oppgaver vises én gang («Hver uke · neste lør. 21. nov.»), men ikke daglige: de står uansett i
+ * «I dag» hver dag. Vinduet i get_family_board er like langt.
  */
 export const DISPLAY_UPCOMING_DAYS = CHILD_UPCOMING_DAYS;
 
@@ -26,7 +26,7 @@ export function boardPersonView(board: FamilyBoard, memberId: string): BoardPers
     sections: focusSections(boardCards(board), memberId),
     upcoming: buildUpcoming(board.occurrences ?? [], board.upcoming_tasks ?? [], memberId, board.today, {
       windowDays: DISPLAY_UPCOMING_DAYS,
-      hideFrequent: true,
+      hideDaily: true,
     }),
     recentDays: groupRecentByDay(board.recent ?? [], memberId, board.today),
   };

@@ -110,7 +110,7 @@ function weekTitle(monday: string, today: string): string {
  * «Kommende» for én person (memberId), eller for hele husstanden (null: alle personer og felles).
  * Jobber er ikke med, siden de ikke har dato. Hyppige oppgaver (se isFrequent) samles i
  * repeating, én rad hver, med mindre hideFrequent er satt; da vises de ikke i det hele tatt
- * (barnets egen visning og «Alle»). Månedsoppgaver i neste måned legges i nextMonth, og
+ * (barnets egen visning og «Alle»). hideDaily skjuler bare de daglige av dem (familieskjermen). Månedsoppgaver i neste måned legges i nextMonth, og
  * månedsoppgaver lenger fram utelates (de kommer med når de blir neste måned). Resten
  * grupperes per ISO-uke, sortert på dato og tittel.
  */
@@ -119,7 +119,11 @@ export function buildUpcoming<T extends UpcomingTask>(
   tasks: T[],
   memberId: string | null,
   today: string,
-  { windowDays, hideFrequent = false }: { windowDays: number; hideFrequent?: boolean },
+  {
+    windowDays,
+    hideFrequent = false,
+    hideDaily = false,
+  }: { windowDays: number; hideFrequent?: boolean; hideDaily?: boolean },
 ): MemberUpcoming<T> {
   const taskById = new Map(
     tasks
@@ -155,7 +159,7 @@ export function buildUpcoming<T extends UpcomingTask>(
     const task = taskById.get(taskId)!;
     const sorted = [...dates].sort();
     if (isFrequent(sorted.length, windowDays)) {
-      if (!hideFrequent) {
+      if (!hideFrequent && !(hideDaily && isDaily(task))) {
         repeating.push({ task, nextOn: sorted[0], checkable: canCompleteEarly(task, sorted[0]) });
       }
       continue;

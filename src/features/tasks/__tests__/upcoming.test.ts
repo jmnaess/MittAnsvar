@@ -24,7 +24,7 @@ function every(taskId: string, step: number, windowDays = UPCOMING_DAYS): Occurr
 const run = (
   occ: Occurrence[],
   tasks: Task[],
-  opts: { hideFrequent?: boolean; windowDays?: number; memberId?: string | null } = {},
+  opts: { hideFrequent?: boolean; hideDaily?: boolean; windowDays?: number; memberId?: string | null } = {},
 ) => {
   const { memberId = 'leah', ...rest } = opts;
   return buildUpcoming(occ, tasks, memberId, TODAY, { windowDays: UPCOMING_DAYS, ...rest });
@@ -91,6 +91,15 @@ describe('buildUpcoming', () => {
     });
     expect(result.repeating).toEqual([]);
     expect(result.groups.flatMap((g) => g.items.map((i) => i.task.id))).toEqual(['o']);
+  });
+
+  it('skjuler bare daglige med hideDaily (familieskjermen): ukentlige vises én gang', () => {
+    const daily = task({ id: 'd', recurrence_unit: 'day', recurrence_every: 1 });
+    const weekly = task({ id: 'w', recurrence_unit: 'week', recurrence_every: 1, next_due_on: '2026-11-19' });
+    const occ = [...every('d', 1, CHILD_UPCOMING_DAYS), ...every('w', 7, CHILD_UPCOMING_DAYS)];
+    const result = run(occ, [daily, weekly], { hideDaily: true, windowDays: CHILD_UPCOMING_DAYS });
+    expect(result.repeating.map((r) => [r.task.id, r.nextOn])).toEqual([['w', '2026-11-19']]);
+    expect(result.groups).toEqual([]);
   });
 
   it('tar bare med personens egne oppgaver, ikke felles eller andres', () => {

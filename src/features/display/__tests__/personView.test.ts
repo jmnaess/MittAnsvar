@@ -120,7 +120,7 @@ describe('boardPersonView', () => {
     expect(view.sections[0].data).toEqual([]);
   });
 
-  it('«Kommende»: bare personens oppgaver, uten hyppige (ukentlige og oftere)', () => {
+  it('«Kommende»: bare personens oppgaver, ukentlige én gang, uten daglige', () => {
     const view = boardPersonView(
       board({
         upcoming_tasks: [
@@ -142,9 +142,25 @@ describe('boardPersonView', () => {
       }),
       'k',
     );
-    expect(view.upcoming.repeating).toEqual([]);
+    expect(view.upcoming.repeating.map((r) => [r.task.id, r.nextOn])).toEqual([['k-uke', '2026-11-26']]);
     const ids = view.upcoming.groups.flatMap((g) => g.items.map((i) => i.task.id));
     expect(ids).toEqual(['k-annenhver']);
+  });
+
+  it('«Kommende»: oppgaver hver 2. dag er ikke daglige og vises én gang', () => {
+    const view = boardPersonView(
+      board({
+        upcoming_tasks: [
+          upcomingTask('k-annenhver-dag', { recurrence_unit: 'day', recurrence_every: 2, next_due_on: addDays(TODAY, 2) }),
+        ],
+        occurrences: Array.from({ length: DISPLAY_UPCOMING_DAYS / 2 }, (_, i) => ({
+          task_id: 'k-annenhver-dag',
+          due_on: addDays(TODAY, 2 * (i + 1)),
+        })),
+      }),
+      'k',
+    );
+    expect(view.upcoming.repeating.map((r) => r.task.id)).toEqual(['k-annenhver-dag']);
   });
 
   it('«Kommende»: tomt når databasen ikke sender personvisningen ennå', () => {

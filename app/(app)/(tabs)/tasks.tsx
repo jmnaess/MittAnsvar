@@ -8,6 +8,7 @@ import { EverydayTasks } from '../../../src/features/tasks/components/EverydayTa
 import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
 import type { TaskSection } from '../../../src/features/tasks/section';
 import {
+  FROM_TASKS,
   getTasksSegment,
   setTasksSegment,
   takeReveal,
@@ -29,8 +30,8 @@ const NOTICE: Record<TaskSection, string> = {
  * «Oppgaver»: segmentene «Hverdag» (EverydayTasks) og «Årshjul» (YearWheel). Hvilket som er valgt,
  * huskes per enhet (tasksSegment.ts). /tasks?view=year velger Årshjul (de gamle lenkene til /year
  * sendes hit, se app/(app)/year.tsx).
- * Etter lagring i et skjema byttes det til segmentet der oppgaven havnet. I Årshjul rulles det til
- * måneden. Var det et annet segment, sier en kort melding nederst fra.
+ * Etter lagring i et skjema åpnet herfra (FROM_TASKS) byttes det til segmentet der oppgaven havnet.
+ * I Årshjul rulles det til måneden én gang. Var det et annet segment, sier en kort melding nederst fra.
  */
 export default function TasksScreen() {
   const styles = useStyles();
@@ -67,8 +68,8 @@ export default function TasksScreen() {
 
   /** Pluss i Hverdag: med en person valgt i filteret rett til skjemaet med personen forhåndsvalgt. */
   function create() {
-    if (segment === 'year') router.push('/year-task/new');
-    else if (personId) router.push({ pathname: '/task/new', params: { memberId: personId } });
+    if (segment === 'year') router.push({ pathname: '/year-task/new', params: FROM_TASKS });
+    else if (personId) router.push({ pathname: '/task/new', params: { memberId: personId, ...FROM_TASKS } });
     else setCreating(true);
   }
 
@@ -102,13 +103,13 @@ export default function TasksScreen() {
           onPersonChange={setPersonId}
         />
       ) : (
-        <YearWheel header={header} reveal={reveal} />
+        <YearWheel header={header} reveal={reveal} onRevealed={() => setReveal(null)} />
       )}
       <NewTaskSheet
         visible={creating}
         onClose={() => setCreating(false)}
         taskLabel="Oppgave"
-        taskHref="/task/new"
+        taskHref={{ pathname: '/task/new', params: FROM_TASKS }}
       />
       {notice && (
         <NoticeToast resetKey={String(notice.id)} message={notice.message} onHide={() => setNotice(null)} />

@@ -1,8 +1,10 @@
 // Hvilket segment i «Oppgaver» som er valgt («Hverdag» eller «Årshjul»). Per enhet, i samme
 // lager som åpne grupper (openGroups.ts). Standard er Hverdag.
 //
-// Etter lagring husker modulen også hvor oppgaven havnet (revealSaved). «Oppgaver» bytter dit
-// neste gang skjermen får fokus (takeReveal), og sier fra hvis det er et annet segment.
+// Etter lagring i et skjema som er åpnet fra «Oppgaver» (parameteren from=tasks, FROM_TASKS),
+// husker modulen hvor oppgaven havnet (revealSaved). «Oppgaver» bytter dit når skjermen får fokus
+// igjen (takeReveal), og sier fra hvis det er et annet segment. Skjemaer åpnet fra «I dag» sender
+// ikke parameteren, så de rører ikke «Oppgaver».
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { secureStorage } from '../../lib/secureStorage';
@@ -11,8 +13,14 @@ import { type TaskSection, taskSection } from './section';
 import type { TaskInput } from './types';
 
 const STORAGE_KEY = 'tasks.segment';
-/** Eldre lagringer vises ikke. Da ble oppgaven lagret et annet sted (f.eks. fra «I dag»). */
-const REVEAL_MAX_AGE_MS = 30_000;
+
+/** Parameteren skjemaene får når de åpnes fra «Oppgaver». */
+export const FROM_TASKS = { from: 'tasks' } as const;
+
+/** Er skjemaet åpnet fra «Oppgaver»? */
+export function isFromTasks(params: { from?: string | string[] }): boolean {
+  return params.from === FROM_TASKS.from;
+}
 
 let current: TaskSection = 'everyday';
 let changedBeforeLoad = false;
@@ -78,7 +86,7 @@ export type Reveal = { segment: TaskSection; sectionKey: string | null; at: numb
 
 let pending: Reveal | null = null;
 
-/** Kalles etter lagring. Med flere oppgaver (flere måneder) gjelder den første. */
+/** Kalles etter lagring i et skjema fra «Oppgaver». Med flere oppgaver (flere måneder) gjelder den første. */
 export function revealSaved(inputs: TaskInput[], now = Date.now()) {
   const first = inputs[0];
   if (!first) return;
@@ -86,9 +94,9 @@ export function revealSaved(inputs: TaskInput[], now = Date.now()) {
   pending = { segment, sectionKey: segment === 'year' ? yearSectionKey(first) : null, at: now };
 }
 
-/** Henter og tømmer det ventende. null når ingenting er lagret de siste 30 sekundene. */
-export function takeReveal(now = Date.now()): Reveal | null {
+/** Henter og tømmer det ventende. null når ingenting er lagret. */
+export function takeReveal(): Reveal | null {
   const reveal = pending;
   pending = null;
-  return reveal && now - reveal.at <= REVEAL_MAX_AGE_MS ? reveal : null;
+  return reveal;
 }

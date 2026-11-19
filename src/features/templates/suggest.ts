@@ -1,7 +1,7 @@
 import { MONTH_NAMES } from '../../lib/dates';
 import type { Household, HomeProfile } from '../household/types';
 import { describeRecurrence, isSeasonal } from '../tasks/recurrence';
-import { isLongInterval, taskSection } from '../tasks/section';
+import { taskSection } from '../tasks/section';
 import type { Recurrence, Task } from '../tasks/types';
 import { meetsRequires } from './requires';
 import type { TaskTemplate } from './types';
@@ -19,11 +19,11 @@ export function fitsHousehold(t: TaskTemplate, household: SuggestionHousehold): 
 }
 
 /**
- * Årshjulet: årlige maler med måned, sesongmaler (i periodens første måned) og lange
- * intervallmaler (minst ca. 3 måneder, under «Med jevne mellomrom»). Se tasks/section.ts.
+ * Årshjulet: samme regel som for oppgaver (tasks/section.ts). Årlige maler står under måneden,
+ * sesongmaler i periodens første måned, og lange intervallmaler under «Med jevne mellomrom».
  */
 function isYearWheelTemplate(t: TaskTemplate): boolean {
-  return (t.recurrence_unit === 'year' && t.month !== null) || isSeasonal(t) || isLongInterval(t);
+  return taskSection(t) === 'year';
 }
 
 /** Måneden en rad står under i årshjulet: årlig måned, eller periodens første måned. */

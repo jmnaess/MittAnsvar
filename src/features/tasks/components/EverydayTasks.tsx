@@ -28,6 +28,7 @@ import { describeJobMembers, jobMembers } from '../job';
 import { toggleGroup, useOpenGroups } from '../openGroups';
 import { isJob } from '../recurrence';
 import { taskSection } from '../section';
+import { FROM_TASKS } from '../tasksSegment';
 import {
   bundleTasks,
   filterTasks,
@@ -127,9 +128,11 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
     return names.length > 0 ? joinNames(names) : 'Felles';
   }
 
-  // Jobber endres i jobbskjemaet, alt annet i oppgaveskjemaet.
+  // Jobber endres i jobbskjemaet (de står alltid i Hverdag), alt annet i oppgaveskjemaet.
   const edit = (task: Task) =>
-    router.push({ pathname: isJob(task) ? '/job/[id]' : '/task/[id]', params: { id: task.id } });
+    isJob(task)
+      ? router.push({ pathname: '/job/[id]', params: { id: task.id } })
+      : router.push({ pathname: '/task/[id]', params: { id: task.id, ...FROM_TASKS } });
 
   function pickOwner(member: Member) {
     const task = picking?.find((t) => t.assigned_member_id === member.id);
@@ -174,6 +177,8 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
   }
 
   const hasTasks = tasks.length > 0;
+  // Husstanden har oppgaver, men alle står i Årshjul.
+  const onlyYearly = !hasTasks && (allTasks?.length ?? 0) > 0;
 
   return (
     <>
@@ -213,6 +218,11 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
         ListEmptyComponent={
           isPending ? undefined : hasTasks ? (
             <EmptyState title="Ingen treff" text="Prøv et annet søk, eller velg Alle." />
+          ) : onlyYearly ? (
+            <EmptyState
+              title="Ingen hverdagsoppgaver ennå"
+              text="Oppgavene dere har, står i Årshjul. Trykk + for å lage en hverdagsoppgave."
+            />
           ) : (
             <EmptyState title="Ingen oppgaver ennå" text="Trykk + for å lage den første." />
           )

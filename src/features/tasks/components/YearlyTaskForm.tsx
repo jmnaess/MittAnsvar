@@ -5,6 +5,7 @@ import { MONTH_NAMES } from '../../../lib/dates';
 import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
 import type { CategoryKey } from '../categories';
+import { YEARLY_ADULTS_HINT } from '../assignees';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
 import { toYearlyInputs } from '../yearly';
 import { CategoryPicker } from './CategoryPicker';
@@ -94,6 +95,7 @@ export function YearlyTaskFields({ form, members, disabled }: Props) {
         onChange={form.setAssignee}
         disabled={disabled}
       />
+      {members.some((m) => m.role === 'child') && <Hint>{YEARLY_ADULTS_HINT}</Hint>}
       {!assigneeIsAdult && (
         <>
           <TextField

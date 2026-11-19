@@ -4,10 +4,11 @@ import { toIsoDate } from '../../../lib/dates';
 import { Avatar, ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
-import { allAdults, nextAssignees, SHARED, toTaskInputs } from '../assignees';
+import { allAdults, allowedAssignees, nextAssignees, SHARED, toTaskInputs, YEARLY_ADULTS_HINT } from '../assignees';
 import { type CategoryKey, toCategory } from '../categories';
 import { defaultRecurrenceForm, fromRecurrence, sameWhen, toRecurrence } from '../recurrence';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
+import { taskSection } from '../section';
 import type { TaskInput } from '../types';
 import { CategoryPicker } from './CategoryPicker';
 import { RecurrencePicker } from './RecurrencePicker';
@@ -55,11 +56,17 @@ export function useTaskForm(
     schedule = { ...schedule, once_on: initial.once_on };
   }
 
+  // Blir den en årsoppgave (Årshjul), kan bare voksne og Felles ha den. Unntak: den som allerede
+  // har en eksisterende årsoppgave, også om det er et barn.
+  const yearly = schedule !== null && taskSection(schedule) === 'year';
+  const keepId = initial && taskSection(initial) === 'year' ? initial.assigned_member_id : null;
+  const chosen = allowedAssignees(assignees, members, { yearly, keepId });
+
   const values: TaskInput[] | null =
     trimmedTitle.length > 0 && schedule && rewardNok !== undefined
       ? toTaskInputs(
           { title: trimmedTitle, category, job_member_ids: [], reward_nok: rewardNok, ...schedule },
-          assignees,
+          chosen,
           members,
         )
       : null;
@@ -70,8 +77,12 @@ export function useTaskForm(
     multiple: !initial,
     title,
     setTitle,
-    assignees,
+    /** Utvalget slik det lagres (uten barn når oppgaven blir en årsoppgave). */
+    assignees: chosen,
     setAssignees,
+    /** Oppgaven blir en årsoppgave: bare voksne og Felles (og keepId) kan velges. */
+    yearly,
+    keepId,
     recurrenceForm,
     setRecurrenceForm,
     reward,
@@ -94,21 +105,17 @@ type Props = {
   canSetReward: boolean;
   /** false = uten «Når?» («Oppgave i dag» fra «I dag»). Skjemaet står da på I dag. */
   showWhen?: boolean;
-  /**
-   * Bare voksne og Felles kan velges (en årsoppgave som endres). Unntaket er den som har oppgaven
-   * nå, så et barn som allerede er ansvarlig, fortsatt vises og står valgt. undefined = alle kan velges.
-   */
-  adultsOnlyExcept?: string | null;
   disabled?: boolean;
 };
 
 /** Tittel, når, hvem som har ansvaret, kategori og lønn. */
-export function TaskFields({ form, members, canSetReward, showWhen = true, adultsOnlyExcept, disabled }: Props) {
+export function TaskFields({ form, members, canSetReward, showWhen = true, disabled }: Props) {
   const photoOf = useMemberPhotoLookup(members[0]?.household_id);
-  const choosable =
-    adultsOnlyExcept === undefined
-      ? members
-      : members.filter((m) => m.role === 'adult' || m.id === adultsOnlyExcept);
+  // En årsoppgave er for voksne: barna vises ikke (unntatt et barn som allerede har den).
+  const choosable = form.yearly
+    ? members.filter((m) => m.role === 'adult' || m.id === form.keepId)
+    : members;
+  const childrenHidden = choosable.length < members.length;
   const assigneeOptions = [
     { value: SHARED, label: 'Felles', icon: 'people-outline' as const },
     ...choosable.map((m) => ({
@@ -163,6 +170,7 @@ export function TaskFields({ form, members, canSetReward, showWhen = true, adult
               ? `Lager ${form.assignees.length} oppgaver, én til hver. De krysses av hver for seg.`
               : 'Velg én eller flere. Felles betyr at hvem som helst kan gjøre den.'}
           </Hint>
+          {childrenHidden && <Hint>{YEARLY_ADULTS_HINT}</Hint>}
         </>
       ) : (
         <>
@@ -174,6 +182,7 @@ export function TaskFields({ form, members, canSetReward, showWhen = true, adult
             disabled={disabled}
           />
           <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
+          {childrenHidden && <Hint>{YEARLY_ADULTS_HINT}</Hint>}
         </>
       )}
       <CategoryPicker value={form.category} onChange={form.setCategory} disabled={disabled} />

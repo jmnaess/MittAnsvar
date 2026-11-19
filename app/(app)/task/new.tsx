@@ -3,6 +3,7 @@ import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/h
 import { initialAssignees } from '../../../src/features/tasks/assignees';
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useCreateTasks } from '../../../src/features/tasks/hooks';
+import { isFromTasks, revealSaved } from '../../../src/features/tasks/tasksSegment';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { Message, ModalFormScreen } from '../../../src/ui';
 
@@ -11,7 +12,8 @@ import { Message, ModalFormScreen } from '../../../src/ui';
  * er forhåndsvalgt (som «+ Ny oppgave til Leah» i «I dag»).
  */
 export default function NewTaskScreen() {
-  const { memberId } = useLocalSearchParams<{ memberId?: string }>();
+  const params = useLocalSearchParams<{ memberId?: string; from?: string }>();
+  const { memberId } = params;
   // Skjermen er bare tilgjengelig med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const { data: members } = useMembers(household!.id);
@@ -21,7 +23,15 @@ export default function NewTaskScreen() {
 
   function save() {
     // Én oppgave per valgt person, i ett kall: enten lagres alle, eller ingen.
-    if (form.values) createTasks.mutate(form.values, { onSuccess: () => router.back() });
+    const values = form.values;
+    if (!values) return;
+    createTasks.mutate(values, {
+      onSuccess: () => {
+        // Fra «Oppgaver»: vis oppgaven i segmentet der den havnet.
+        if (isFromTasks(params)) revealSaved(values);
+        router.back();
+      },
+    });
   }
 
   return (

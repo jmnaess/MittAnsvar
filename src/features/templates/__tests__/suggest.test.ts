@@ -136,6 +136,19 @@ describe('lange intervallmaler i årshjulet', () => {
     ).map((t) => t.id);
     expect(ids).toEqual(['lang', 'aar', 'dager']);
   });
+
+  it('samme regel som for oppgaver: en årlig mal uten måned vises som mal i «Med jevne mellomrom»', () => {
+    const yearly = template('uten-maaned', null, {
+      recurrence_type: 'calendar',
+      recurrence_unit: 'year',
+      recurrence_every: 1,
+      household_types: null,
+      housing_types: null,
+      requires: null,
+    });
+    expect(suggestForHousehold([yearly], household).map((t) => t.id)).toEqual(['uten-maaned']);
+    expect(groupByMonth([yearly], [])[12].data.map((i) => i.key)).toEqual(['t-uten-maaned']);
+  });
 });
 
 describe('describeEvery', () => {

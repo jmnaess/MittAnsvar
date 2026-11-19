@@ -13,10 +13,12 @@ type Props = {
   onToggle: (on: boolean) => void;
   /** Gjentakelse og neste frist i én tekst («Hver 3. måned · neste i mars»). Brukes i «Med jevne mellomrom». */
   when?: string;
+  /** Åpner oppgaven malen er aktivert som. Utelatt = bare bryteren. */
+  onPress?: () => void;
 };
 
-/** Én mal i årshjulet: tittel, kort forklaring, bryter og neste frist når den er aktivert. */
-export function TemplateRow({ template, task, value, disabled, onToggle, when }: Props) {
+/** Én mal i årshjulet: tittel, kort forklaring, bryter og neste frist når den er aktivert. Trykk åpner oppgaven. */
+export function TemplateRow({ template, task, value, disabled, onToggle, when, onPress }: Props) {
   return (
     <ListRow
       title={template.title}
@@ -29,6 +31,8 @@ export function TemplateRow({ template, task, value, disabled, onToggle, when }:
               task && `Neste frist: ${formatNextDue(task)}`,
             ]
       }
+      onPress={onPress}
+      accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}
       right={
         <Switch
           value={value}

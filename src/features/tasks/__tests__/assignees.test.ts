@@ -1,6 +1,8 @@
 import type { Member } from '../../household/types';
 import {
   allAdults,
+  allowedAssignees,
+  canHaveYearlyTask,
   initialAssignees,
   newTaskForLabel,
   nextAssignees,
@@ -92,5 +94,27 @@ describe('initialAssignees', () => {
 
   it('tar den første når ruteparameteren er en liste', () => {
     expect(initialAssignees(['leah', 'ola'])).toEqual(['leah']);
+  });
+});
+
+describe('årsoppgaver er for voksne', () => {
+  it('voksne og Felles kan ha en årsoppgave, barn ikke', () => {
+    expect(canHaveYearlyTask('mor', members, null)).toBe(true);
+    expect(canHaveYearlyTask(SHARED, members, null)).toBe(true);
+    expect(canHaveYearlyTask('leah', members, null)).toBe(false);
+  });
+
+  it('et barn som allerede har årsoppgaven, beholdes', () => {
+    expect(canHaveYearlyTask('leah', members, 'leah')).toBe(true);
+    expect(allowedAssignees(['leah'], members, { yearly: true, keepId: 'leah' })).toEqual(['leah']);
+  });
+
+  it('barna fjernes når oppgaven blir årlig, og tomt blir Felles', () => {
+    expect(allowedAssignees(['mor', 'leah'], members, { yearly: true, keepId: null })).toEqual(['mor']);
+    expect(allowedAssignees(['leah', 'ola'], members, { yearly: true, keepId: null })).toEqual([SHARED]);
+  });
+
+  it('ikke årlig: utvalget er uendret', () => {
+    expect(allowedAssignees(['leah', 'ola'], members, { yearly: false, keepId: null })).toEqual(['leah', 'ola']);
   });
 });

@@ -1,10 +1,11 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import {
   useYearlyTaskForm,
   YearlyTaskFields,
 } from '../../../src/features/tasks/components/YearlyTaskForm';
 import { useCreateTasks } from '../../../src/features/tasks/hooks';
+import { isFromTasks, revealSaved } from '../../../src/features/tasks/tasksSegment';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { Message, ModalFormScreen } from '../../../src/ui';
 
@@ -18,9 +19,18 @@ export default function NewYearlyTaskScreen() {
   const { data: members } = useMembers(household!.id);
   const createTasks = useCreateTasks(household!.id);
   const form = useYearlyTaskForm();
+  const params = useLocalSearchParams<{ from?: string }>();
 
   function save() {
-    if (form.value) createTasks.mutate(form.value, { onSuccess: () => router.back() });
+    const values = form.value;
+    if (!values) return;
+    createTasks.mutate(values, {
+      onSuccess: () => {
+        // Fra «Oppgaver»: rull til måneden oppgaven havnet i.
+        if (isFromTasks(params)) revealSaved(values);
+        router.back();
+      },
+    });
   }
 
   return (

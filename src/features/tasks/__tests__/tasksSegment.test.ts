@@ -60,20 +60,20 @@ it('et valg før det lagrede er lest, skriver ikke det lagrede over valget', asy
 it('revealSaved: årsoppgave gir Årshjul og måneden', () => {
   const { revealSaved, takeReveal } = load();
   revealSaved([input({ recurrence_unit: 'year', month: 4 }), input({ recurrence_unit: 'year', month: 9 })], 1000);
-  expect(takeReveal(2000)).toEqual({ segment: 'year', sectionKey: 'month-4', at: 1000 });
-  expect(takeReveal(2000)).toBeNull();
+  expect(takeReveal()).toEqual({ segment: 'year', sectionKey: 'month-4', at: 1000 });
+  expect(takeReveal()).toBeNull();
 });
 
 it('revealSaved: langt intervall gir «Med jevne mellomrom», ukentlig gir Hverdag', () => {
   const { revealSaved, takeReveal } = load();
   revealSaved([input({ recurrence_type: 'interval', recurrence_unit: 'month', recurrence_every: 3 })], 0);
-  expect(takeReveal(0)?.sectionKey).toBe('interval');
+  expect(takeReveal()?.sectionKey).toBe('interval');
   revealSaved([input({})], 0);
-  expect(takeReveal(0)).toEqual({ segment: 'everyday', sectionKey: null, at: 0 });
+  expect(takeReveal()).toEqual({ segment: 'everyday', sectionKey: null, at: 0 });
 });
 
-it('takeReveal ignorerer lagringer eldre enn 30 sekunder', () => {
-  const { revealSaved, takeReveal } = load();
-  revealSaved([input({})], 0);
-  expect(takeReveal(30_001)).toBeNull();
+it('isFromTasks: bare skjemaer åpnet fra «Oppgaver»', () => {
+  const { FROM_TASKS, isFromTasks } = load();
+  expect(isFromTasks(FROM_TASKS)).toBe(true);
+  expect(isFromTasks({})).toBe(false);
 });

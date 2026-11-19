@@ -58,6 +58,8 @@ export default function AppLayout() {
     <Stack screenOptions={modalScreenOptions(colors)}>
       <Stack.Protected guard={isAdultHome}>
         <Stack.Screen name="(tabs)" />
+        {/* Den gamle «Årshjul»-fanen: sender videre til «Oppgaver» med Årshjul valgt. */}
+        <Stack.Screen name="year" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen
           name="display/link"
           options={{ headerShown: true, title: 'Legg til familieskjerm', presentation: 'modal' }}

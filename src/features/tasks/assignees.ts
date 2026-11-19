@@ -56,3 +56,29 @@ export function toTaskInputs(
     };
   });
 }
+
+/** Hintet under «Hvem har ansvaret?» når barna er tatt bort fordi oppgaven blir en årsoppgave. */
+export const YEARLY_ADULTS_HINT = 'Årsoppgaver er for voksne, så barna kan ikke velges her.';
+
+/**
+ * Kan personen ha en årsoppgave (Årshjul)? Voksne og «Felles». keepId er den som allerede har en
+ * eksisterende årsoppgave. Den vises fortsatt som valgt, også om det er et barn.
+ */
+export function canHaveYearlyTask(id: string, members: Pick<Member, 'id' | 'role'>[], keepId: string | null): boolean {
+  return id === SHARED || id === keepId || members.some((m) => m.id === id && m.role === 'adult');
+}
+
+/**
+ * Utvalget som lagres. Blir oppgaven en årsoppgave, fjernes barna (unntatt keepId). Er ingen igjen,
+ * blir det «Felles». Ellers uendret. Valget i skjemaet beholdes, så barna kommer tilbake hvis
+ * gjentakelsen endres tilbake.
+ */
+export function allowedAssignees(
+  assignees: string[],
+  members: Pick<Member, 'id' | 'role'>[],
+  rule: { yearly: boolean; keepId: string | null },
+): string[] {
+  if (!rule.yearly) return assignees;
+  const kept = assignees.filter((id) => canHaveYearlyTask(id, members, rule.keepId));
+  return kept.length > 0 ? kept : [SHARED];
+}

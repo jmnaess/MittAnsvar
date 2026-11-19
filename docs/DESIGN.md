@@ -206,8 +206,13 @@ Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`), en rund + (`I
 Hvilket segment en oppgave står i, avgjør `taskSection` i `features/tasks/section.ts`: Årshjul for årlige
 oppgaver, sesongoppgaver og intervaller på minst ca. 3 måneder (90 dager, 13 uker, 3 måneder eller år).
 Alt annet står i Hverdag, også engangsoppgaver langt fram og ledige jobber.
-Etter lagring i et skjema byttes det til segmentet oppgaven havnet i. I Årshjul rulles det til måneden.
-Var det et annet segment, vises `NoticeToast` («Lagt i Årshjul» / «Lagt i Hverdag»).
+Etter lagring i et skjema som er åpnet fra «Oppgaver» (parameteren `from=tasks`, `FROM_TASKS`) byttes det
+til segmentet oppgaven havnet i. I Årshjul rulles det til måneden, én gang. Var det et annet segment, vises
+`NoticeToast` («Lagt i Årshjul» / «Lagt i Hverdag»). Skjemaer åpnet fra «I dag» rører ikke «Oppgaver».
+Årsoppgaver er for voksne: når det skjemaet skal lagre, blir en årsoppgave (i «Ny oppgave», «Endre oppgave»
+og «Ny årlig oppgave»), kan bare voksne og Felles velges, og hintet «Årsoppgaver er for voksne …» forklarer
+hvorfor barna er borte. Et barn som allerede har en eksisterende årsoppgave, vises fortsatt som valgt
+(`allowedAssignees` i `features/tasks/assignees.ts`).
 
 **Hverdag** (`features/tasks/components/EverydayTasks.tsx`). + åpner «Hva vil du lage?»; med en person valgt i
 filteret går den rett til `/task/new` med personen forhåndsvalgt. Under segmentene: `SearchField` og
@@ -229,10 +234,9 @@ overskriften teller rader. Bare visningen: hver person har fortsatt sin egen opp
 
 **Årshjul** (`features/templates/components/YearWheel.tsx`). Januar til desember, så «Med jevne mellomrom»
 (lange intervaller, raden viser «Hver 3. måned · neste i mars»). Maler med bryter (`TemplateRow`) og egne
-oppgaver merket «Egen» (`OwnYearTaskRow`), begge `ListRow`. Øverst en kort forklaring, «Velg anbefalte» og
-«Fortell om hjemmet for flere forslag» (voksne). + åpner «Ny årlig oppgave» og vises bare for voksne. Der kan
-bare voksne og Felles velges som ansvarlig, og det samme gjelder når en årsoppgave endres (den som har den nå,
-beholdes). Ikke personfilter.
+oppgaver merket «Egen» (`OwnYearTaskRow`), begge `ListRow`. Voksne kan trykke på en egen oppgave, eller en
+mal som er på, for å endre oppgaven. Øverst en kort forklaring, «Velg anbefalte» og «Fortell om hjemmet for
+flere forslag» (voksne). + åpner «Ny årlig oppgave» og vises bare for voksne. Ikke personfilter.
 
 Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.

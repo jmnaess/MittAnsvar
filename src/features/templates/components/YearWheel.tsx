@@ -8,6 +8,7 @@ import { usePullToRefresh } from '../../../lib/usePullToRefresh';
 import { hasAnyAnswer } from '../../household/homeProfile';
 import { useMembers, useMyHousehold, useMyMember } from '../../household/hooks';
 import { useArchiveTask, useTasks } from '../../tasks/hooks';
+import { FROM_TASKS } from '../../tasks/tasksSegment';
 import type { Task } from '../../tasks/types';
 import { useActivateTemplates, useTemplates } from '../hooks';
 import {
@@ -28,15 +29,20 @@ type Props = {
   header: ReactElement;
   /** Seksjonen som skal rulles fram (etter lagring). id endres for hver ny lagring. */
   reveal: { sectionKey: string; id: number } | null;
+  /** Kalles når rullingen er startet, så den ikke gjentas neste gang Årshjul vises. */
+  onRevealed: () => void;
 };
+
+/** Så mange ganger prøver listen på nytt når den ikke kommer fram til seksjonen. */
+const MAX_SCROLL_RETRIES = 3;
 
 /**
  * «Årshjul» i «Oppgaver»: januar til desember, så «Med jevne mellomrom» (lange intervaller).
  * Hver seksjon viser malene som passer husstanden, med en bryter for å aktivere (lage oppgave) eller
- * deaktivere (arkivere den), og husstandens egne oppgaver, merket «Egen». Trykk på en egen oppgave
- * åpner den. Voksne lager nye med «+» øverst (én eller flere måneder).
+ * deaktivere (arkivere den), og husstandens egne oppgaver, merket «Egen». Voksne kan trykke på en egen
+ * oppgave eller en mal som er på, for å endre oppgaven. Voksne lager nye med «+» øverst.
  */
-export function YearWheel({ header, reveal }: Props) {
+export function YearWheel({ header, reveal, onRevealed }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
@@ -67,18 +73,35 @@ export function YearWheel({ header, reveal }: Props) {
   for (const t of tasks.data ?? []) if (t.template_id) taskByTemplate.set(t.template_id, t);
   const notActive = suggested.filter((t) => !taskByTemplate.has(t.id));
 
-  // Rull til seksjonen der en lagret oppgave havnet, når listen er hentet.
+  // Rull til seksjonen der en lagret oppgave havnet, når listen er hentet. Én gang per lagring:
+  // onRevealed tømmer reveal, så det ikke rulles på nytt når segmentet byttes fram og tilbake.
   const listRef = useRef<SectionList<YearItem, MonthSection>>(null);
+  const targetIndex = useRef(-1);
+  const retries = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loaded = !tasks.isPending && !templates.isPending;
   const revealIndex = reveal ? sections.findIndex((s) => s.key === reveal.sectionKey) : -1;
+
+  function scrollToTarget(delayMs: number) {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      if (targetIndex.current < 0) return;
+      listRef.current?.scrollToLocation({ sectionIndex: targetIndex.current, itemIndex: 0, viewOffset: 8 });
+    }, delayMs);
+  }
+
+  // Ingen tidtaker skal gå etter at Årshjul er lukket.
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
   useEffect(() => {
     if (!loaded || revealIndex < 0) return;
+    targetIndex.current = revealIndex;
+    retries.current = 0;
     // Vent til listen er tegnet med de nye radene.
-    const timer = setTimeout(
-      () => listRef.current?.scrollToLocation({ sectionIndex: revealIndex, itemIndex: 0, viewOffset: 8 }),
-      100,
-    );
-    return () => clearTimeout(timer);
+    scrollToTarget(100);
+    onRevealed();
     // Bare når en ny lagring skal vises, ikke ved hver oppdatering av listen.
   }, [reveal?.id, loaded]);
 
@@ -145,18 +168,18 @@ export function YearWheel({ header, reveal }: Props) {
       // Uten faste høyder kan listen ikke alltid rulle rett til en seksjon langt nede.
       // Rull omtrent dit først, og prøv igjen når radene der er tegnet.
       onScrollToIndexFailed={(info) => {
+        if (retries.current >= MAX_SCROLL_RETRIES) return;
+        retries.current += 1;
         listRef.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
-        setTimeout(
-          () => listRef.current?.scrollToLocation({ sectionIndex: revealIndex, itemIndex: 0, viewOffset: 8 }),
-          100,
-        );
+        scrollToTarget(100);
       }}
       ListHeaderComponent={
         <View style={styles.header}>
           {header}
           <Text variant="meta" color={colors.textMuted}>
-            Faste oppgaver gjennom året. Slå på det som passer, eller lag egne med +. Når
-            måneden kommer, dukker de opp under «Denne måneden» i «I dag».
+            Faste oppgaver gjennom året. Slå på det som passer, eller lag egne med +. Oppgaver
+            med måned dukker opp under «Denne måneden» i «I dag» når måneden kommer. De med jevne
+            mellomrom kommer i «I dag» når det er på tide igjen.
           </Text>
           {isAdult && notActive.length > 0 && (
             <Button
@@ -200,7 +223,7 @@ export function YearWheel({ header, reveal }: Props) {
               when={inIntervals ? describeEvery(item.task, item.task.next_due_on, today) : undefined}
               onPress={
                 isAdult
-                  ? () => router.push({ pathname: '/task/[id]', params: { id: item.task.id } })
+                  ? () => router.push({ pathname: '/task/[id]', params: { id: item.task.id, ...FROM_TASKS } })
                   : undefined
               }
             />
@@ -217,6 +240,12 @@ export function YearWheel({ header, reveal }: Props) {
             disabled={!isAdult || isPending}
             onToggle={(on) => toggle(template, on)}
             when={inIntervals ? describeEvery(template, task?.next_due_on ?? null, today) : undefined}
+            // En mal som er på, er en vanlig oppgave: voksne kan endre ansvarlig, lønn og frist.
+            onPress={
+              isAdult && task
+                ? () => router.push({ pathname: '/task/[id]', params: { id: task.id, ...FROM_TASKS } })
+                : undefined
+            }
           />
         );
       }}

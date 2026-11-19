@@ -35,6 +35,7 @@ const template = (id: string, overrides: Partial<TaskTemplate> = {}) =>
     id,
     title: id,
     month: 5,
+    recurrence_type: 'calendar',
     recurrence_unit: 'year',
     household_types: null,
     housing_types: null,
@@ -182,7 +183,7 @@ describe('intervallmaler', () => {
   });
   const withInterval = [...all, heatPumpFilter];
 
-  it('vises ikke i årshjulet', () => {
+  it('korte intervaller (8 uker) vises ikke i årshjulet', () => {
     const h = household({ has_air_heat_pump: true });
     expect(ids(suggestForHousehold(withInterval, h))).toEqual(['fridge', 'heat-pump']);
   });
@@ -212,7 +213,7 @@ describe('yearWheelTemplates', () => {
     expect(ids(yearWheelTemplates(all, h, new Set(['tyres'])))).toEqual(['fridge', 'tyres']);
   });
 
-  it('viser aldri intervallmaler', () => {
+  it('viser ikke korte intervallmaler (lange står i «Med jevne mellomrom», se suggest.test.ts)', () => {
     const filter = template('filter', { recurrence_type: 'interval', recurrence_unit: 'week', recurrence_every: 8, month: null });
     expect(ids(yearWheelTemplates([fridge, filter], household(), new Set(['filter'])))).toEqual(['fridge']);
   });

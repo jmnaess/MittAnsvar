@@ -5,14 +5,15 @@ import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/h
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useArchiveTask, useTasks, useUpdateTask } from '../../../src/features/tasks/hooks';
 import { isJob } from '../../../src/features/tasks/recurrence';
-import { taskSection } from '../../../src/features/tasks/section';
+import { isFromTasks, revealSaved } from '../../../src/features/tasks/tasksSegment';
 import type { Task } from '../../../src/features/tasks/types';
 import { formatDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { Button, Message, ModalFormScreen, Text, useTheme } from '../../../src/ui';
 
 export default function EditTaskScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; from?: string }>();
+  const { id } = params;
   const { data: household } = useMyHousehold();
   const { data: tasks, isPending } = useTasks(household!.id);
   const [archived, setArchived] = useState(false);
@@ -30,13 +31,24 @@ export default function EditTaskScreen() {
   }
   // Skjemaet får startverdiene først når oppgaven er hentet.
   return (
-    <EditTaskForm task={task} householdId={household!.id} onArchived={() => setArchived(true)} />
+    <EditTaskForm
+      task={task}
+      householdId={household!.id}
+      fromTasks={isFromTasks(params)}
+      onArchived={() => setArchived(true)}
+    />
   );
 }
 
-type FormProps = { task: Task; householdId: string; onArchived: () => void };
+type FormProps = {
+  task: Task;
+  householdId: string;
+  /** Åpnet fra «Oppgaver»: etter lagring vises oppgaven i segmentet der den havnet. */
+  fromTasks: boolean;
+  onArchived: () => void;
+};
 
-function EditTaskForm({ task, householdId, onArchived }: FormProps) {
+function EditTaskForm({ task, householdId, fromTasks, onArchived }: FormProps) {
   const { colors } = useTheme();
   const { data: members } = useMembers(householdId);
   const updateTask = useUpdateTask(householdId);
@@ -48,8 +60,17 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
   const error = updateTask.error ?? archiveTask.error;
 
   function save() {
-    if (!form.value) return;
-    updateTask.mutate({ taskId: task.id, input: form.value }, { onSuccess: () => router.back() });
+    const input = form.value;
+    if (!input) return;
+    updateTask.mutate(
+      { taskId: task.id, input },
+      {
+        onSuccess: () => {
+          if (fromTasks) revealSaved([input]);
+          router.back();
+        },
+      },
+    );
   }
 
   function confirmDelete() {
@@ -83,8 +104,6 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
         form={form}
         members={members ?? []}
         canSetReward={me?.role === 'adult'}
-        // En årsoppgave (Årshjul) kan bare gis til voksne eller Felles. Den som har den nå, beholdes.
-        adultsOnlyExcept={taskSection(task) === 'year' ? task.assigned_member_id : undefined}
         disabled={busy}
       />
       <Text variant="hint" color={colors.textMuted}>Endrer du hvor ofte, beregnes neste gang på nytt fra i dag.</Text>

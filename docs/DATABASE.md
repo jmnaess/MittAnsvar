@@ -135,7 +135,7 @@ Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader
 | household_id | uuid not null → households on delete cascade | |
 | title | text not null | 1–80 tegn |
 | description | text null | |
-| category | text not null default `other` | check: `daily`, `cleaning`, `kitchen`, `laundry`, `outdoor`, `maintenance`, `safety`, `other`. Skjemaet spør ikke om kategori ennå |
+| category | text not null default `other` | check, i fast rekkefølge: `kitchen` (Kjøkken), `tidying` (Rydding og rom), `laundry` (Klesvask), `outdoor` (Ute og hage), `car` (Bil), `pets` (Kjæledyr), `maintenance` (Vedlikehold), `other` (Annet). Velges i skjemaene, grupperer «Oppgaver». Mappingen fra de gamle verdiene står i `*_task_categories.sql` |
 | assigned_member_id | uuid null | null = «hvem som helst». Sammensatt FK `(household_id, assigned_member_id) → members (household_id, id) on delete set null (assigned_member_id)`, så den ansvarlige alltid er i samme husstand. Alltid null for jobber (check `tasks_job_no_assignee`) |
 | template_id | uuid null → task_templates on delete set null | hvilken mal oppgaven ble laget fra (steg 7). Kan settes ved insert, ikke endres |
 | *gjentakelse* | se §2 | `recurrence_type`, `recurrence_unit`, `recurrence_every`, `weekdays`, `month_day`, `month`, `anchor_on` |

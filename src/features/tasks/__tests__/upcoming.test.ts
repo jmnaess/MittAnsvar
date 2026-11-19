@@ -5,7 +5,7 @@ import {
   CHILD_UPCOMING_DAYS,
   isFrequent,
   UPCOMING_DAYS,
-  upcomingForMember,
+  buildUpcoming,
   upcomingWindow,
 } from '../upcoming';
 
@@ -21,8 +21,14 @@ function every(taskId: string, step: number, windowDays = UPCOMING_DAYS): Occurr
   return out;
 }
 
-const run = (occ: Occurrence[], tasks: Task[], opts: { hideFrequent?: boolean; windowDays?: number } = {}) =>
-  upcomingForMember(occ, tasks, 'leah', TODAY, { windowDays: UPCOMING_DAYS, ...opts });
+const run = (
+  occ: Occurrence[],
+  tasks: Task[],
+  opts: { hideFrequent?: boolean; windowDays?: number; memberId?: string | null } = {},
+) => {
+  const { memberId = 'leah', ...rest } = opts;
+  return buildUpcoming(occ, tasks, memberId, TODAY, { windowDays: UPCOMING_DAYS, ...rest });
+};
 
 describe('upcomingWindow', () => {
   it('starter i morgen', () => {
@@ -46,7 +52,7 @@ describe('isFrequent', () => {
   });
 });
 
-describe('upcomingForMember', () => {
+describe('buildUpcoming', () => {
   it('viser en daglig oppgave én gang, med neste dato', () => {
     const daily = task({ id: 'd', title: 'Re opp sengen' });
     const result = run(every('d', 1), [daily]);
@@ -163,7 +169,7 @@ describe('canCompleteEarly', () => {
   });
 });
 
-describe('upcomingForMember: sirkel for tidlig avkrysning', () => {
+describe('buildUpcoming: sirkel for tidlig avkrysning', () => {
   const checkable = (result: ReturnType<typeof run>) =>
     result.groups.flatMap((g) => g.items.map((i) => [i.dueOn, i.checkable]));
 
@@ -205,5 +211,77 @@ describe('upcomingForMember: sirkel for tidlig avkrysning', () => {
   it('hyppig daglig oppgave får aldri sirkel', () => {
     const t = task({ id: 'd', recurrence_unit: 'day', recurrence_every: 1, next_due_on: '2026-11-19' });
     expect(run(every('d', 1), [t]).repeating[0].checkable).toBe(false);
+  });
+});
+
+describe('buildUpcoming: hele husstanden (memberId null)', () => {
+  it('tar med alle personer og felles, men ikke jobber', () => {
+    const occ = [
+      { task_id: 'mine', due_on: '2026-11-20' },
+      { task_id: 'shared', due_on: '2026-11-21' },
+      { task_id: 'other', due_on: '2026-11-22' },
+      { task_id: 'job', due_on: '2026-11-23' },
+    ];
+    const tasks = [
+      task({ id: 'mine' }),
+      task({ id: 'shared', assigned_member_id: null }),
+      task({ id: 'other', assigned_member_id: 'noah' }),
+      task({ id: 'job', recurrence_type: 'job' }),
+    ];
+    const ids = run(occ, tasks, { memberId: null }).groups.flatMap((g) => g.items.map((i) => i.task.id));
+    expect(ids).toEqual(['mine', 'shared', 'other']);
+  });
+
+  it('skjuler hyppige oppgaver med hideFrequent', () => {
+    const result = run(every('w', 7), [task({ id: 'w', recurrence_unit: 'week', recurrence_every: 1 })], {
+      memberId: null,
+      hideFrequent: true,
+    });
+    expect(result.repeating).toEqual([]);
+    expect(result.groups).toEqual([]);
+  });
+});
+
+describe('buildUpcoming: månedsoppgaver (årshjulet)', () => {
+  const month = (overrides: Partial<Task>) =>
+    task({ recurrence_unit: 'year', recurrence_every: 1, month_day: null, postponed_to: null, ...overrides });
+
+  it('neste måned havner i nextMonth, ikke i ukene', () => {
+    const t = month({ id: 'm', month: 12, next_due_on: '2026-12-01' });
+    const result = run([{ task_id: 'm', due_on: '2026-12-01' }], [t]);
+    expect(result.groups).toEqual([]);
+    expect(result.nextMonth.map((i) => [i.task.id, i.dueOn, i.checkable])).toEqual([['m', '2026-12-01', true]]);
+  });
+
+  it('måneder lenger fram utelates', () => {
+    const t = month({ id: 'jan', month: 1, next_due_on: '2027-01-01' });
+    const result = run([{ task_id: 'jan', due_on: '2027-01-01' }], [t]);
+    expect(result.groups).toEqual([]);
+    expect(result.nextMonth).toEqual([]);
+  });
+
+  it('en utsatt månedsoppgave vises på datoen som en vanlig rad', () => {
+    const t = month({ id: 'p', month: 11, next_due_on: '2026-12-05', postponed_to: '2026-12-05' });
+    const result = run([{ task_id: 'p', due_on: '2026-12-05' }], [t]);
+    expect(result.nextMonth).toEqual([]);
+    expect(result.groups.flatMap((g) => g.items.map((i) => i.dueOn))).toEqual(['2026-12-05']);
+  });
+
+  it('årlig oppgave med fast dag er ikke en månedsoppgave', () => {
+    const t = month({ id: 'd', month: 12, month_day: 10 });
+    const result = run([{ task_id: 'd', due_on: '2026-12-10' }], [t]);
+    expect(result.nextMonth).toEqual([]);
+    expect(result.groups).toHaveLength(1);
+  });
+
+  it('felles månedsoppgaver er med for hele husstanden, sortert på tittel', () => {
+    const a = month({ id: 'a', title: 'Sjekke brannvarslere', assigned_member_id: null });
+    const b = month({ id: 'b', title: 'Rense sluk', assigned_member_id: 'noah' });
+    const occ = [
+      { task_id: 'a', due_on: '2026-12-01' },
+      { task_id: 'b', due_on: '2026-12-01' },
+    ];
+    expect(run(occ, [a, b], { memberId: null }).nextMonth.map((i) => i.task.id)).toEqual(['b', 'a']);
+    expect(run(occ, [a, b]).nextMonth).toEqual([]);
   });
 });

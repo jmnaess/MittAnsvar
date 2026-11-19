@@ -81,7 +81,7 @@ describe('boardCards', () => {
         task('jobb', { recurrence_type: 'job' }),
       ],
     });
-    expect(cards.map((c) => c.key)).toEqual(['a', 'k', 'l', 'shared', 'this-month', 'jobs']);
+    expect(cards.map((c) => c.key)).toEqual(['a', 'k', 'l', 'shared', 'jobs', 'this-month']);
     expect(cards[1].data.map((t) => t.id)).toEqual(['til-k']);
   });
 

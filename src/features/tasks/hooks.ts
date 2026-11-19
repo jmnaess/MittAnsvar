@@ -13,7 +13,7 @@ import {
   updateTask,
 } from './api';
 import type { TaskInput } from './types';
-import { upcomingForMember, upcomingWindow, type MemberUpcoming } from './upcoming';
+import { buildUpcoming, EMPTY_UPCOMING, upcomingWindow, type MemberUpcoming } from './upcoming';
 
 // Begge listene ligger under ['tasks', householdId]. Da holder det å invalidere den
 // nøkkelen for å hente både oversikten og «I dag» på nytt.
@@ -46,18 +46,21 @@ export function useUpcomingOccurrences(householdId: string, from: string, to: st
 }
 
 /**
- * «Kommende» for én person (personvisningen i «I dag»): forekomster fra i morgen og windowDays
- * fram, gruppert med upcomingForMember. memberId null = ingen er valgt, og ingenting hentes.
- * refetch (dra for å oppdatere) gjør heller ingenting når ingen er valgt.
+ * «Kommende»: forekomster fra i morgen og windowDays fram, gruppert med buildUpcoming.
+ * memberId: én person (personvisningen, barnets visning), eller null for hele husstanden («Alle»).
+ * enabled false = ingenting hentes ennå, og refetch (dra for å oppdatere) gjør ingenting.
  */
 export function useMemberUpcoming(
   householdId: string,
   memberId: string | null,
   today: string,
-  { windowDays, hideFrequent = false }: { windowDays: number; hideFrequent?: boolean },
+  {
+    windowDays,
+    hideFrequent = false,
+    enabled = true,
+  }: { windowDays: number; hideFrequent?: boolean; enabled?: boolean },
 ): { upcoming: MemberUpcoming; isPending: boolean; refetch: () => Promise<unknown> } {
   const { from, to } = upcomingWindow(today, windowDays);
-  const enabled = memberId !== null;
   const occurrences = useUpcomingOccurrences(householdId, from, to, enabled);
   const tasks = useQuery({
     queryKey: taskKeys.list(householdId),
@@ -65,9 +68,9 @@ export function useMemberUpcoming(
     enabled,
   });
   const upcoming =
-    memberId && occurrences.data && tasks.data
-      ? upcomingForMember(occurrences.data, tasks.data, memberId, today, { windowDays, hideFrequent })
-      : { repeating: [], groups: [] };
+    enabled && occurrences.data && tasks.data
+      ? buildUpcoming(occurrences.data, tasks.data, memberId, today, { windowDays, hideFrequent })
+      : EMPTY_UPCOMING;
   // refetch fra useQuery hopper over enabled, så vi sjekker selv.
   const refetchOccurrences = occurrences.refetch;
   const refetchTasks = tasks.refetch;

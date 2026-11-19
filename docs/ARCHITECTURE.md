@@ -133,6 +133,8 @@ Hver `feature` eier sine egne API-kall og hooks. Skjermene i `app/` setter bare 
 
 ---
 
+**Rekkefølgen i «I dag».** Alle: ett kort per person, «Felles», «Ledige jobber», «Denne måneden» (årshjulets månedsoppgaver, nederst fordi de kan gjøres når som helst i måneden) og «Kommende» for hele husstanden: 8 uker, uten daglige og ukentlige oppgaver (de står allerede i «I dag»), med navn eller «Felles» på raden. Personvisning: personens kort, personens egne oppgaver i «Denne måneden», «Kommende» for personen og «Gjort siste 3 dager». «Kommende» viser månedsoppgaver for neste måned samlet under «Neste måned (desember)» i stedet for på den 1., og utelater måneder lenger fram (`buildUpcoming` i `upcoming.ts`).
+
 **Radene i «I dag» og personvisningen (voksne).** Sirkelen krysser av. Trykk på raden åpner alltid samme meny (`TaskRowMenu`), og `rowActions.ts` bestemmer valgene: åpen oppgave gir Utsett til … / Velg hvem som gjorde det / Endre oppgave / Avbryt, «Kommende» gir Utsett til … / Velg hvem som gjorde det (begge bare for nærmeste forekomst, som kan krysses av tidlig) / Endre oppgave / Avbryt, utført i dag gir Ikke gjort / Endre hvem som gjorde det / Endre oppgave / Avbryt, og «Gjort siste 3 dager» gir Endre oppgave / Avbryt. Valg som ikke gir mening skjules: «Velg hvem» når husstanden har én person, «Endre hvem» når det ikke finnes andre å flytte til, og «Endre oppgave» når oppgaven ikke lenger er aktiv. Barnets enhet og familieskjermen har ingen meny.
 
 ## 3. Barneprofiler, QR-kobling og felles visning
@@ -176,7 +178,7 @@ En egen enhet, typisk en iPad på kjøkkenet, som viser «I dag» for hele husst
 
 1. **Kobling:** «Husstand» → «Legg til familieskjerm» (`app/(app)/display/link.tsx`) kaller `create_display_link_token`. På nettbrettet: «Sett opp familieskjerm» gir anonym innlogging og samme «Koble til»-skjerm som for barn. `redeem_link_token` ser at koden ikke har `member_id`, og lager en rad i `household_displays`.
 2. **Ikke et medlem:** alle innloggede er samme Postgres-rolle, så kolonnerettigheter kan ikke skille skjermen fra andre. Skjermen har derfor ingen rad i `members`. Alle policyer er stengt for den, og den leser bare via `get_family_board`.
-3. **Visning** (`app/(app)/(display)/index.tsx`): ett kort per person, så «Felles», «Denne måneden» og «Ledige jobber». Kolonnene følger vindusbredden. Kortene fordeles etter rekkefølge, så de ikke flytter seg under avkrysning.
+3. **Visning** (`app/(app)/(display)/index.tsx`): ett kort per person, så «Felles», «Ledige jobber» og «Denne måneden». Kolonnene følger vindusbredden. Kortene fordeles etter rekkefølge, så de ikke flytter seg under avkrysning.
 4. **Avkrysning:** oppgave med ansvarlig krysses av for den personen med ett trykk. Felles oppgaver og jobber gir «Hvem gjorde det?». Lønn blir «venter» som på barnets enhet. Skjermen kan angre det den selv registrerte, innen 10 minutter.
 5. **Ingen beløp summert:** barn ser bare sin egen saldo, så skjermen viser ikke «X kr tjent». Beløpet på selve oppgaven vises.
 6. **Oppdatering:** hvert 60. sekund mens appen er aktiv, ved retur til appen og ved midnatt. Fordi data kan være opptil et minutt gamle, avviser `complete_task` med `task_not_due` en oppgave som ikke lenger står i «I dag». Ellers ville neste forekomst blitt krysset av.

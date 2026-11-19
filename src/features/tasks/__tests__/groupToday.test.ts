@@ -1,6 +1,6 @@
 import type { TodayCompletion } from '../../completions/api';
 import type { Member } from '../../household/types';
-import { groupTodayByMember, JOBS_KEY } from '../groupToday';
+import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../groupToday';
 import type { TodayTask } from '../types';
 
 const leah: Member = {
@@ -56,5 +56,19 @@ describe('groupTodayByMember', () => {
     expect(sections[0].data).toEqual([]);
     expect(sections[0].done.map((c) => c.id)).toEqual(['c']);
     expect(sections[1].done.map((c) => c.id)).toEqual(['f']);
+  });
+
+  it('legger «Denne måneden» nederst, etter «Ledige jobber». Forfalte ligger hos personen', () => {
+    const maned = task({ id: 'm', is_month_task: true, assigned_member_id: 'leah' });
+    const forfalt = task({ id: 'f', is_month_task: true, is_overdue: true, assigned_member_id: 'leah' });
+    const felles = task({ id: 's' });
+    const job = task({ id: 'j', recurrence_type: 'job' });
+    const sections = groupTodayByMember([maned, forfalt, felles, job], [leah]);
+    expect(sections.map((s) => [s.key, s.data.map((t) => t.id)])).toEqual([
+      ['leah', ['f']],
+      ['shared', ['s']],
+      [JOBS_KEY, ['j']],
+      [THIS_MONTH_KEY, ['m']],
+    ]);
   });
 });

@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { Card, Chip, ListRow, Message, spacing, TaskRow, Text, useTheme } from '../../../ui';
-import { formatDate } from '../../../lib/dates';
+import { formatDate, monthName } from '../../../lib/dates';
 import { describeRecurrence } from '../recurrence';
 import { formatKroner } from '../reward';
 import type { Task } from '../types';
@@ -24,25 +24,30 @@ type Props = {
   /** Listen hentes fortsatt: ikke vis «Ingenting planlagt» ennå. */
   loading?: boolean;
   emptyText: string;
+  /** Satt i «Alle»: hvem oppgaven er til («Kari» eller «Felles»), etter datoen på raden. */
+  nameOf?: (task: Task) => string;
 };
 
 /**
- * «Kommende» i personvisningen: hyppige oppgaver én gang («Hver dag · neste tor. 19. nov.»),
- * deretter én gruppe per uke med dato på hver rad. Den nærmeste forekomsten av en oppgave kan
- * krysses av tidlig (onComplete). Voksne åpner valgene med trykk på raden (onOpen).
+ * «Kommende» i personvisningen og i «Alle»: hyppige oppgaver én gang («Hver dag · neste tor.
+ * 19. nov.»), deretter én gruppe per uke med dato på hver rad, og til slutt «Neste måned» med
+ * årshjulets månedsoppgaver. Den nærmeste forekomsten av en oppgave kan krysses av tidlig
+ * (onComplete). Voksne åpner valgene med trykk på raden (onOpen). nameOf legger til hvem.
  */
 export function UpcomingCard({
-  upcoming, showReward, onOpen, onComplete, busyId, checkColor, loading, emptyText,
+  upcoming, showReward, onOpen, onComplete, busyId, checkColor, loading, emptyText, nameOf,
 }: Props) {
   const { colors } = useTheme();
-  const { repeating, groups } = upcoming;
-  const empty = repeating.length === 0 && groups.length === 0;
+  const { repeating, groups, nextMonth } = upcoming;
+  const empty = repeating.length === 0 && groups.length === 0 && nextMonth.length === 0;
+  const withName = (task: Task, meta: string) => (nameOf ? `${meta} · ${nameOf(task)}` : meta);
 
   const reward = (task: Task) =>
     showReward && task.reward_nok ? <Chip label={formatKroner(task.reward_nok)} tone="money" /> : undefined;
 
   // En vanlig funksjon, ikke en komponent: da monteres ikke radene på nytt ved hver render.
-  function renderRow(key: string, task: Task, meta: string, checkable: boolean) {
+  function renderRow(key: string, task: Task, dateText: string, checkable: boolean) {
+    const meta = withName(task, dateText);
     const open = onOpen ? () => onOpen(task, checkable) : undefined;
     if (!checkable || !onComplete) {
       return (
@@ -98,6 +103,17 @@ export function UpcomingCard({
           )}
         </View>
       ))}
+
+      {nextMonth.length > 0 && (
+        <View style={styles.group}>
+          <Text variant="label" color={colors.textMuted} accessibilityRole="header">
+            {`Neste måned (${monthName(nextMonth[0].dueOn)})`}
+          </Text>
+          {nextMonth.map((item) =>
+            renderRow(item.key, item.task, `I løpet av ${monthName(item.dueOn)}`, item.checkable),
+          )}
+        </View>
+      )}
     </Card>
   );
 }

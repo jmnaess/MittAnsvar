@@ -65,7 +65,7 @@ export default function ChildTodayScreen() {
     householdId,
     me?.id ?? null,
     today,
-    { windowDays: CHILD_UPCOMING_DAYS, hideFrequent: true },
+    { windowDays: CHILD_UPCOMING_DAYS, hideFrequent: true, enabled: !!me },
   );
   // RLS: barnet får bare sine egne avkrysninger.
   const { data: recent = [], refetch: refetchRecentQuery } = useRecentCompletions(householdId, today, !!me);

@@ -86,12 +86,15 @@ type PostponedToast = { taskId: string; message: string };
 
 /**
  * «I dag»: dato og tittel, alle i husstanden (trykk for å vise bare én), godkjenningsbanner for
- * voksne, én seksjon per person i personens farge, «Felles», «Denne måneden» og «Ledige jobber».
+ * voksne, én seksjon per person i personens farge, «Felles», «Ledige jobber», «Denne måneden»
+ * (årshjulet) og «Kommende» for hele husstanden: 8 uker, uten hyppige oppgaver, med navn på
+ * raden og «Neste måned» nederst.
  * Voksne legger ut jobber med «+» og endrer dem med langt trykk. Trykk på en oppgaverad åpner
  * valgene for voksne (TaskRowMenu, rowActions.ts), og sirkelen krysser av.
  *
- * Personvisning (én person valgt): personens kort, «Kommende» (8 uker, sirkelen krysser av den
- * nærmeste forekomsten tidlig) og «Gjort siste 3 dager».
+ * Personvisning (én person valgt): personens kort, personens oppgaver «Denne måneden»,
+ * «Kommende» (8 uker, sirkelen krysser av den nærmeste forekomsten tidlig, «Neste måned»
+ * nederst) og «Gjort siste 3 dager».
  */
 export default function TodayScreen() {
   const { colors, personColor, sharedColors } = useTheme();
@@ -105,12 +108,12 @@ export default function TodayScreen() {
   /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const today = toIsoDate(new Date());
-  // Personvisningen. Hentes bare når en person er valgt.
+  // «Kommende»: personen som er valgt, eller hele husstanden uten de hyppige oppgavene.
   const { upcoming, isPending: upcomingPending, refetch: refetchUpcoming } = useMemberUpcoming(
     householdId,
     focusedId,
     today,
-    { windowDays: UPCOMING_DAYS },
+    { windowDays: UPCOMING_DAYS, hideFrequent: focusedId === null },
   );
   // Aktive oppgaver: en utført rad kan bare endres hvis oppgaven fortsatt finnes.
   const { data: activeTasks = [], refetch: refetchActiveTasks } = useTasks(householdId);
@@ -179,7 +182,8 @@ export default function TodayScreen() {
     done,
   });
   const focused = members.find((m) => m.id === focusedId);
-  const sections = focused ? allSections.filter((s) => s.key === focused.id) : allSections;
+  // Personvisning: personens kort, og personens egne oppgaver i «Denne måneden».
+  const sections = focused ? focusSections(allSections, focused.id) : allSections;
   const nothingToDo = !isPending && sections.every((s) => s.data.length === 0 && s.done.length === 0);
 
   const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
@@ -459,6 +463,23 @@ export default function TodayScreen() {
             />
           )}
           {sections.map(renderSection)}
+          {!focused && !isPending && (
+            <UpcomingCard
+              upcoming={upcoming}
+              showReward={false}
+              nameOf={(task) => nameOf(task.assigned_member_id) ?? 'Felles'}
+              onComplete={handlePress}
+              busyId={busyId}
+              checkColor={colors.primary}
+              loading={upcomingPending}
+              emptyText="Ingenting planlagt de neste ukene."
+              onOpen={
+                isAdult
+                  ? (task, checkable) => openMenu({ kind: 'upcoming', task, checkable })
+                  : undefined
+              }
+            />
+          )}
           {focused && (
             <>
               {/* Rett under personens kort: ny oppgave i dag med personen forhåndsvalgt. */}
@@ -577,6 +598,14 @@ export default function TodayScreen() {
       )}
     </View>
   );
+}
+
+/** Personvisning: personens kort, og «Denne måneden» med bare personens oppgaver (hvis noen). */
+function focusSections(all: TodaySection[], memberId: string): TodaySection[] {
+  const own = all.filter((s) => s.key === memberId);
+  const month = all.find((s) => s.key === THIS_MONTH_KEY);
+  const ownMonth = month?.data.filter((t) => t.assigned_member_id === memberId) ?? [];
+  return ownMonth.length > 0 ? [...own, { ...month!, data: ownMonth }] : own;
 }
 
 const useStyles = makeStyles(({ colors }) =>

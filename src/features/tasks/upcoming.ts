@@ -1,7 +1,7 @@
-import { addDays, formatDate, formatWeekRange, isoWeekNumber, startOfIsoWeek } from '../../lib/dates';
+import { addDays, formatDate, formatWeekRange, isoWeekNumber, lastDayOfMonth, startOfIsoWeek } from '../../lib/dates';
 import type { Occurrence, Task } from './types';
 
-/** «Kommende» for voksne og i personvisningen: 8 uker fra i morgen. */
+/** «Kommende» for voksne, i personvisningen og i «Alle»: 8 uker fra i morgen. */
 export const UPCOMING_DAYS = 56;
 /** «Kommende» på barnets egen enhet: 2 uker, uten de hyppige oppgavene. */
 export const CHILD_UPCOMING_DAYS = 14;
@@ -23,7 +23,31 @@ export type RepeatingItem = { task: Task; nextOn: string; checkable: boolean };
 /** «Denne uken», «Neste uke» eller «Uke 50 · 7.–13. des.». */
 export type UpcomingGroup = { key: string; title: string; items: UpcomingItem[] };
 
-export type MemberUpcoming = { repeating: RepeatingItem[]; groups: UpcomingGroup[] };
+/**
+ * nextMonth: årlige månedsoppgaver (årshjulet) i neste kalendermåned. De har ingen dag, så de
+ * vises samlet under «Neste måned» i stedet for på den 1. i måneden.
+ */
+export type MemberUpcoming = { repeating: RepeatingItem[]; groups: UpcomingGroup[]; nextMonth: UpcomingItem[] };
+
+export const EMPTY_UPCOMING: MemberUpcoming = { repeating: [], groups: [], nextMonth: [] };
+
+/** Månedsoppgave: årlig kalenderoppgave uten dag (som private.is_month_task i databasen). */
+export function isMonthTask(task: Pick<Task, 'recurrence_type' | 'recurrence_unit' | 'month_day'>): boolean {
+  return task.recurrence_type === 'calendar' && task.recurrence_unit === 'year' && task.month_day === null;
+}
+
+/**
+ * Forekomsten er en hel måned, ikke en dato. En utsatt månedsoppgave har fått en fast dato
+ * (postponed_to), og den vises som en vanlig rad på datoen.
+ */
+function isMonthOccurrence(task: Task, dueOn: string): boolean {
+  return isMonthTask(task) && task.postponed_to !== dueOn;
+}
+
+/** 'YYYY-MM' for måneden etter today. */
+function nextMonthKey(today: string): string {
+  return addDays(lastDayOfMonth(today), 1).slice(0, 7);
+}
 
 /**
  * Hyppig = i snitt minst én gang i uken i vinduet, og minst to ganger. I 8 uker betyr det
@@ -56,23 +80,43 @@ function weekTitle(monday: string, today: string): string {
 }
 
 /**
- * «Kommende» for én person: oppgaver tildelt personen (ikke felles, ikke jobber, som ikke har
- * dato). Hyppige oppgaver (se isFrequent) samles i repeating, én rad hver, med mindre
- * hideFrequent er satt; da vises de ikke i det hele tatt (barnets egen visning). Resten
+ * «Kommende» for én person (memberId), eller for hele husstanden (null: alle personer og felles).
+ * Jobber er ikke med, siden de ikke har dato. Hyppige oppgaver (se isFrequent) samles i
+ * repeating, én rad hver, med mindre hideFrequent er satt; da vises de ikke i det hele tatt
+ * (barnets egen visning og «Alle»). Månedsoppgaver i neste måned legges i nextMonth, og
+ * månedsoppgaver lenger fram utelates (de kommer med når de blir neste måned). Resten
  * grupperes per ISO-uke, sortert på dato og tittel.
  */
-export function upcomingForMember(
+export function buildUpcoming(
   occurrences: Occurrence[],
   tasks: Task[],
-  memberId: string,
+  memberId: string | null,
   today: string,
   { windowDays, hideFrequent = false }: { windowDays: number; hideFrequent?: boolean },
 ): MemberUpcoming {
-  const taskById = new Map(tasks.filter((t) => t.assigned_member_id === memberId).map((t) => [t.id, t]));
+  const taskById = new Map(
+    tasks
+      .filter((t) => t.recurrence_type !== 'job' && (memberId === null || t.assigned_member_id === memberId))
+      .map((t) => [t.id, t]),
+  );
+  const nextMonth = nextMonthKey(today);
+  const monthItems: UpcomingItem[] = [];
 
   const datesByTask = new Map<string, string[]>();
   for (const o of occurrences) {
-    if (!taskById.has(o.task_id)) continue;
+    const task = taskById.get(o.task_id);
+    if (!task) continue;
+    if (isMonthOccurrence(task, o.due_on)) {
+      if (o.due_on.slice(0, 7) === nextMonth) {
+        monthItems.push({
+          key: `${o.task_id}:${o.due_on}`,
+          task,
+          dueOn: o.due_on,
+          checkable: canCompleteEarly(task, o.due_on),
+        });
+      }
+      continue;
+    }
     const dates = datesByTask.get(o.task_id) ?? [];
     dates.push(o.due_on);
     datesByTask.set(o.task_id, dates);
@@ -96,6 +140,7 @@ export function upcomingForMember(
 
   repeating.sort((a, b) => a.nextOn.localeCompare(b.nextOn) || a.task.title.localeCompare(b.task.title));
   items.sort((a, b) => a.dueOn.localeCompare(b.dueOn) || a.task.title.localeCompare(b.task.title));
+  monthItems.sort((a, b) => a.task.title.localeCompare(b.task.title, 'nb'));
 
   const groups: UpcomingGroup[] = [];
   for (const item of items) {
@@ -105,7 +150,7 @@ export function upcomingForMember(
     else groups.push({ key: monday, title: weekTitle(monday, today), items: [item] });
   }
 
-  return { repeating, groups };
+  return { repeating, groups, nextMonth: monthItems };
 }
 
 /** 'Lør. 22. nov.' til datoen på en rad. */

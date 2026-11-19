@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { signOutLocal } from '../../src/features/auth/api';
 import { useSession } from '../../src/features/auth/SessionProvider';
+import { useFamilyBoard } from '../../src/features/display/hooks';
 import { useMyHousehold } from '../../src/features/household/hooks';
 import { toNorwegianMessage } from '../../src/lib/errors';
 import { Button, makeStyles, spacing, Text, useTheme } from '../../src/ui';
@@ -13,35 +14,54 @@ import { modalScreenOptions } from '../../src/ui/tabOptions';
 // Her avgjør husstanden og typen bruker hva man ser:
 //   voksen uten husstand        → oppstart
 //   voksen med husstand         → fanene
-//   barnets enhet (anonym), ikke koblet → «Koble til» (skann eller tast kode)
+//   anonym enhet, ikke koblet   → «Koble til» (skann eller tast kode)
 //   barnets enhet, koblet       → barnets faner (bare egne oppgaver, jobber og lønn)
+//   familieskjerm, koblet       → tavla for hele husstanden
 export default function AppLayout() {
   const { session } = useSession();
   const { data: household, isPending, error, refetch, isRefetching } = useMyHousehold();
-  const isChildDevice = !!session?.user.is_anonymous;
+  const isAnonymous = !!session?.user.is_anonymous;
+  // Bare anonyme enheter kan være en familieskjerm. Skjermen er ikke medlem, så den ser ingen husstand.
+  const board = useFamilyBoard(isAnonymous);
+  const isDisplay = isAnonymous && !!board.data;
+  const isChildDevice = isAnonymous && !isDisplay;
+  const pending = isPending || (isAnonymous && board.isPending);
   const { colors } = useTheme();
   const styles = useStyles();
-  useSignOutWhenUnlinked(isChildDevice, !!household, isPending);
+  useSignOutWhenUnlinked(isAnonymous, !!household || isDisplay, pending);
 
-  if (isPending) return null;
+  if (pending) return null;
 
   // Viktig: ved feil (f.eks. uten nett) vet vi ikke om brukeren har husstand.
   // Da skal vi ikke vise oppstarten, ellers kan de prøve å lage en husstand til.
-  if (error) {
+  // En koblet skjerm viser de siste dataene sine i stedet, og prøver igjen av seg selv.
+  const blockingError = isDisplay ? null : (error ?? (isAnonymous ? board.error : null));
+  if (blockingError) {
     return (
       <View style={styles.error}>
-        <Text style={styles.errorText}>{toNorwegianMessage(error)}</Text>
-        <Button title="Prøv igjen" onPress={() => refetch()} disabled={isRefetching} />
+        <Text style={styles.errorText}>{toNorwegianMessage(blockingError)}</Text>
+        <Button
+          title="Prøv igjen"
+          onPress={() => {
+            refetch();
+            if (isAnonymous) board.refetch();
+          }}
+          disabled={isRefetching || board.isRefetching}
+        />
       </View>
     );
   }
 
-  const isAdultHome = !!household && !isChildDevice;
+  const isAdultHome = !!household && !isAnonymous;
 
   return (
     <Stack screenOptions={modalScreenOptions(colors)}>
       <Stack.Protected guard={isAdultHome}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="display/link"
+          options={{ headerShown: true, title: 'Legg til familieskjerm', presentation: 'modal' }}
+        />
         <Stack.Screen
           name="child/new"
           options={{ headerShown: true, title: 'Legg til barn', presentation: 'modal' }}
@@ -91,7 +111,7 @@ export default function AppLayout() {
           options={{ headerShown: true, title: 'Endre oppgave', presentation: 'modal' }}
         />
       </Stack.Protected>
-      <Stack.Protected guard={!household && !isChildDevice}>
+      <Stack.Protected guard={!household && !isAnonymous}>
         <Stack.Screen name="onboarding" />
       </Stack.Protected>
       <Stack.Protected guard={!!household && isChildDevice}>
@@ -100,25 +120,28 @@ export default function AppLayout() {
       <Stack.Protected guard={!household && isChildDevice}>
         <Stack.Screen name="link-device" />
       </Stack.Protected>
+      <Stack.Protected guard={isDisplay}>
+        <Stack.Screen name="(display)" />
+      </Stack.Protected>
     </Stack>
   );
 }
 
 /**
- * En voksen har koblet fra barnets enhet: husstanden var der, men er borte. Da logges barnet ut,
- * i stedet for å bli stående på «Koble til». Brukeren er allerede slettet på serveren, så vi
- * logger bare ut lokalt.
+ * En voksen har koblet fra enheten (barnets enhet eller familieskjermen): koblingen var der, men
+ * er borte. Da logges enheten ut, i stedet for å bli stående på «Koble til». Brukeren er allerede
+ * slettet på serveren, så vi logger bare ut lokalt.
  */
-function useSignOutWhenUnlinked(isChildDevice: boolean, hasHousehold: boolean, isPending: boolean) {
+function useSignOutWhenUnlinked(isAnonymous: boolean, isLinked: boolean, isPending: boolean) {
   const wasLinked = useRef(false);
   useEffect(() => {
-    if (!isChildDevice || isPending) return;
-    if (hasHousehold) wasLinked.current = true;
+    if (!isAnonymous || isPending) return;
+    if (isLinked) wasLinked.current = true;
     else if (wasLinked.current) {
       wasLinked.current = false;
       signOutLocal();
     }
-  }, [isChildDevice, hasHousehold, isPending]);
+  }, [isAnonymous, isLinked, isPending]);
 }
 
 const useStyles = makeStyles(({ colors }) =>

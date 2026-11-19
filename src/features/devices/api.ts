@@ -18,8 +18,11 @@ export async function createLinkCode(memberId: string): Promise<LinkCode> {
   return { code: row.code, expiresAt: row.expires_at };
 }
 
-/** «Jeg er et barn»: logger inn uten e-post. Sesjonen lagres i SecureStore som vanlig. */
-export async function signInAsChild(): Promise<void> {
+/**
+ * «Jeg er et barn» og «Sett opp familieskjerm»: logger inn uten e-post. Koden avgjør senere hva
+ * enheten blir. Sesjonen lagres i SecureStore som vanlig.
+ */
+export async function signInAsDevice(): Promise<void> {
   const { error } = await supabase.auth.signInAnonymously();
   if (error) throw error;
 }

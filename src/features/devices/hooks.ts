@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { displayKeys } from '../display/hooks';
 import { householdKeys } from '../household/hooks';
 import { createLinkCode, redeemLinkCode, unlinkDevice } from './api';
 
@@ -6,12 +7,16 @@ export function useCreateLinkCode() {
   return useMutation({ mutationFn: createLinkCode });
 }
 
-/** Etter innløsning hentes husstanden på nytt, og app/(app)/_layout.tsx viser barnets faner. */
+/** Etter innløsning hentes koblingen på nytt, og app/(app)/_layout.tsx viser riktig skjerm. */
 export function useRedeemLinkCode() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: redeemLinkCode,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: householdKeys.mine }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: householdKeys.mine }),
+        queryClient.invalidateQueries({ queryKey: displayKeys.board }),
+      ]),
   });
 }
 

@@ -26,12 +26,13 @@ const MODE_OPTIONS: { value: Mode; label: string }[] = [
 ];
 
 /**
- * Barnets enhet, før den er koblet til en barneprofil (anonym innlogging, se app/(app)/_layout.tsx).
+ * Barnets enhet eller familieskjermen, før den er koblet (anonym innlogging, se
+ * app/(app)/_layout.tsx). Koden avgjør hva enheten blir.
  * To valg: skann QR-koden på den voksnes mobil (standard), eller skriv inn koden.
  *
  * «Skriv inn kode» skjuler kameraet, så feltet står øverst og alltid er over tastaturet.
  * Med kameraet over feltet ble feltet liggende under tastaturet.
- * Når koden er godtatt, hentes husstanden på nytt og layouten viser barnets faner.
+ * Når koden er godtatt, hentes koblingen på nytt og layouten viser riktig skjerm.
  */
 export default function LinkDeviceScreen() {
   const styles = useStyles();
@@ -59,7 +60,7 @@ export default function LinkDeviceScreen() {
       >
         <Text variant="pageTitle">Koble til</Text>
         <Text>
-          Be en voksen åpne deg under «Husstand» og trykke «Koble til enhet».
+          Be en voksen lage en kode under «Husstand» i appen sin.
         </Text>
 
         <ChoiceChips options={MODE_OPTIONS} value={mode} onChange={changeMode} disabled={redeem.isPending} />

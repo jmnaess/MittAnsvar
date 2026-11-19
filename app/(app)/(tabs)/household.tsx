@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Alert, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Button, makeStyles, Message, Section, pageWidth, spacing, Text, useTheme } from '../../../src/ui';
 import { useSession } from '../../../src/features/auth/SessionProvider';
+import { DisplaySection } from '../../../src/features/display/components/DisplaySection';
 import { InviteRow } from '../../../src/features/household/components/InviteRow';
 import { MemberRow } from '../../../src/features/household/components/MemberRow';
 import {
@@ -62,6 +63,7 @@ export default function HouseholdScreen() {
       </Section>
 
       {isAdult && <InviteSection household={household!} members={members ?? []} />}
+      {isAdult && <DisplaySection householdId={household!.id} />}
     </ScrollView>
   );
 }

@@ -13,7 +13,7 @@ import {
   useTheme,
 } from '../src/ui';
 import { sendCode, verifyCode } from '../src/features/auth/api';
-import { signInAsChild } from '../src/features/devices/api';
+import { signInAsDevice } from '../src/features/devices/api';
 import { toNorwegianMessage } from '../src/lib/errors';
 
 const CODE_LENGTH = 6;
@@ -60,8 +60,9 @@ export default function SignInScreen() {
 
   const handleVerify = () => run(() => verifyCode(trimmedEmail, code));
 
-  // Barnets enhet: logger inn anonymt. Etterpå viser appen «Koble til» (app/(app)/link-device.tsx).
-  const handleChild = () => run(signInAsChild);
+  // Barnets enhet og familieskjermen: logger inn anonymt. Etterpå viser appen «Koble til»
+  // (app/(app)/link-device.tsx), og koden avgjør hva enheten blir.
+  const handleDevice = () => run(signInAsDevice);
 
   function handleChangeEmail() {
     setStep('email');
@@ -106,7 +107,8 @@ export default function SignInScreen() {
               <Text variant="meta" color={colors.textMuted} style={styles.center}>
                 Har en voksen i familien laget en profil til deg?
               </Text>
-              <Button variant="secondary" title="Jeg er et barn" onPress={handleChild} disabled={busy} />
+              <Button variant="secondary" title="Jeg er et barn" onPress={handleDevice} disabled={busy} />
+              <Button variant="text" title="Sett opp familieskjerm" onPress={handleDevice} disabled={busy} />
             </View>
           </>
         ) : (

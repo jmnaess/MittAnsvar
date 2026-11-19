@@ -80,7 +80,7 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/task/[id].tsx
   (app)/task/new.tsx
   (app)/job/new.tsx               # «Ny ledig jobb» (kort skjema) fra «+» i «I dag»
-  (app)/job/[id].tsx              # endre jobb (langt trykk i «I dag»)
+  (app)/job/[id].tsx              # endre jobb (langt trykk i «I dag», eller «Endre oppgave»)
   (app)/(display)/index.tsx       # familieskjermen: «I dag» for hele husstanden
   (app)/display/link.tsx          # QR-kode og kode for familieskjermen
   paywall.tsx
@@ -90,7 +90,8 @@ src/
     auth/         api.ts, hooks.ts
     household/    api.ts, hooks.ts, inviteCode.ts, components/
     tasks/        api.ts, hooks.ts, recurrence.ts, reward.ts, job.ts (jobbskjema, hvilke barn),
-                  groupToday.ts, childToday.ts (barnets «I dag»), components/
+                  groupToday.ts, childToday.ts (barnets «I dag»), rowActions.ts (valgene på en rad),
+                  components/
     completions/  api.ts, hooks.ts, chooseDoer.ts (hvem gjorde det, testes), components/MemberPickerModal.tsx
     rewards/      api.ts, hooks.ts, format.ts (saldo med «venter»), components/ (PayoutModal, RewardEventRow,
                   PendingApprovalBanner)
@@ -131,6 +132,8 @@ docs/
 Hver `feature` eier sine egne API-kall og hooks. Skjermene i `app/` setter bare sammen komponenter.
 
 ---
+
+**Radene i «I dag» og personvisningen (voksne).** Sirkelen krysser av. Trykk på raden åpner alltid samme meny (`TaskRowMenu`), og `rowActions.ts` bestemmer valgene: åpen oppgave gir Utsett til … / Velg hvem som gjorde det / Endre oppgave / Avbryt, «Kommende» gir Velg hvem som gjorde det (hvis den kan krysses av tidlig) / Endre oppgave / Avbryt, utført i dag gir Ikke gjort / Endre hvem som gjorde det / Endre oppgave / Avbryt, og «Gjort siste 3 dager» gir Endre oppgave / Avbryt. Valg som ikke gir mening skjules: «Velg hvem» når husstanden har én person, «Endre hvem» når det ikke finnes andre å flytte til, og «Endre oppgave» når oppgaven ikke lenger er aktiv. Barnets enhet og familieskjermen har ingen meny.
 
 ## 3. Barneprofiler, QR-kobling og felles visning
 

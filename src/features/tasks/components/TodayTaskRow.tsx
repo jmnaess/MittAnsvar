@@ -23,7 +23,7 @@ type Props = {
   onPress: () => void;
   /**
    * Satt (bare voksne): sirkelen krysser av, og trykk på resten av raden åpner valgene
-   * («Utsett til» m.fl.). Utelatt: hele raden krysser av.
+   * (TaskRowMenu). Utelatt: hele raden krysser av.
    */
   onOpen?: () => void;
   /** Utelatt = langt trykk gjør ingenting (barnets enhet). */

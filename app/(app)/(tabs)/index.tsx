@@ -4,8 +4,7 @@ import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { chooseCompletionAction } from '../../../src/features/completions/chooseDoer';
-import type { TodayCompletion } from '../../../src/features/completions/api';
-import { DoneActionsSheet } from '../../../src/features/completions/components/DoneActionsSheet';
+import type { RecentCompletion, TodayCompletion } from '../../../src/features/completions/api';
 import { RecentDoneCard } from '../../../src/features/completions/components/RecentDoneCard';
 import { DoneList } from '../../../src/features/completions/components/DoneList';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
@@ -26,20 +25,22 @@ import { PendingApprovalBanner } from '../../../src/features/rewards/components/
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
 import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
-import { TaskActionsSheet } from '../../../src/features/tasks/components/TaskActionsSheet';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
+import { TaskRowMenu } from '../../../src/features/tasks/components/TaskRowMenu';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
 import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY, type TodaySection } from '../../../src/features/tasks/groupToday';
 import {
   useMemberUpcoming,
   usePostponeTask,
+  useTasks,
   useTodayTasks,
   useUndoPostpone,
 } from '../../../src/features/tasks/hooks';
 import { newTaskForLabel } from '../../../src/features/tasks/assignees';
 import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
+import { editHref, rowActions, type RowAction } from '../../../src/features/tasks/rowActions';
 import type { Task, TodayTask } from '../../../src/features/tasks/types';
 import { UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatDate, formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
@@ -73,8 +74,12 @@ type Completable = Pick<
 /** «Hvem gjorde det?»: hvilke personer som kan velges, og om en er forhåndsvalgt. */
 type Picking = { task: Completable; members: Member[]; preselectedId: string | null };
 
-/** En voksen retter en utført rad: valgene først, så personvelgeren ved «Endre hvem». */
-type Fixing = { completion: TodayCompletion; step: 'menu' | 'pick' };
+/** Raden en voksen har trykket på. Se TaskRowMenu. */
+type RowMenu =
+  | { kind: 'open'; task: TodayTask }
+  | { kind: 'upcoming'; task: Task; checkable: boolean }
+  | { kind: 'done'; completion: TodayCompletion }
+  | { kind: 'recent'; completion: RecentCompletion };
 
 /** «Utsatt til …» med «Angre». */
 type PostponedToast = { taskId: string; message: string };
@@ -82,10 +87,11 @@ type PostponedToast = { taskId: string; message: string };
 /**
  * «I dag»: dato og tittel, alle i husstanden (trykk for å vise bare én), godkjenningsbanner for
  * voksne, én seksjon per person i personens farge, «Felles», «Denne måneden» og «Ledige jobber».
- * Voksne legger ut jobber med «+» og endrer dem med langt trykk.
+ * Voksne legger ut jobber med «+» og endrer dem med langt trykk. Trykk på en oppgaverad åpner
+ * valgene for voksne (TaskRowMenu, rowActions.ts), og sirkelen krysser av.
  *
- * Personvisning (én person valgt): personens kort, «Kommende» (8 uker, voksne kan trykke for å
- * endre, og sirkelen krysser av den nærmeste forekomsten tidlig) og «Gjort siste 3 dager».
+ * Personvisning (én person valgt): personens kort, «Kommende» (8 uker, sirkelen krysser av den
+ * nærmeste forekomsten tidlig) og «Gjort siste 3 dager».
  */
 export default function TodayScreen() {
   const { colors, personColor, sharedColors } = useTheme();
@@ -106,6 +112,8 @@ export default function TodayScreen() {
     today,
     { windowDays: UPCOMING_DAYS },
   );
+  // Aktive oppgaver: en utført rad kan bare endres hvis oppgaven fortsatt finnes.
+  const { data: activeTasks = [], refetch: refetchActiveTasks } = useTasks(householdId);
   const { data: recent = [], refetch: refetchRecentQuery } = useRecentCompletions(
     householdId,
     today,
@@ -118,9 +126,10 @@ export default function TodayScreen() {
         refetchTasks(),
         refetchDone(),
         refetchUpcoming(),
+        refetchActiveTasks(),
         focusedId !== null ? refetchRecentQuery() : undefined,
       ]),
-    [refetchTasks, refetchDone, refetchUpcoming, refetchRecentQuery, focusedId],
+    [refetchTasks, refetchDone, refetchUpcoming, refetchActiveTasks, refetchRecentQuery, focusedId],
   );
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
@@ -137,9 +146,11 @@ export default function TodayScreen() {
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
-  const [fixing, setFixing] = useState<Fixing | null>(null);
-  /** Voksen har trykket på raden til en åpen oppgave. */
-  const [opened, setOpened] = useState<TodayTask | null>(null);
+  /** «Endre hvem som gjorde det»: personvelgeren er åpen for denne avkrysningen. */
+  const [reassigning, setReassigning] = useState<TodayCompletion | null>(null);
+  // Raden beholdes mens menyen lukkes, så innholdet ikke forsvinner under animasjonen.
+  const [menu, setMenu] = useState<RowMenu | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [postponed, setPostponed] = useState<PostponedToast | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   // Pluss: velg «Oppgave i dag» eller «Ledig jobb».
@@ -207,11 +218,51 @@ export default function TodayScreen() {
     }
   }
 
-  const pickDoer = (task: TodayTask) => setPicking({ task, members, preselectedId: null });
+  const pickDoer = (task: Completable) => setPicking({ task, members, preselectedId: null });
 
-  // «Utsett til»: oppgaven forsvinner fra i dag og kommer tilbake på den nye datoen.
-  function postponeTo(task: TodayTask, to: string) {
-    setOpened(null);
+  function openMenu(row: RowMenu) {
+    setMenu(row);
+    setMenuOpen(true);
+  }
+  const closeMenu = () => setMenuOpen(false);
+
+  const isActiveTask = (taskId: string) => activeTasks.some((t) => t.id === taskId);
+
+  function menuActions(row: RowMenu | null): RowAction[] {
+    if (!row) return [];
+    const canPickDoer = members.length > 1;
+    switch (row.kind) {
+      case 'open':
+        return rowActions({ kind: 'open', canPickDoer });
+      case 'upcoming':
+        return rowActions({ kind: 'upcoming', checkable: row.checkable, canPickDoer });
+      case 'done':
+        return rowActions({
+          kind: 'done',
+          canReassign: reassignCandidates(row.completion, members).some(
+            (m) => m.id !== row.completion.completed_by_member_id,
+          ),
+          canEdit: isActiveTask(row.completion.task_id),
+        });
+      case 'recent':
+        return rowActions({ kind: 'recent', canEdit: isActiveTask(row.completion.task_id) });
+    }
+  }
+
+  // Oppgaven menyen gjelder, når raden er åpen eller kommende.
+  const menuTask = menu?.kind === 'open' || menu?.kind === 'upcoming' ? menu.task : null;
+  const menuCompletion = menu?.kind === 'done' || menu?.kind === 'recent' ? menu.completion : null;
+
+  // «Endre oppgave»: samme skjerm som fra «Oppgaver». Jobber har sitt eget skjema.
+  function editFromMenu() {
+    closeMenu();
+    if (menuTask) router.push(editHref(menuTask.id, menuTask.recurrence_type));
+    else if (menuCompletion) router.push(editHref(menuCompletion.task_id, menuCompletion.recurrence_type));
+  }
+
+  // «Utsett til»: oppgaven flyttes og kommer tilbake på den nye datoen.
+  function postponeTo(task: Pick<Task, 'id' | 'title'>, to: string) {
+    closeMenu();
     setActionError(null);
     postpone.mutate(
       { taskId: task.id, to },
@@ -247,7 +298,7 @@ export default function TodayScreen() {
 
   // Voksne, hele dagen: «Ikke gjort» fjerner avkrysningen.
   function removeDone(completion: TodayCompletion) {
-    setFixing(null);
+    closeMenu();
     setActionError(null);
     remove.mutate(completion.id, {
       onSuccess: () => setToast((t) => (t?.completionId === completion.id ? null : t)),
@@ -266,7 +317,7 @@ export default function TodayScreen() {
 
   // «Endre hvem som gjorde det»: flytter avkrysningen (og eventuell lønn) til en annen.
   function reassignDone(completion: TodayCompletion, member: Member) {
-    setFixing(null);
+    setReassigning(null);
     if (member.id === completion.completed_by_member_id) return;
     setActionError(null);
     reassign.mutate(
@@ -302,7 +353,7 @@ export default function TodayScreen() {
         muted={muted}
         busy={busyId === task.id}
         onPress={() => handlePress(task)}
-        onOpen={isAdult ? () => setOpened(task) : undefined}
+        onOpen={isAdult ? () => openMenu({ kind: 'open', task }) : undefined}
         onLongPress={() => pickDoer(task)}
       />
     ));
@@ -321,7 +372,7 @@ export default function TodayScreen() {
           onUndo={undoDone}
           adultActions={{
             onRemove: confirmRemove,
-            onOpen: (completion) => setFixing({ completion, step: 'menu' }),
+            onOpen: (completion) => openMenu({ kind: 'done', completion }),
           }}
           expanded={expandedKeys.has(section.key)}
           onToggleExpanded={() => toggleExpanded(section.key)}
@@ -433,11 +484,22 @@ export default function TodayScreen() {
                 emptyText="Ingenting planlagt de neste ukene."
                 onOpen={
                   isAdult
-                    ? (task) => router.push({ pathname: '/task/[id]', params: { id: task.id } })
+                    ? (task, checkable) => openMenu({ kind: 'upcoming', task, checkable })
                     : undefined
                 }
               />
-              <RecentDoneCard days={recentDays} checkColor={personColor(focused.avatar).ring} />
+              <RecentDoneCard
+                days={recentDays}
+                checkColor={personColor(focused.avatar).ring}
+                rowPress={
+                  isAdult
+                    ? (completion) =>
+                        isActiveTask(completion.task_id)
+                          ? () => openMenu({ kind: 'recent', completion })
+                          : undefined
+                    : undefined
+                }
+              />
             </>
           )}
         </View>
@@ -455,32 +517,33 @@ export default function TodayScreen() {
         }}
       />
 
-      <DoneActionsSheet
-        taskTitle={fixing?.step === 'menu' ? fixing.completion.title : null}
-        onClose={() => setFixing(null)}
-        onRemove={() => fixing && removeDone(fixing.completion)}
-        onReassign={() => fixing && setFixing({ ...fixing, step: 'pick' })}
-      />
-
       <MemberPickerModal
-        taskTitle={fixing?.step === 'pick' ? fixing.completion.title : null}
-        members={fixing ? reassignCandidates(fixing.completion, members) : []}
-        preselectedId={fixing?.completion.completed_by_member_id}
+        taskTitle={reassigning?.title ?? null}
+        members={reassigning ? reassignCandidates(reassigning, members) : []}
+        preselectedId={reassigning?.completed_by_member_id}
         meId={me?.id}
         confirmLabel="Lagre"
-        onClose={() => setFixing(null)}
-        onPick={(member) => fixing && reassignDone(fixing.completion, member)}
+        onClose={() => setReassigning(null)}
+        onPick={(member) => reassigning && reassignDone(reassigning, member)}
       />
 
-      <TaskActionsSheet
-        taskTitle={opened?.title ?? null}
+      <TaskRowMenu
+        visible={menuOpen}
+        title={menuTask?.title ?? menuCompletion?.title ?? ''}
+        actions={menuActions(menu)}
         today={today}
-        onClose={() => setOpened(null)}
-        onPostpone={(to) => opened && postponeTo(opened, to)}
+        onClose={closeMenu}
+        onPostpone={(to) => menuTask && postponeTo(menuTask, to)}
         onPickDoer={() => {
-          if (opened) pickDoer(opened);
-          setOpened(null);
+          closeMenu();
+          if (menuTask) pickDoer(menuTask);
         }}
+        onRemove={() => menu?.kind === 'done' && removeDone(menu.completion)}
+        onReassign={() => {
+          closeMenu();
+          if (menu?.kind === 'done') setReassigning(menu.completion);
+        }}
+        onEdit={editFromMenu}
       />
 
       <NewTaskSheet

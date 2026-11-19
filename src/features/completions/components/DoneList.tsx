@@ -7,7 +7,7 @@ import { canUndo, DONE_PREVIEW, doneByText, moreDoneA11yLabel, moreDoneText, vis
 export type AdultDoneActions = {
   /** Trykk på sirkelen: «Merke som ikke gjort?». */
   onRemove: (completion: TodayCompletion) => void;
-  /** Trykk på raden: valg mellom «Ikke gjort» og «Endre hvem som gjorde det». */
+  /** Trykk på raden: åpner valgene (se TaskRowMenu). */
   onOpen: (completion: TodayCompletion) => void;
 };
 
@@ -81,7 +81,7 @@ export function DoneList({
               onCheckPress={() => adult.onRemove(c)}
               checkAccessibilityLabel={`Merk ${c.title} som ikke gjort`}
               accessibilityLabel={label}
-              accessibilityHint="Trykk for å endre"
+              accessibilityHint="Trykk for å åpne valg"
               right={right}
             />
           );

@@ -1,19 +1,22 @@
 import { StyleSheet, View } from 'react-native';
 import { Card, Chip, spacing, TaskRow, Text, useTheme } from '../../../ui';
 import { formatKroner } from '../../tasks/reward';
+import type { RecentCompletion } from '../api';
 import type { RecentDay } from '../recent';
 
 type Props = {
   days: RecentDay[];
   /** Fyllfarge på sjekkboksen: personens ring-farge. */
   checkColor: string;
+  /** Satt for voksne: hva trykk på raden gjør. undefined for en rad = den kan ikke trykkes. */
+  rowPress?: (completion: RecentCompletion) => (() => void) | undefined;
 };
 
 /**
  * «Gjort siste 3 dager» i personvisningen: én gruppe per dag («I går», «Mandag»), gjennomstreket
- * og dempet som det som er gjort i dag. Bare visning. Vises ikke når ingenting er gjort.
+ * og dempet som det som er gjort i dag. Uten rowPress bare visning. Vises ikke når ingenting er gjort.
  */
-export function RecentDoneCard({ days, checkColor }: Props) {
+export function RecentDoneCard({ days, checkColor, rowPress }: Props) {
   const { colors } = useTheme();
   if (days.length === 0) return null;
   return (
@@ -31,6 +34,7 @@ export function RecentDoneCard({ days, checkColor }: Props) {
               done
               muted
               checkColor={checkColor}
+              onPress={rowPress?.(c)}
               accessibilityLabel={`${c.title}, utført ${day.title.toLowerCase()}`}
               right={
                 c.reward_nok !== null ? (

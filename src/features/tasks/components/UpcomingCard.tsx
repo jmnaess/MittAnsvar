@@ -10,11 +10,11 @@ type Props = {
   upcoming: MemberUpcoming;
   /** Personen er et barn: vis lønn. Voksne får aldri lønn. */
   showReward: boolean;
-  /** Satt for voksne: trykk åpner oppgaven i redigering. Barn kan bare se. */
-  onOpen?: (task: Task) => void;
+  /** Satt for voksne: trykk på raden åpner valgene. checkable som i upcoming.ts. Barn kan bare se. */
+  onOpen?: (task: Task, checkable: boolean) => void;
   /**
    * Satt: rader som kan krysses av tidlig (checkable, se canCompleteEarly) får sirkel.
-   * Med onOpen krysser sirkelen av og raden åpner. Uten krysser hele raden av, som i «I dag».
+   * Med onOpen krysser sirkelen av og raden åpner valgene. Uten krysser hele raden av, som i «I dag».
    */
   onComplete?: (task: Task) => void;
   /** Oppgaven som krysses av nå: sirkelen vises fylt, og raden kan ikke trykkes. */
@@ -29,7 +29,7 @@ type Props = {
 /**
  * «Kommende» i personvisningen: hyppige oppgaver én gang («Hver dag · neste tor. 19. nov.»),
  * deretter én gruppe per uke med dato på hver rad. Den nærmeste forekomsten av en oppgave kan
- * krysses av tidlig (onComplete). Ellers bare visning, unntatt at voksne kan åpne.
+ * krysses av tidlig (onComplete). Voksne åpner valgene med trykk på raden (onOpen).
  */
 export function UpcomingCard({
   upcoming, showReward, onOpen, onComplete, busyId, checkColor, loading, emptyText,
@@ -40,12 +40,22 @@ export function UpcomingCard({
 
   const reward = (task: Task) =>
     showReward && task.reward_nok ? <Chip label={formatKroner(task.reward_nok)} tone="money" /> : undefined;
-  const open = (task: Task) => (onOpen ? () => onOpen(task) : undefined);
 
   // En vanlig funksjon, ikke en komponent: da monteres ikke radene på nytt ved hver render.
   function renderRow(key: string, task: Task, meta: string, checkable: boolean) {
+    const open = onOpen ? () => onOpen(task, checkable) : undefined;
     if (!checkable || !onComplete) {
-      return <ListRow key={key} muted title={task.title} meta={meta} right={reward(task)} onPress={open(task)} />;
+      return (
+        <ListRow
+          key={key}
+          muted
+          title={task.title}
+          meta={meta}
+          right={reward(task)}
+          onPress={open}
+          accessibilityLabel={open ? `${task.title}, ${meta}. Åpne valg` : undefined}
+        />
+      );
     }
     const busy = busyId === task.id;
     const complete = () => onComplete(task);
@@ -59,11 +69,11 @@ export function UpcomingCard({
         done={busy}
         disabled={busy}
         checkColor={checkColor}
-        onPress={onOpen ? () => onOpen(task) : complete}
-        onCheckPress={onOpen ? complete : undefined}
-        checkAccessibilityLabel={onOpen ? `Marker ${task.title} som utført nå` : undefined}
+        onPress={open ?? complete}
+        onCheckPress={open ? complete : undefined}
+        checkAccessibilityLabel={open ? `Marker ${task.title} som utført nå` : undefined}
         accessibilityLabel={
-          onOpen ? `${task.title}, ${meta}. Åpne oppgaven` : `${task.title}, ${meta}. Marker som utført nå`
+          open ? `${task.title}, ${meta}. Åpne valg` : `${task.title}, ${meta}. Marker som utført nå`
         }
       />
     );

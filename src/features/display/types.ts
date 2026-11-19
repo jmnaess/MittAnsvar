@@ -1,6 +1,7 @@
-import type { TodayCompletion } from '../completions/api';
+import type { RecentCompletion, TodayCompletion } from '../completions/api';
 import type { Member } from '../household/types';
-import type { TodayTask } from '../tasks/types';
+import type { Occurrence, TodayTask } from '../tasks/types';
+import type { UpcomingTask } from '../tasks/upcoming';
 
 /** En koblet familieskjerm, slik voksne ser den under «Husstand». */
 export type HouseholdDisplay = { id: string; created_at: string };
@@ -44,4 +45,13 @@ export type FamilyBoard = {
   tasks: BoardTask[];
   /** recorded_by er bare satt på det skjermen selv har registrert. */
   completions: TodayCompletion[];
+  /**
+   * Personvisningen. Valgfrie: en app som er nyere enn databasen, får dem ikke.
+   * upcoming_tasks: aktive oppgaver med ansvarlig person (ikke jobber og ikke felles).
+   * occurrences: forekomstene deres fra i morgen og 14 dager fram.
+   * recent: avkrysninger fra i går og tre dager bakover, uten avviste.
+   */
+  upcoming_tasks?: UpcomingTask[];
+  occurrences?: Pick<Occurrence, 'task_id' | 'due_on'>[];
+  recent?: RecentCompletion[];
 };

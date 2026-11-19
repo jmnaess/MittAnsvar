@@ -29,7 +29,13 @@ import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJo
 import { TaskRowMenu } from '../../../src/features/tasks/components/TaskRowMenu';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
-import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY, type TodaySection } from '../../../src/features/tasks/groupToday';
+import {
+  focusSections,
+  groupTodayByMember,
+  JOBS_KEY,
+  THIS_MONTH_KEY,
+  type TodaySection,
+} from '../../../src/features/tasks/groupToday';
 import {
   useMemberUpcoming,
   usePostponeTask,
@@ -598,14 +604,6 @@ export default function TodayScreen() {
       )}
     </View>
   );
-}
-
-/** Personvisning: personens kort, og «Denne måneden» med bare personens oppgaver (hvis noen). */
-function focusSections(all: TodaySection[], memberId: string): TodaySection[] {
-  const own = all.filter((s) => s.key === memberId);
-  const month = all.find((s) => s.key === THIS_MONTH_KEY);
-  const ownMonth = month?.data.filter((t) => t.assigned_member_id === memberId) ?? [];
-  return ownMonth.length > 0 ? [...own, { ...month!, data: ownMonth }] : own;
 }
 
 const useStyles = makeStyles(({ colors }) =>

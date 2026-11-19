@@ -88,3 +88,17 @@ export function groupTodayByMember<T extends GroupableTask, M extends Pick<Membe
       (showAllMembers && s.member !== null),
   );
 }
+
+/**
+ * Personvisning (én person valgt i FamilyStrip): personens kort, og «Denne måneden» med bare
+ * personens egne oppgaver (hvis noen). Brukes i voksnes «I dag» og på familieskjermen.
+ */
+export function focusSections<T extends Pick<TodayTask, 'assigned_member_id'>, M>(
+  all: TodaySection<T, M>[],
+  memberId: string,
+): TodaySection<T, M>[] {
+  const own = all.filter((s) => s.key === memberId);
+  const month = all.find((s) => s.key === THIS_MONTH_KEY);
+  const ownMonth = month?.data.filter((t) => t.assigned_member_id === memberId) ?? [];
+  return month && ownMonth.length > 0 ? [...own, { ...month, data: ownMonth }] : own;
+}

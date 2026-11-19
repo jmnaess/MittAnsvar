@@ -1,6 +1,29 @@
 import { addDays, formatDate, formatWeekRange, isoWeekNumber, lastDayOfMonth, startOfIsoWeek } from '../../lib/dates';
 import type { Occurrence, Task } from './types';
 
+/**
+ * Feltene «Kommende» bruker. Familieskjermen får bare disse (get_family_board), voksne og barn
+ * hele raden.
+ */
+export type UpcomingTask = Pick<
+  Task,
+  | 'id'
+  | 'title'
+  | 'assigned_member_id'
+  | 'reward_nok'
+  | 'recurrence_type'
+  | 'recurrence_unit'
+  | 'recurrence_every'
+  | 'weekdays'
+  | 'month_day'
+  | 'month'
+  | 'job_repeats'
+  | 'season_start_month'
+  | 'season_end_month'
+  | 'next_due_on'
+  | 'postponed_to'
+>;
+
 /** «Kommende» for voksne, i personvisningen og i «Alle»: 8 uker fra i morgen. */
 export const UPCOMING_DAYS = 56;
 /** «Kommende» på barnets egen enhet: 2 uker, uten de hyppige oppgavene. */
@@ -15,21 +38,25 @@ export function upcomingWindow(today: string, days: number): { from: string; to:
  * En forekomst med dato. key er unik også når samme oppgave kommer flere ganger.
  * checkable: raden får sirkel og kan krysses av tidlig (se canCompleteEarly).
  */
-export type UpcomingItem = { key: string; task: Task; dueOn: string; checkable: boolean };
+export type UpcomingItem<T extends UpcomingTask = Task> = { key: string; task: T; dueOn: string; checkable: boolean };
 
 /** En hyppig oppgave, vist én gang («Hver dag») med neste dato. checkable som over. */
-export type RepeatingItem = { task: Task; nextOn: string; checkable: boolean };
+export type RepeatingItem<T extends UpcomingTask = Task> = { task: T; nextOn: string; checkable: boolean };
 
 /** «Denne uken», «Neste uke» eller «Uke 50 · 7.–13. des.». */
-export type UpcomingGroup = { key: string; title: string; items: UpcomingItem[] };
+export type UpcomingGroup<T extends UpcomingTask = Task> = { key: string; title: string; items: UpcomingItem<T>[] };
 
 /**
  * nextMonth: årlige månedsoppgaver (årshjulet) i neste kalendermåned. De har ingen dag, så de
  * vises samlet under «Neste måned» i stedet for på den 1. i måneden.
  */
-export type MemberUpcoming = { repeating: RepeatingItem[]; groups: UpcomingGroup[]; nextMonth: UpcomingItem[] };
+export type MemberUpcoming<T extends UpcomingTask = Task> = {
+  repeating: RepeatingItem<T>[];
+  groups: UpcomingGroup<T>[];
+  nextMonth: UpcomingItem<T>[];
+};
 
-export const EMPTY_UPCOMING: MemberUpcoming = { repeating: [], groups: [], nextMonth: [] };
+export const EMPTY_UPCOMING: MemberUpcoming<never> = { repeating: [], groups: [], nextMonth: [] };
 
 /** Månedsoppgave: årlig kalenderoppgave uten dag (som private.is_month_task i databasen). */
 export function isMonthTask(task: Pick<Task, 'recurrence_type' | 'recurrence_unit' | 'month_day'>): boolean {
@@ -40,7 +67,7 @@ export function isMonthTask(task: Pick<Task, 'recurrence_type' | 'recurrence_uni
  * Forekomsten er en hel måned, ikke en dato. En utsatt månedsoppgave har fått en fast dato
  * (postponed_to), og den vises som en vanlig rad på datoen.
  */
-function isMonthOccurrence(task: Task, dueOn: string): boolean {
+function isMonthOccurrence(task: UpcomingTask, dueOn: string): boolean {
   return isMonthTask(task) && task.postponed_to !== dueOn;
 }
 
@@ -58,7 +85,7 @@ export function isFrequent(count: number, windowDays: number): boolean {
 }
 
 /** Hver dag (kalender eller intervall). */
-function isDaily(task: Task): boolean {
+function isDaily(task: Pick<Task, 'recurrence_unit' | 'recurrence_every'>): boolean {
   return task.recurrence_unit === 'day' && task.recurrence_every === 1;
 }
 
@@ -68,7 +95,7 @@ function isDaily(task: Task): boolean {
  * kommende forekomst lik fristen, og man krysser av i «I dag» som vanlig.
  * Daglige oppgaver aldri: morgendagens forekomst gjør man ikke i dag.
  */
-export function canCompleteEarly(task: Task, dueOn: string): boolean {
+export function canCompleteEarly(task: UpcomingTask, dueOn: string): boolean {
   return task.next_due_on === dueOn && !isDaily(task);
 }
 
@@ -87,20 +114,20 @@ function weekTitle(monday: string, today: string): string {
  * månedsoppgaver lenger fram utelates (de kommer med når de blir neste måned). Resten
  * grupperes per ISO-uke, sortert på dato og tittel.
  */
-export function buildUpcoming(
-  occurrences: Occurrence[],
-  tasks: Task[],
+export function buildUpcoming<T extends UpcomingTask>(
+  occurrences: Pick<Occurrence, 'task_id' | 'due_on'>[],
+  tasks: T[],
   memberId: string | null,
   today: string,
   { windowDays, hideFrequent = false }: { windowDays: number; hideFrequent?: boolean },
-): MemberUpcoming {
+): MemberUpcoming<T> {
   const taskById = new Map(
     tasks
       .filter((t) => t.recurrence_type !== 'job' && (memberId === null || t.assigned_member_id === memberId))
       .map((t) => [t.id, t]),
   );
   const nextMonth = nextMonthKey(today);
-  const monthItems: UpcomingItem[] = [];
+  const monthItems: UpcomingItem<T>[] = [];
 
   const datesByTask = new Map<string, string[]>();
   for (const o of occurrences) {
@@ -122,8 +149,8 @@ export function buildUpcoming(
     datesByTask.set(o.task_id, dates);
   }
 
-  const repeating: RepeatingItem[] = [];
-  const items: UpcomingItem[] = [];
+  const repeating: RepeatingItem<T>[] = [];
+  const items: UpcomingItem<T>[] = [];
   for (const [taskId, dates] of datesByTask) {
     const task = taskById.get(taskId)!;
     const sorted = [...dates].sort();
@@ -142,7 +169,7 @@ export function buildUpcoming(
   items.sort((a, b) => a.dueOn.localeCompare(b.dueOn) || a.task.title.localeCompare(b.task.title));
   monthItems.sort((a, b) => a.task.title.localeCompare(b.task.title, 'nb'));
 
-  const groups: UpcomingGroup[] = [];
+  const groups: UpcomingGroup<T>[] = [];
   for (const item of items) {
     const monday = startOfIsoWeek(item.dueOn);
     const last = groups[groups.length - 1];

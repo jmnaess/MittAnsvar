@@ -60,6 +60,8 @@ const KNOWN: Record<string, string> = {
   invalid_avatar: 'Velg en av avatarene.',
   member_not_found: 'Fant ikke profilen din. Logg inn på nytt.',
   anonymous_required: 'Denne enheten er logget inn som voksen. Logg ut først.',
+  // Familieskjermen
+  not_display: 'Denne enheten er ikke en familieskjerm.',
   // Oppgaver
   subscription_required: 'Prøveperioden er over. Husstanden trenger abonnement for å gjøre endringer.',
   recurrence_not_found: 'Fant ingen dato som passer gjentakelsen. Prøv et annet valg.',

@@ -4,22 +4,22 @@ import { formatDate, monthName } from '../../../lib/dates';
 import { describeRecurrence } from '../recurrence';
 import { formatKroner } from '../reward';
 import type { Task } from '../types';
-import { formatUpcomingDate, type MemberUpcoming } from '../upcoming';
+import { formatUpcomingDate, type MemberUpcoming, type UpcomingTask } from '../upcoming';
 
-type Props = {
-  upcoming: MemberUpcoming;
+type Props<T extends UpcomingTask> = {
+  upcoming: MemberUpcoming<T>;
   /**
    * Vis lønn: true når personen er et barn (voksne får aldri lønn). I «Alle» en funksjon som
    * sier om oppgaven er til et barn.
    */
-  showReward: boolean | ((task: Task) => boolean);
+  showReward: boolean | ((task: T) => boolean);
   /** Satt for voksne: trykk på raden åpner valgene. checkable som i upcoming.ts. Barn kan bare se. */
-  onOpen?: (task: Task, checkable: boolean) => void;
+  onOpen?: (task: T, checkable: boolean) => void;
   /**
    * Satt: rader som kan krysses av tidlig (checkable, se canCompleteEarly) får sirkel.
    * Med onOpen krysser sirkelen av og raden åpner valgene. Uten krysser hele raden av, som i «I dag».
    */
-  onComplete?: (task: Task) => void;
+  onComplete?: (task: T) => void;
   /** Oppgaven som krysses av nå: sirkelen vises fylt, og raden kan ikke trykkes. */
   busyId?: string;
   /** Fyllfarge på sirkelen: personens ring-farge. */
@@ -28,7 +28,7 @@ type Props = {
   loading?: boolean;
   emptyText: string;
   /** Satt i «Alle»: hvem oppgaven er til («Kari» eller «Felles»), etter datoen på raden. */
-  nameOf?: (task: Task) => string;
+  nameOf?: (task: T) => string;
 };
 
 /**
@@ -37,19 +37,19 @@ type Props = {
  * årshjulets månedsoppgaver. Den nærmeste forekomsten av en oppgave kan krysses av tidlig
  * (onComplete). Voksne åpner valgene med trykk på raden (onOpen). nameOf legger til hvem.
  */
-export function UpcomingCard({
+export function UpcomingCard<T extends UpcomingTask = Task>({
   upcoming, showReward, onOpen, onComplete, busyId, checkColor, loading, emptyText, nameOf,
-}: Props) {
+}: Props<T>) {
   const { colors } = useTheme();
   const { repeating, groups, nextMonth } = upcoming;
   const empty = repeating.length === 0 && groups.length === 0 && nextMonth.length === 0;
-  const withName = (task: Task, meta: string) => (nameOf ? `${meta} · ${nameOf(task)}` : meta);
+  const withName = (task: T, meta: string) => (nameOf ? `${meta} · ${nameOf(task)}` : meta);
 
-  const reward = (task: Task) =>
+  const reward = (task: T) =>
     (typeof showReward === 'function' ? showReward(task) : showReward) && task.reward_nok ? <Chip label={formatKroner(task.reward_nok)} tone="money" /> : undefined;
 
   // En vanlig funksjon, ikke en komponent: da monteres ikke radene på nytt ved hver render.
-  function renderRow(key: string, task: Task, dateText: string, checkable: boolean) {
+  function renderRow(key: string, task: T, dateText: string, checkable: boolean) {
     const meta = withName(task, dateText);
     const open = onOpen ? () => onOpen(task, checkable) : undefined;
     if (!checkable || !onComplete) {

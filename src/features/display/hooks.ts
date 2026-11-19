@@ -5,6 +5,7 @@ import {
   getFamilyBoard,
   listDisplays,
   unlinkDisplay,
+  unlinkThisDisplay,
 } from './api';
 import { loadKeepAwake, saveKeepAwake } from './settings';
 import type { HouseholdDisplay } from './types';
@@ -55,6 +56,11 @@ export function useUnlinkDisplay(householdId: string) {
     mutationFn: unlinkDisplay,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: displayKeys.list(householdId) }),
   });
+}
+
+/** Skjermen kobler fra seg selv. Utloggingen tømmer cachen (se SessionProvider). */
+export function useUnlinkThisDisplay() {
+  return useMutation({ mutationFn: unlinkThisDisplay });
 }
 
 function useInvalidateBoard() {

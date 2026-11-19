@@ -1,5 +1,6 @@
 import { ApiError, unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
+import { signOutLocal } from '../auth/api';
 import type { LinkCode } from '../devices/api';
 import type { FamilyBoard, HouseholdDisplay } from './types';
 
@@ -38,4 +39,14 @@ export async function listDisplays(householdId: string): Promise<HouseholdDispla
 /** En voksen kobler fra. Den anonyme brukeren slettes, og skjermen logger seg ut. */
 export async function unlinkDisplay(displayId: string): Promise<void> {
   unwrap(await supabase.rpc('unlink_display', { p_display_id: displayId }));
+}
+
+/**
+ * «Koble fra denne skjermen» på skjermen selv. Samme virkning som når en voksen kobler fra: koblingen
+ * og den anonyme brukeren slettes på serveren. Så logger vi ut lokalt, og skjermen går til
+ * innloggingen.
+ */
+export async function unlinkThisDisplay(): Promise<void> {
+  unwrap(await supabase.rpc('unlink_this_display'));
+  await signOutLocal();
 }

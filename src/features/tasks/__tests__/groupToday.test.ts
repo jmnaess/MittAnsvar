@@ -1,6 +1,6 @@
 import type { TodayCompletion } from '../../completions/api';
 import type { Member } from '../../household/types';
-import { groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../groupToday';
+import { focusSections, groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../groupToday';
 import type { TodayTask } from '../types';
 
 const leah: Member = {
@@ -70,5 +70,35 @@ describe('groupTodayByMember', () => {
       [JOBS_KEY, ['j']],
       [THIS_MONTH_KEY, ['m']],
     ]);
+  });
+});
+
+describe('focusSections', () => {
+  const ola: Member = { ...leah, id: 'ola', display_name: 'Ola' };
+  const all = groupTodayByMember(
+    [
+      task({ id: 'l1', assigned_member_id: 'leah' }),
+      task({ id: 'o1', assigned_member_id: 'ola' }),
+      task({ id: 'f1' }),
+      task({ id: 'lm', assigned_member_id: 'leah', is_month_task: true }),
+      task({ id: 'om', assigned_member_id: 'ola', is_month_task: true }),
+    ],
+    [leah, ola],
+  );
+
+  it('gir personens kort og bare personens månedsoppgaver', () => {
+    const sections = focusSections(all, 'leah');
+    expect(sections.map((s) => s.key)).toEqual(['leah', THIS_MONTH_KEY]);
+    expect(sections[0].data.map((t) => t.id)).toEqual(['l1']);
+    expect(sections[1].data.map((t) => t.id)).toEqual(['lm']);
+  });
+
+  it('dropper «Denne måneden» når personen ikke har noen der', () => {
+    const sections = focusSections(groupTodayByMember([task({ id: 'l1', assigned_member_id: 'leah' })], [leah, ola]), 'leah');
+    expect(sections.map((s) => s.key)).toEqual(['leah']);
+  });
+
+  it('gir ingenting for en ukjent person', () => {
+    expect(focusSections(all, 'borte')).toEqual([]);
   });
 });

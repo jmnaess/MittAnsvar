@@ -610,6 +610,9 @@ isOneToOne: false
                            },
 "unlink_my_device":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"unlink_this_display":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            }
           }
           Enums: {

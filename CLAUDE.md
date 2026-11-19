@@ -24,7 +24,9 @@ Utvikling på Ubuntu. Testing på fysisk mobil med Expo Go – ikke emulator.
 - Barn MED enhet: kobles til via QR-kode fra en voksens mobil.
 - Barn UTEN enhet: familieskjerm, en egen enhet (typisk iPad) koblet med QR-kode, uten voksenkonto.
   Viser dagens oppgaver med ett kort per person. Kan bare krysse av og angre egne avkrysninger.
-  Ingen redigering, godkjenning eller saldo. Ingen vei ut og ingen PIN: en voksen kobler fra.
+  Ingen redigering, godkjenning eller saldo. Ingen PIN: en voksen kobler fra, eller skjermen kobler
+  fra seg selv under tannhjulet (må kobles til på nytt med en kode fra en voksen).
+  Familieraden gir personvisning (I dag, Kommende, Gjort siste 3 dager), bare avkrysning i I dag.
 - Abonnement tilhører husstanden, ikke brukeren. Én betaling = tilgang for alle.
 - Pris: 14 dagers gratis prøvetid, deretter 39 kr/mnd eller 299 kr/år.
 - Gjentakelse, to modi: fast kalender (hver søndag) og intervall fra sist utført

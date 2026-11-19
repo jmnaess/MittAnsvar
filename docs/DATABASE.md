@@ -15,7 +15,8 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
     │  │           └──* payouts                          └──0..1 task_templates
     │  └──1 household_subscriptions
     ├──* invites                      feedback_messages (global, les-bare)
-    └──* link_tokens                  invite_attempts, link_attempts (per auth-bruker, stengt)
+    ├──* household_displays           invite_attempts, link_attempts (per auth-bruker, stengt)
+    └──* link_tokens
 
 View: today_tasks (tasks), today_completions (task_completions + tasks), recent_completions (task_completions + tasks), member_balances (members + task_completions + payouts)
 ```
@@ -102,7 +103,7 @@ Ett feilet `accept_invite`-forsøk = én rad. 5 rader nyere enn 15 minutter gir 
 |---------|------|---------|
 | id | uuid pk | |
 | household_id | uuid not null → households on delete cascade | |
-| member_id | uuid not null → members on delete cascade | barnet som skal kobles |
+| member_id | uuid null → members on delete cascade | barnet som skal kobles. `null` = kode for en familieskjerm |
 | code_hash | bytea not null unique | SHA-256 av den normaliserte koden. Klarteksten lagres aldri |
 | created_by | uuid not null → members on delete cascade | |
 | created_at | timestamptz not null default now() | |
@@ -110,8 +111,19 @@ Ett feilet `accept_invite`-forsøk = én rad. 5 rader nyere enn 15 minutter gir 
 | used_at | timestamptz null | engangsbruk |
 
 - **Én kort kode** på 8 tegn, samme alfabet, generator og normalisering som `invites` (`private.generate_invite_code`, `private.hash_invite_code`). QR-koden inneholder den samme koden (`mittansvar://link?code=ABCDEFGH`), så skann og inntasting er samme vei. Planen var et token på 32 byte i QR-koden. Det ble endret i steg 10, fordi en kort kode som også kan tastes inn, er trygg nok når den bare gjelder i 10 minutter og har sperre mot gjetting.
-- Bare den nyeste koden per barn gjelder: `create_link_token` sletter barnets ubrukte koder.
+- Bare den nyeste koden per barn gjelder: `create_link_token` sletter barnets ubrukte koder. Det samme gjelder skjermkoder per husstand (`create_display_link_token`).
 - Helt stengt for klienten (ingen rettigheter, ingen policyer).
+
+### `household_displays` (familieskjermer)
+| Kolonne | Type | Merknad |
+|---------|------|---------|
+| id | uuid pk | |
+| household_id | uuid not null → households on delete cascade | |
+| auth_user_id | uuid not null **unique** → auth.users on delete cascade | skjermens anonyme bruker. Kan ikke leses av klienten |
+| created_by | uuid null → members on delete set null | skjermen virker videre når den voksne sletter kontoen sin |
+| created_at | timestamptz not null default now() | |
+
+Skjermen er **ikke** et medlem. Alle innloggede er rollen `authenticated`, så kolonnerettigheter kan ikke skille den fra andre, og en leserett via RLS ville også gitt fødselsår, hjemprofil og all historikk. Uten rad i `members` er alle policyer stengt, og den leser bare via `get_family_board`. Voksne i husstanden kan lese `id`, `household_id` og `created_at`.
 
 ### `link_attempts` (sperre mot gjetting av koden)
 Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader nyere enn 15 minutter gir `too_many_attempts`. Helt stengt for klienten. Anonyme innlogginger er i tillegg begrenset per IP i Supabase Auth (standard 30 per time).
@@ -344,13 +356,13 @@ Hver avkrysning blir en ny rad. Tabellen er nesten append-only: bare `status` ka
 | household_id | uuid not null → households on delete cascade | denormalisert for enkel RLS |
 | task_id | uuid not null → tasks on delete cascade | |
 | completed_by_member_id | uuid not null → members **on delete cascade** | hvem som gjorde det. Slettes med barneprofilen (GDPR) |
-| recorded_by | uuid null → auth.users on delete set null | hvilken innlogget bruker som registrerte (i kiosk: den voksne) |
+| recorded_by | uuid null → auth.users on delete set null | hvilken innlogget bruker som registrerte (på familieskjermen: skjermens anonyme bruker, `null` etter frakobling) |
 | completed_on | date not null | lokal dato i husstandens tidssone, **settes av serveren** |
 | completed_at | timestamptz not null default now() | `complete_task` setter `clock_timestamp()`, så to avkrysninger i samme transaksjon får ulik tid |
 | due_on | date null | fristen denne avkrysningen dekket. Brukes til «i tide?» og til angring |
 | feedback_message_id | uuid null → feedback_messages on delete set null | hvilken tekst som ble vist, for å unngå gjentakelser |
 | reward_nok | integer null | lønnen som ble tjent (steg 9), kopiert fra `tasks.reward_nok`. null = ingen lønn, eller en voksen gjorde oppgaven. Senere prisendring påvirker ikke raden |
-| status | completion_status not null default `approved` | steg 10b. `pending` når et barn krysser av en oppgave med lønn på sin egen enhet. Alt annet (uten lønn, eller registrert av en voksen, også for et barn) er `approved` med én gang. `rejected` = ikke godkjent: beløpet teller ikke, og oppgaven regnes som ikke gjort. Raden beholdes, så barnet ser det. Delvis indeks `(household_id) where status = 'pending'` |
+| status | completion_status not null default `approved` | steg 10b. `pending` når et barn krysser av en oppgave med lønn på sin egen enhet, eller det skjer på familieskjermen. Alt annet (uten lønn, eller registrert av en voksen, også for et barn) er `approved` med én gang. `rejected` = ikke godkjent: beløpet teller ikke, og oppgaven regnes som ikke gjort. Raden beholdes, så barnet ser det. Delvis indeks `(household_id) where status = 'pending'` |
 
 Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(household_id, completed_by_member_id)`. `task_id` og `completed_by_member_id` har sammensatte FK-er med `household_id`, slik at oppgave og medlem alltid hører til samme husstand som raden.
 
@@ -364,8 +376,9 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
   5. Velger en tilbakemeldingstekst (se §4), setter inn raden (`due_on` = oppgavens nåværende `next_due_on`) og setter `tasks.next_due_on = private.compute_next_due(oppgaven, completed_on)`. Alt skjer i én transaksjon.
   6. Steg 9: `reward_nok` = oppgavens beløp hvis den som gjorde oppgaven er et barn, ellers `null`. Er oppgaven en engangsjobb, settes `archived_at = now()`.
   7. Steg 10b: `status` = `pending` hvis det er lønn og kalleren er et barn, ellers `approved`. Returneres også.
-  8. **Før fristen** (sirkelen i «Kommende»): ingen egen sjekk, avkrysningen virker som ellers. `due_on` er den planlagte datoen, og `completed_on` er i dag. Kalender: `compute_next_due` tar `greatest(next_due_on, completed_on)`, så den planlagte forekomsten hoppes over, og neste frist blir forekomsten etter. Intervall: regnes fra i dag. Angring setter fristen tilbake til den planlagte datoen. Bare den nærmeste forekomsten kan krysses av, fordi en oppgave bare har én åpen forekomst (`next_due_on`). Appen viser sirkel der forekomsten er lik `next_due_on`, men ikke på daglige oppgaver (`canCompleteEarly` i `src/features/tasks/upcoming.ts`). Testes i `supabase/tests/early_completion.test.sql`.
-- `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som registrerte den (`recorded_by`), innen 10 minutter. Raden slettes (med beløpet), og `tasks.next_due_on` settes tilbake til `due_on`. En engangsjobb får `archived_at = null` igjen. Feil: `completion_not_found`, `undo_not_allowed`, `undo_expired`. Appen viser «Angre» i 6 sekunder. Steg 10b: en avvist rad kan ikke angres (`undo_not_allowed`), og avviste rader teller ikke som «nyere avkrysning». Et barn kan fortsatt angre sin egen ventende avkrysning.
+  8. **Familieskjerm som kaller:** oppgaven må stå i «I dag», ellers `task_not_due` (skjermen kan vise litt gamle data, og et trykk skal ikke krysse av neste forekomst). Oppgave med ansvarlig bare for den ansvarlige, felles for hvem som helst i husstanden, jobb bare for barn den gjelder. Ellers `invalid_member`.
+  9. **Før fristen** (sirkelen i «Kommende»): ingen egen sjekk, avkrysningen virker som ellers. `due_on` er den planlagte datoen, og `completed_on` er i dag. Kalender: `compute_next_due` tar `greatest(next_due_on, completed_on)`, så den planlagte forekomsten hoppes over, og neste frist blir forekomsten etter. Intervall: regnes fra i dag. Angring setter fristen tilbake til den planlagte datoen. Bare den nærmeste forekomsten kan krysses av, fordi en oppgave bare har én åpen forekomst (`next_due_on`). Appen viser sirkel der forekomsten er lik `next_due_on`, men ikke på daglige oppgaver (`canCompleteEarly` i `src/features/tasks/upcoming.ts`). Testes i `supabase/tests/early_completion.test.sql`.
+- `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som registrerte den (`recorded_by`, også en familieskjerm), innen 10 minutter. Raden slettes (med beløpet), og `tasks.next_due_on` settes tilbake til `due_on`. En engangsjobb får `archived_at = null` igjen. Feil: `completion_not_found`, `undo_not_allowed`, `undo_expired`. Appen viser «Angre» i 6 sekunder. Steg 10b: en avvist rad kan ikke angres (`undo_not_allowed`), og avviste rader teller ikke som «nyere avkrysning». Et barn kan fortsatt angre sin egen ventende avkrysning.
 - `approve_completions(p_completion_ids uuid[]) returns int` (steg 10b): en voksen godkjenner én eller flere («Godkjenn alle»). Bare `pending` endres, så det er trygt å trykke to ganger. Returnerer antall godkjente.
 - `reject_completion(p_completion_id)` (steg 10b): «Ikke godkjent». Status blir `rejected`. Er det den siste ikke-avviste avkrysningen på oppgaven, settes `next_due_on` tilbake til `due_on`, og en engangsjobb får `archived_at = null` (som angring). Finnes en nyere, endres bare statusen. Låser oppgaven og leser raden på nytt, så to voksne ikke behandler samme rad samtidig. Feil: `not_pending`.
 - `set_completion_status(p_completion_id, p_status)`: endre godkjenning i ettertid fra barnets historikk, godkjent ↔ ikke godkjent. Bare rader med lønn som ikke venter (ventende behandles med de to over). Låser oppgaven, barnets `members`-rad (som `record_payout`) og raden.
@@ -463,7 +476,7 @@ private.household_has_access(hid) returns boolean     -- prøvetid eller aktivt 
 
 Policyer bruker `household_id in (select private.my_household_ids())`. Innpakningen i `select` gjør at funksjonen evalueres én gang per spørring, ikke én gang per rad.
 
-Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er trygt, fordi hver policy krever medlemskap via `auth_user_id`.
+Merk: Anonyme brukere (barneenheter og familieskjermer) har også rollen `authenticated`. Det er trygt, fordi hver policy krever medlemskap via `auth_user_id`. Familieskjermen er ikke medlem, og `private.my_display_household()` brukes bare av funksjonene som er laget for den.
 
 ### Policyer per tabell
 
@@ -480,7 +493,8 @@ Merk: Anonyme brukere (barneenheter) har også rollen `authenticated`. Det er tr
 | member_balances (view) | voksen: alle barna; barn: bare seg selv (filter i viewet + RLS på tabellene under) | – | – | – |
 | invites | voksen i husstanden; alle kolonner unntatt `code_hash` | – (RPC `create_invite`) | – (RPC `accept_invite`) | voksen, bare `used_at is null` (= trekke tilbake) |
 | invite_attempts | – | – (RPC) | – | – |
-| link_tokens | – | – (RPC `create_link_token`) | – (RPC `redeem_link_token`) | – |
+| link_tokens | – | – (RPC `create_link_token`, `create_display_link_token`) | – (RPC `redeem_link_token`) | – |
+| household_displays | voksen i husstanden; ikke `auth_user_id` | – (RPC `redeem_link_token`) | – | – (RPC `unlink_display`) |
 | link_attempts | – | – (RPC) | – | – |
 | household_subscriptions | medlem | – (service role) | – | – |
 | task_templates | alle innloggede, `is_active` | – | – | – |
@@ -527,7 +541,10 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `create_invite(p_household_id) returns table (code, expires_at)` | voksen, `household_has_access` | lager kode (8 tegn, 48 t, engangs), lagrer hash, returnerer klartekst bare her. Feil: `not_authenticated`, `not_adult` (barn, anonym, annen husstand), `subscription_required` |
 | `accept_invite(p_code, p_display_name, p_avatar) returns uuid` | innlogget, ikke-anonym, uten husstand | normaliserer koden, legger til voksen-member og markerer invitasjonen brukt i én transaksjon. Returnerer husstandens id. Feil: `not_authenticated`, `anonymous_not_allowed`, `already_in_household`, `too_many_attempts`. **Feil, utløpt, brukt eller tilbaketrukket kode gir `null`**, som appen gjør om til `invite_invalid`. Grunnen: en kastet feil ruller tilbake hele transaksjonen, også raden i `invite_attempts`, og da ville sperren aldri slått inn. `pg_advisory_xact_lock` per bruker hindrer at parallelle kall sniker seg forbi sperren |
 | `create_link_token(p_member_id) returns table (code, expires_at)` | voksen i barnets husstand | lager kode (8 tegn, 10 min, engangs), sletter barnets ubrukte koder, returnerer klartekst bare her. Krever ikke abonnement. Feil: `not_adult` (barn, annen husstand, ukjent id), `invalid_member` (ikke et barn), `already_linked` (barnet har enhet, koble fra først) |
-| `redeem_link_token(p_code) returns uuid` | anonym innlogget uten husstand (barnets enhet) | normaliserer koden, setter `members.auth_user_id = auth.uid()` og `used_at`. Returnerer husstandens id. Feil: `not_authenticated`, `anonymous_required` (e-postbruker), `already_in_household`, `too_many_attempts`. **Feil, utløpt eller brukt kode, eller et barn som ble koblet i mellomtiden, gir `null`** (appen: `link_invalid`), av samme grunn som `accept_invite`. Advisory lock per bruker |
+| `create_display_link_token(p_household_id) returns table (code, expires_at)` | voksen i husstanden | som `create_link_token`, men for en familieskjerm (`member_id` null). Sletter husstandens ubrukte skjermkoder. Feil: `not_adult` |
+| `unlink_display(p_display_id)` | voksen i husstanden | sletter skjermraden og den anonyme brukeren. Feil: `not_adult` (også ukjent id og annen husstand) |
+| `get_family_board() returns jsonb` | familieskjerm | alt skjermen får lese: husstandsnavn, `today`, medlemmer, dagens oppgaver og avkrysninger. Ikke fødselsår, `auth_user_id`, beskrivelser eller saldo. `recorded_by` bare når skjermen selv registrerte. `null` for alle andre. Er `security definer`, så RLS gjelder ikke: spørringene filtrerer selv på husstanden |
+| `redeem_link_token(p_code) returns uuid` | anonym innlogget uten husstand (barnets enhet eller familieskjerm) | normaliserer koden, setter `members.auth_user_id = auth.uid()` (eller lager raden i `household_displays` når koden ikke har `member_id`) og `used_at`. Returnerer husstandens id. Feil: `not_authenticated`, `anonymous_required` (e-postbruker), `already_in_household`, `too_many_attempts`. **Feil, utløpt eller brukt kode, eller et barn som ble koblet i mellomtiden, gir `null`** (appen: `link_invalid`), av samme grunn som `accept_invite`. Advisory lock per bruker |
 | `unlink_member_device(p_member_id)` | voksen | `auth_user_id = null` på barnet, og sletter den anonyme brukeren i `auth.users` (med sesjoner og refresh-token, så barnet logges ut). Trygt å kalle igjen. Feil: `not_adult`, `invalid_member` |
 | `unlink_my_device()` | barn på egen (anonym) enhet | barnet kobler fra seg selv («Logg ut av denne enheten»): egen `auth_user_id = null`, og egen anonym bruker slettes. En vanlig utlogging ville latt profilen stå koblet til en bruker ingen kan logge inn som. Feil: `invalid_member` (voksen, eller ikke koblet) |
 | `set_my_avatar(p_avatar)` | medlem (brukes av barn) | ny avatar på egen `members`-rad, ingenting annet. RPC i stedet for policy, fordi kolonnerettigheter gjelder hele rollen `authenticated`: en update-policy for barn ville også gitt dem navn og fødselsår. Sjekker formen (`^[a-z_]{1,30}$`), ikke listen, så nyere appversjoner kan legge til avatarer. Feil: `not_authenticated`, `invalid_avatar`, `member_not_found` |
@@ -543,7 +560,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `undo_postpone(p_task_id)` | voksen, `household_has_access` | «Angre»: fristen før kommer tilbake, også forfalt. For engangsoppgaver settes `once_on` først og fristen i en egen spørring, ellers ville triggeren flyttet en passert dato til i dag. Bare mens oppgaven fortsatt er utsatt. Feil: `not_adult`, `subscription_required`, `undo_postpone_expired` (krysset av eller redigert siden) |
 | `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Fra steg 10b er grensen godkjent saldo (ventende og avviste teller ikke). Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
-| `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade) og barnas anonyme brukere (steg 10a). Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
+| `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade) og de anonyme brukerne til barna og familieskjermene. Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
 
 ### RLS-tester (pgTAP, `supabase/tests/`)
 Minimum før lansering:
@@ -606,6 +623,15 @@ Minimum før lansering:
     - Endret gjentakelse nullstiller. Klienten kan ikke skrive `postponed_*`.
     - Jobb, oppgave fram i tid, i dag, over ett år, barn, annen husstand og utløpt prøvetid avvises.
 
+17. Familieskjerm (`family_display.test.sql`):
+    - Kobling: kode på 8 tegn, 10 minutter, én gang, bare den nyeste gjelder, og sperren mot gjetting. Barn, annen husstand, e-postbruker og enhet som allerede er koblet, avvises.
+    - Tavla har bare egen husstand, og ikke fødselsår, `auth_user_id`, beskrivelser eller andres `recorded_by`.
+    - Skjermen ser ingen rader direkte i husstand, medlemmer, oppgaver, avkrysninger, utbetalinger, saldo eller views.
+    - Avkrysning etter reglene, lønn gir `pending`, `task_not_due`, utløpt prøvetid, og angring bare av egne innen 10 minutter.
+    - Skjermen kan ikke godkjenne, avvise, endre, fjerne, flytte, utsette, betale ut, koble enheter, invitere, eller skrive direkte i tabellene.
+    - Bilder: bare de som vises i egen husstand, ingen opplasting eller sletting.
+    - Frakobling og sletting: anonym bruker fjernes, skjermen består når en av flere voksne sletter seg, og alt forsvinner med husstanden.
+
 Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
 
 16. Profilbilder (`member_photos.test.sql`):
@@ -629,7 +655,7 @@ Bøtta `member-photos` er **privat** (`public = false`), tar bare `image/jpeg` o
 
 | Operasjon | Hvem |
 |-----------|------|
-| SELECT (lese, liste, signere URL) | medlem i husstanden (også barn med enhet) |
+| SELECT (lese, liste, signere URL) | medlem i husstanden (også barn med enhet). Familieskjerm: bare bilder som vises (`photo_path` og `avatar_mode = 'photo'`) i egen husstand |
 | INSERT (laste opp) | voksen i husstanden, filnavn `{uuid}.jpg` |
 | DELETE | voksen i husstanden |
 | UPDATE | ingen (appen laster aldri opp over en fil) |

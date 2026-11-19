@@ -1,6 +1,18 @@
 # MittAnsvar
 A family responsibility and household task management app for parents and children.
 
+## Familieskjerm (19. november 2026)
+
+- **Hva:** et nettbrett på kjøkkenet viser dagens oppgaver for hele husstanden, med ett kort per
+  person. Alle kan krysse av der, og angre innen 10 minutter.
+- **Koble til:** en voksen velger «Husstand» → «Legg til familieskjerm». På nettbrettet: «Sett opp
+  familieskjerm», og skann koden eller skriv den inn. Enheten trenger ingen konto.
+- **Begrenset:** skjermen kan ikke godkjenne, redigere, slette eller se saldo. Oppgaver med lønn
+  blir «venter». Det finnes ingen utlogging på skjermen: en voksen kobler den fra under «Husstand».
+- **Liggende:** iPad kan stå begge veier, og hele appen roterer der. iPhone er fortsatt stående.
+  Dette virker først i et EAS-bygg, ikke i Expo Go.
+- **Våken skjerm:** slås av og på under tannhjulet på skjermen.
+
 ## Nytt i «I dag» (18. november 2026)
 
 - **Rette avkrysninger:** voksne kan trykke på en utført oppgave hele dagen og velge

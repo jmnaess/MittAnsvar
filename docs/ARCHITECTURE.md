@@ -81,7 +81,8 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/task/new.tsx
   (app)/job/new.tsx               # «Ny ledig jobb» (kort skjema) fra «+» i «I dag»
   (app)/job/[id].tsx              # endre jobb (langt trykk i «I dag»)
-  kiosk/index.tsx                 # felles husstandsvisning
+  (app)/(display)/index.tsx       # familieskjermen: «I dag» for hele husstanden
+  (app)/display/link.tsx          # QR-kode og kode for familieskjermen
   paywall.tsx
 src/
   lib/            supabase.ts, queryClient.ts, errors.ts (unwrap + norske feilmeldinger), dates.ts
@@ -96,7 +97,8 @@ src/
     templates/    api.ts, hooks.ts, suggest.ts (filter, egne årlige oppgaver, månedsgruppering),
                   components/ (TemplateRow, OwnYearTaskRow)
     feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
-    kiosk/        pin.ts, components/
+    display/      api.ts, hooks.ts, board.ts, chooseBoardDoer.ts, layout.ts (rene, testes),
+                  useBoardActions.ts, settings.ts, components/
     devices/      api.ts, hooks.ts, linkCode.ts (QR-innhold, normalisering), components/ (QrScanner, LinkCodeCard)
     subscription/ revenuecat.ts, useAccess.ts
     notifications/ plan.ts + text.ts (rene, testes), schedule.ts (expo-notifications), settings.ts,
@@ -166,15 +168,18 @@ Samme mønster som QR-tokenet (bare hash, engangsbruk, utløp, RPC), men i egen 
 
 Ikke ennå: fjerne en annen voksen, lenker inn i appen.
 
-### Felles husstandsvisning (kiosk)
-- **MVP:** en *modus* på en voksens enhet. Sesjonen er fortsatt den voksnes, men skjermen `kiosk/` har:
-  - avatarrad → oppgaveliste for valgt medlem → avkrysning
-  - ingen navigasjon ut, og Androids tilbake-knapp er blokkert
-  - «Avslutt» krever PIN
-- **PIN:** 4 siffer, satt av en voksen. Den lagres **lokalt** som en hash i `expo-secure-store`, altså per enhet og ikke i databasen. Glemt PIN løses med ny innlogging med e-postkode.
-- Avkrysning kaller `complete_task(task_id, completed_by_member_id)`. Databasen registrerer *hvem* som gjorde oppgaven (barnet) og *hvem som registrerte* den (den voksnes bruker-ID).
-- **Begrensning, sagt ærlig:** kiosk-låsen er en UI-sperre. Et barn som på en eller annen måte kommer seg ut av skjermen, har den voksnes rettigheter. Det er en akseptabel risiko innad i en husstand. Anbefal brukerne å slå på iOS «Guidet tilgang» eller Androids «Fest app».
-- **Senere:** et eget familienettbrett kan kobles med QR (`kind = 'shared_device'`) og få en egen, begrenset rolle. Det gjør vi ikke i MVP.
+### Familieskjerm (felles husstandsvisning)
+En egen enhet, typisk en iPad på kjøkkenet, som viser «I dag» for hele husstanden. Den erstatter den tidligere planen om en kiosk-modus på en voksens enhet, der et barn som kom seg ut av skjermen, ville hatt den voksnes rettigheter.
+
+1. **Kobling:** «Husstand» → «Legg til familieskjerm» (`app/(app)/display/link.tsx`) kaller `create_display_link_token`. På nettbrettet: «Sett opp familieskjerm» gir anonym innlogging og samme «Koble til»-skjerm som for barn. `redeem_link_token` ser at koden ikke har `member_id`, og lager en rad i `household_displays`.
+2. **Ikke et medlem:** alle innloggede er samme Postgres-rolle, så kolonnerettigheter kan ikke skille skjermen fra andre. Skjermen har derfor ingen rad i `members`. Alle policyer er stengt for den, og den leser bare via `get_family_board`.
+3. **Visning** (`app/(app)/(display)/index.tsx`): ett kort per person, så «Felles», «Denne måneden» og «Ledige jobber». Kolonnene følger vindusbredden. Kortene fordeles etter rekkefølge, så de ikke flytter seg under avkrysning.
+4. **Avkrysning:** oppgave med ansvarlig krysses av for den personen med ett trykk. Felles oppgaver og jobber gir «Hvem gjorde det?». Lønn blir «venter» som på barnets enhet. Skjermen kan angre det den selv registrerte, innen 10 minutter.
+5. **Ingen beløp summert:** barn ser bare sin egen saldo, så skjermen viser ikke «X kr tjent». Beløpet på selve oppgaven vises.
+6. **Oppdatering:** hvert 60. sekund mens appen er aktiv, ved retur til appen og ved midnatt. Fordi data kan være opptil et minutt gamle, avviser `complete_task` med `task_not_due` en oppgave som ikke lenger står i «I dag». Ellers ville neste forekomst blitt krysset av.
+7. **Våken skjerm:** `expo-keep-awake`, av og på under tannhjulet. Lagres på enheten.
+8. **Frakobling:** bare en voksen, fra «Husstand» (`unlink_display`). Den anonyme brukeren slettes, tavla blir `null`, og skjermen logger seg ut. Det finnes ingen vei ut på selve skjermen, og derfor ingen PIN. Anbefal «Guidet tilgang» på iPad hvis barna ikke skal kunne bytte app.
+9. **Liggende format:** iPhone er bare stående. iPad støtter alle retninger (`UISupportedInterfaceOrientations~ipad`), for hele appen. `requireFullScreen` er fjernet, fordi Expo skriver at den ikke lenger hindrer endring av størrelse fra iOS 27. Vanlige skjermer er sentrert med `pageWidth`. Native innstillinger virker først i et EAS-bygg, ikke i Expo Go. Android-nettbrett er foreløpig bare stående.
 
 ---
 
@@ -247,7 +252,7 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 12 | Tilbakemeldingstekster: utvid startsettet fra 5b til 80–100 tekster, flytt til `seed/feedback.sql`, tekster per mal | Tekstene gjentas sjelden og passer oppgaven |
 | 13 | *Gjort i steg 8:* lokale påminnelser (`get_upcoming_occurrences`, daglig oppsummering, månedsoppgaver) | Varsel kommer på forfallsdagen |
 | 14 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |
-| 15 | Kiosk-modus + PIN | Barn kan krysse av på en voksens mobil |
+| 15 | *Gjort:* familieskjerm i stedet for kiosk-modus og PIN (se §3) | Hele husstanden ser og krysser av dagens oppgaver på ett nettbrett |
 | 16 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle (tidligere steg 10). QR-kobling er gjort i steg 10a | Nye husstander får relevante forslag |
 | 17 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
 | 18 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |

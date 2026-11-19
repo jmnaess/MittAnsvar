@@ -1,3 +1,4 @@
+import type { CategoryKey } from './categories';
 import { parseReward } from './reward';
 import type { TaskInput } from './types';
 
@@ -10,6 +11,7 @@ export type YearlyFormValues = {
   reward: string;
   /** 1–12. Én oppgave per måned. */
   months: number[];
+  category: CategoryKey;
 };
 
 /**
@@ -25,6 +27,7 @@ export function toYearlyInputs(values: YearlyFormValues): TaskInput[] | null {
   const months = [...new Set(values.months)].sort((a, b) => a - b);
   return months.map((month) => ({
     title,
+    category: values.category,
     assigned_member_id: values.assigneeId,
     job_member_ids: [],
     reward_nok: reward,

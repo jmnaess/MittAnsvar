@@ -1,7 +1,7 @@
 import type { Member } from '../../household/types';
 import { describeJobMembers, jobMembers, toJobInput } from '../job';
 
-const values = { title: 'Henge opp vask', memberIds: [], reward: '15', repeats: false };
+const values = { title: 'Henge opp vask', memberIds: [], reward: '15', repeats: false, category: 'laundry' as const };
 
 function member(id: string, name: string, role: 'adult' | 'child' = 'child'): Member {
   return {
@@ -28,6 +28,7 @@ describe('toJobInput', () => {
   it('lager en ledig jobb uten dato', () => {
     expect(toJobInput(values)).toEqual({
       title: 'Henge opp vask',
+      category: 'laundry',
       assigned_member_id: null,
       job_member_ids: [],
       reward_nok: 15,

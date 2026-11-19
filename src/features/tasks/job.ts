@@ -1,4 +1,5 @@
 import type { Member } from '../household/types';
+import type { CategoryKey } from './categories';
 import { parseReward } from './reward';
 import type { TaskInput } from './types';
 
@@ -10,6 +11,7 @@ export type JobFormValues = {
   /** Tekst fra feltet «Lønn (kr)». Tom = ingen lønn. */
   reward: string;
   repeats: boolean;
+  category: CategoryKey;
 };
 
 /** Skjema → oppgave av typen ledig jobb. null når skjemaet ikke er gyldig. */
@@ -19,6 +21,7 @@ export function toJobInput(values: JobFormValues): TaskInput | null {
   if (title === '' || reward === undefined) return null;
   return {
     title,
+    category: values.category,
     // Jobber bruker job_member_ids, aldri én ansvarlig (check-constraint i databasen).
     assigned_member_id: null,
     job_member_ids: values.memberIds,

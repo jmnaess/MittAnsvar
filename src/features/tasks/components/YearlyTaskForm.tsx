@@ -3,8 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import { ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import { MONTH_NAMES } from '../../../lib/dates';
 import type { Member } from '../../household/types';
+import type { CategoryKey } from '../categories';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
 import { toYearlyInputs } from '../yearly';
+import { CategoryPicker } from './CategoryPicker';
 
 // ChoiceChips trenger en verdi for «felles». null kan ikke brukes som nøkkel.
 const SHARED = 'shared';
@@ -17,12 +19,15 @@ export function useYearlyTaskForm() {
   const [assignee, setAssignee] = useState(SHARED);
   const [reward, setReward] = useState('');
   const [months, setMonths] = useState<number[]>([]);
+  // Årshjulet er mest vedlikehold, så det er forhåndsvalgt.
+  const [category, setCategory] = useState<CategoryKey>('maintenance');
 
   const value = toYearlyInputs({
     title,
     assigneeId: assignee === SHARED ? null : assignee,
     reward,
     months,
+    category,
   });
 
   return {
@@ -34,6 +39,8 @@ export function useYearlyTaskForm() {
     setReward,
     months,
     setMonths,
+    category,
+    setCategory,
     rewardInvalid: parseReward(reward) === undefined,
     value,
   };
@@ -105,6 +112,7 @@ export function YearlyTaskFields({ form, members, disabled }: Props) {
           ? `Blir ${count} oppgaver, én i hver måned. Hele måneden er fristen.`
           : 'Hele måneden er fristen. Velg flere måneder for å gjøre den flere ganger i året.'}
       </Hint>
+      <CategoryPicker value={form.category} onChange={form.setCategory} disabled={disabled} />
     </View>
   );
 }

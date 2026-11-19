@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Hint, Switch, TextField } from '../../../ui';
 import type { Member } from '../../household/types';
+import { type CategoryKey, toCategory } from '../categories';
 import { toJobInput } from '../job';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
 import type { Task } from '../types';
+import { CategoryPicker } from './CategoryPicker';
 import { JobMembersPicker } from './JobMembersPicker';
 
 /** Tilstanden i jobbskjemaet. value er null så lenge skjemaet ikke er gyldig. */
@@ -14,8 +16,9 @@ export function useJobForm(initial?: Task) {
   const [memberIds, setMemberIds] = useState<string[]>(initial?.job_member_ids ?? []);
   const [reward, setReward] = useState(initial?.reward_nok ? String(initial.reward_nok) : '');
   const [repeats, setRepeats] = useState(initial?.job_repeats ?? false);
+  const [category, setCategory] = useState<CategoryKey>(() => toCategory(initial?.category).key);
 
-  const value = toJobInput({ title, memberIds, reward, repeats });
+  const value = toJobInput({ title, memberIds, reward, repeats, category });
 
   return {
     title,
@@ -26,6 +29,8 @@ export function useJobForm(initial?: Task) {
     setReward,
     repeats,
     setRepeats,
+    category,
+    setCategory,
     rewardInvalid: parseReward(reward) === undefined,
     value,
   };
@@ -67,6 +72,7 @@ export function JobFields({ form, members, disabled }: Props) {
         onChange={form.setMemberIds}
         disabled={disabled}
       />
+      <CategoryPicker value={form.category} onChange={form.setCategory} disabled={disabled} />
       <Switch
         label="Kan gjøres flere ganger"
         value={form.repeats}

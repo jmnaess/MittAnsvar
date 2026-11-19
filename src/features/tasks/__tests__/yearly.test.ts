@@ -1,6 +1,6 @@
 import { toYearlyInputs } from '../yearly';
 
-const values = { title: ' Vaske vinduer ', assigneeId: null, reward: '', months: [9, 4] };
+const values = { title: ' Vaske vinduer ', assigneeId: null, reward: '', months: [9, 4], category: 'maintenance' as const };
 
 describe('toYearlyInputs', () => {
   it('lager én årlig månedsoppgave per måned, sortert', () => {
@@ -8,6 +8,7 @@ describe('toYearlyInputs', () => {
     expect(inputs.map((i) => i.month)).toEqual([4, 9]);
     expect(inputs[0]).toMatchObject({
       title: 'Vaske vinduer',
+      category: 'maintenance',
       recurrence_type: 'calendar',
       recurrence_unit: 'year',
       recurrence_every: 1,

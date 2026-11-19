@@ -41,6 +41,7 @@ describe('allAdults', () => {
 describe('toTaskInputs', () => {
   const base = {
     title: 'Rydde rommet',
+    category: 'tidying' as const,
     job_member_ids: [],
     reward_nok: 10,
     recurrence_type: 'once' as const,

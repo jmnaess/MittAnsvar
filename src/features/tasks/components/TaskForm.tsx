@@ -4,13 +4,18 @@ import { toIsoDate } from '../../../lib/dates';
 import { ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import type { Member } from '../../household/types';
 import { allAdults, nextAssignees, SHARED, toTaskInputs } from '../assignees';
+import { type CategoryKey, toCategory } from '../categories';
 import { defaultRecurrenceForm, fromRecurrence, sameWhen, toRecurrence } from '../recurrence';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
 import type { TaskInput } from '../types';
+import { CategoryPicker } from './CategoryPicker';
 import { RecurrencePicker } from './RecurrencePicker';
 
-/** En oppgave som endres: det som ble lagret, og fristen (for eldre engangsoppgaver uten dato). */
-type Initial = TaskInput & { next_due_on: string | null };
+/**
+ * En oppgave som endres: det som ble lagret, og fristen (for eldre engangsoppgaver uten dato).
+ * Kategorien kommer som tekst fra databasen.
+ */
+type Initial = Omit<TaskInput, 'category'> & { category: string; next_due_on: string | null };
 
 /**
  * Tilstanden i oppgaveskjemaet. Skilt fra feltene, så modalen kan ha Lagre i headeren.
@@ -38,6 +43,7 @@ export function useTaskForm(
   const [recurrenceForm, setRecurrenceForm] = useState(initialWhen);
   // Tekst, fordi det skrives i et felt. Tom = ingen lønn.
   const [reward, setReward] = useState(initial?.reward_nok ? String(initial.reward_nok) : '');
+  const [category, setCategory] = useState<CategoryKey>(() => toCategory(initial?.category).key);
 
   const trimmedTitle = title.trim();
   const rewardNok = parseReward(reward);
@@ -51,7 +57,7 @@ export function useTaskForm(
   const values: TaskInput[] | null =
     trimmedTitle.length > 0 && schedule && rewardNok !== undefined
       ? toTaskInputs(
-          { title: trimmedTitle, job_member_ids: [], reward_nok: rewardNok, ...schedule },
+          { title: trimmedTitle, category, job_member_ids: [], reward_nok: rewardNok, ...schedule },
           assignees,
           members,
         )
@@ -69,6 +75,8 @@ export function useTaskForm(
     setRecurrenceForm,
     reward,
     setReward,
+    category,
+    setCategory,
     rewardInvalid: rewardNok === undefined,
     values,
     /** Den ene oppgaven når en eksisterende endres. */
@@ -88,7 +96,7 @@ type Props = {
   disabled?: boolean;
 };
 
-/** Tittel, hvem som har ansvaret, når og lønn. */
+/** Tittel, når, hvem som har ansvaret, kategori og lønn. */
 export function TaskFields({ form, members, canSetReward, showWhen = true, disabled }: Props) {
   const assigneeOptions = [
     { value: SHARED, label: 'Felles' },
@@ -153,6 +161,7 @@ export function TaskFields({ form, members, canSetReward, showWhen = true, disab
           <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
         </>
       )}
+      <CategoryPicker value={form.category} onChange={form.setCategory} disabled={disabled} />
       {showReward && (
         <>
           <TextField

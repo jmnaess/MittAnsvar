@@ -1,4 +1,5 @@
 import type { Database } from '../../types/database';
+import type { CategoryKey } from './categories';
 
 type Tables = Database['public']['Tables'];
 type Views = Database['public']['Views'];
@@ -36,10 +37,12 @@ export type Recurrence = Pick<
  * job_member_ids: bare for jobber, barna som kan ta den. Tom = alle barna. Jobber har aldri
  * assigned_member_id.
  * once_on: datoen for en engangsoppgave. null = i dag (og alltid null for andre typer).
+ * category: en av de faste kategoriene (categories.ts).
  */
 export type TaskInput = Recurrence & {
   once_on: string | null;
   title: string;
+  category: CategoryKey;
   assigned_member_id: string | null;
   job_member_ids: string[];
   reward_nok: number | null;

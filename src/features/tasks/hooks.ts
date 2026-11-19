@@ -12,6 +12,8 @@ import {
   undoPostpone,
   updateTask,
 } from './api';
+import { openGroups } from './openGroups';
+import { groupKeysFor } from './taskGroups';
 import type { TaskInput } from './types';
 import { buildUpcoming, EMPTY_UPCOMING, upcomingWindow, type MemberUpcoming } from './upcoming';
 
@@ -86,24 +88,38 @@ export function useInvalidateTasks(householdId: string) {
   return () => queryClient.invalidateQueries({ queryKey: taskKeys.all(householdId) });
 }
 
+// Etter lagring åpnes gruppene oppgaven havner i under «Oppgaver» (se openGroups.ts).
+
 export function useCreateTask(householdId: string) {
-  const onSuccess = useInvalidateTasks(householdId);
-  return useMutation({ mutationFn: (input: TaskInput) => createTask(householdId, input), onSuccess });
+  const invalidate = useInvalidateTasks(householdId);
+  return useMutation({
+    mutationFn: (input: TaskInput) => createTask(householdId, input),
+    onSuccess: (_data, input) => {
+      openGroups(groupKeysFor(input));
+      return invalidate();
+    },
+  });
 }
 
 export function useCreateTasks(householdId: string) {
-  const onSuccess = useInvalidateTasks(householdId);
+  const invalidate = useInvalidateTasks(householdId);
   return useMutation({
     mutationFn: (inputs: TaskInput[]) => createTasks(householdId, inputs),
-    onSuccess,
+    onSuccess: (_data, inputs) => {
+      openGroups(inputs.flatMap(groupKeysFor));
+      return invalidate();
+    },
   });
 }
 
 export function useUpdateTask(householdId: string) {
-  const onSuccess = useInvalidateTasks(householdId);
+  const invalidate = useInvalidateTasks(householdId);
   return useMutation({
     mutationFn: ({ taskId, input }: { taskId: string; input: TaskInput }) => updateTask(taskId, input),
-    onSuccess,
+    onSuccess: (_data, { input }) => {
+      openGroups(groupKeysFor(input));
+      return invalidate();
+    },
   });
 }
 

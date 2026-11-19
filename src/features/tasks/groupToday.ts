@@ -3,12 +3,18 @@ import { doneSectionKey, SHARED_KEY } from '../completions/doneToday';
 import type { Member } from '../household/types';
 import type { TodayTask } from './types';
 
-export type TodaySection = {
+/** Feltene grupperingen bruker. Familieskjermen får ikke hele raden. */
+type GroupableTask = Pick<
+  TodayTask,
+  'assigned_member_id' | 'is_month_task' | 'is_overdue' | 'recurrence_type'
+>;
+
+export type TodaySection<T = TodayTask, M = Member> = {
   key: string;
   title: string;
   /** null for «Felles». */
-  member: Member | null;
-  data: TodayTask[];
+  member: M | null;
+  data: T[];
   /** Det som er gjort i dag og hører til seksjonen. Vises nederst, som utført. */
   done: TodayCompletion[];
 };
@@ -26,19 +32,25 @@ export const JOBS_KEY = 'jobs';
  *
  * done: dagens avkrysninger. De legges i personens kort eller «Felles» (se doneSectionKey), og
  * en person med bare utførte oppgaver får likevel et kort.
+ *
+ * showAllMembers: alle personer får kort, også uten oppgaver (familieskjermen).
  */
-export function groupTodayByMember(
-  allTasks: TodayTask[],
-  members: Member[],
-  { showEmptyJobs = false, done = [] }: { showEmptyJobs?: boolean; done?: TodayCompletion[] } = {},
-): TodaySection[] {
+export function groupTodayByMember<T extends GroupableTask, M extends Pick<Member, 'id' | 'display_name'>>(
+  allTasks: T[],
+  members: M[],
+  {
+    showEmptyJobs = false,
+    showAllMembers = false,
+    done = [],
+  }: { showEmptyJobs?: boolean; showAllMembers?: boolean; done?: TodayCompletion[] } = {},
+): TodaySection<T, M>[] {
   const known = new Set(members.map((m) => m.id));
   const doneIn = (key: string) => done.filter((c) => doneSectionKey(c, known) === key);
-  const isThisMonth = (t: TodayTask) => !!t.is_month_task && !t.is_overdue;
-  const isJob = (t: TodayTask) => t.recurrence_type === 'job';
+  const isThisMonth = (t: T) => !!t.is_month_task && !t.is_overdue;
+  const isJob = (t: T) => t.recurrence_type === 'job';
   const tasks = allTasks.filter((t) => !isThisMonth(t) && !isJob(t));
 
-  const sections: TodaySection[] = members.map((member) => ({
+  const sections: TodaySection<T, M>[] = members.map((member) => ({
     key: member.id,
     title: member.display_name,
     member,
@@ -68,6 +80,10 @@ export function groupTodayByMember(
   });
 
   return sections.filter(
-    (s) => s.data.length > 0 || s.done.length > 0 || (showEmptyJobs && s.key === JOBS_KEY),
+    (s) =>
+      s.data.length > 0 ||
+      s.done.length > 0 ||
+      (showEmptyJobs && s.key === JOBS_KEY) ||
+      (showAllMembers && s.member !== null),
   );
 }

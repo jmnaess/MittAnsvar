@@ -40,7 +40,7 @@ export function toJobInput(values: JobFormValues): TaskInput | null {
  * Barna som kan ta jobben, i samme rekkefølge som medlemslisten.
  * Tom liste (eller bare ukjente id-er) betyr alle barna.
  */
-export function jobMembers(jobMemberIds: string[], members: Member[]): Member[] {
+export function jobMembers<M extends Pick<Member, 'id' | 'role'>>(jobMemberIds: string[], members: M[]): M[] {
   const children = members.filter((m) => m.role === 'child');
   const chosen = children.filter((m) => jobMemberIds.includes(m.id));
   return chosen.length > 0 ? chosen : children;

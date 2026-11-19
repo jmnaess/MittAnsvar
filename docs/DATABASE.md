@@ -70,7 +70,7 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 - Check: `avatar_mode = 'photo'` ⇒ `photo_path is not null` (`members_photo_mode_needs_photo`). Fjernes bildet, settes modus til `figure` i samme update.
 - `unique(auth_user_id)` betyr én husstand per bruker i MVP. Fjernes constrainten senere, tillates flere husstander.
 - `on delete set null` (ikke cascade): hvis barnets anonyme bruker slettes, skal barneprofilen bestå. `delete-account` sletter den voksnes `members`-rad eksplisitt.
-- Barnets anonyme bruker slettes ved frakobling (`unlink_member_device`) og når husstanden slettes (`delete_my_account_data`). Begge bruker `private.delete_anonymous_users`, som bare sletter brukere med `is_anonymous`.
+- Barnets anonyme bruker slettes ved frakobling (`unlink_member_device`) og når husstanden slettes (`delete_my_account_data`). Begge bruker `private.delete_anonymous_users`, som bare sletter brukere med `is_anonymous`. Anonyme brukere som aldri ble koblet, slettes av en timesjobb etter 24 timer (§5, «Opprydding av anonyme brukere»).
 
 ### `invites` (invitasjon av voksen, steg 6)
 | Kolonne | Type | Merknad |
@@ -126,7 +126,7 @@ Ett feilet `accept_invite`-forsøk = én rad. 5 rader nyere enn 15 minutter gir 
 Skjermen er **ikke** et medlem. Alle innloggede er rollen `authenticated`, så kolonnerettigheter kan ikke skille den fra andre, og en leserett via RLS ville også gitt fødselsår, hjemprofil og all historikk. Uten rad i `members` er alle policyer stengt, og den leser bare via `get_family_board`. Voksne i husstanden kan lese `id`, `household_id` og `created_at`.
 
 ### `link_attempts` (sperre mot gjetting av koden)
-Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader nyere enn 15 minutter gir `too_many_attempts`. Helt stengt for klienten. Anonyme innlogginger er i tillegg begrenset per IP i Supabase Auth (standard 30 per time).
+Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader nyere enn 15 minutter gir `too_many_attempts`. Helt stengt for klienten. Anonyme innlogginger er i tillegg begrenset per IP i Supabase Auth (standard 30 per time), og ukoblede anonyme brukere slettes etter 24 timer (§5).
 
 ### `tasks`
 | Kolonne | Type | Merknad |
@@ -563,6 +563,16 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
 | `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade) og de anonyme brukerne til barna og familieskjermene. Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
 
+### Opprydding av anonyme brukere (misbruksvern)
+Barnets enhet og familieskjermen logger inn anonymt før koden løses inn, så hvem som helst kan lage anonyme brukere. Supabase Auth begrenser antallet per IP. I tillegg sletter `private.delete_stale_anonymous_users(p_now default now()) returns integer` brukere som:
+- har `is_anonymous` og ingen e-post,
+- er opprettet for mer enn 24 timer siden,
+- ikke er koblet: ikke barn i `members` og ikke skjerm i `household_displays`.
+
+E-postbrukere og koblede anonyme brukere røres aldri. Voksne kan ikke være anonyme. Selve slettingen går via `private.delete_anonymous_users`. `for update skip locked` gjør at en bruker som kobles akkurat mens jobben kjører, hoppes over i stedet for å slettes. Den kjøres hver time av pg_cron (`cron.job` `delete-stale-anonymous-users`, minutt 35). Innloggede kan ikke kjøre funksjonen. En enhet som venter mer enn 24 timer før den løser inn koden, må starte på nytt.
+
+Dette er et midlertidig vern. **CAPTCHA (`[auth.captcha]`, hCaptcha eller Turnstile) skal på før offentlig lansering.**
+
 ### RLS-tester (pgTAP, `supabase/tests/`)
 Minimum før lansering:
 1. En bruker i husstand A ser ingen rader fra husstand B, i noen tabell.
@@ -642,6 +652,11 @@ Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
     - Stier til et medlem som ikke finnes, et medlem i en annen husstand, filer rett i husstandsmappen og filnavn som ikke er `{uuid}.jpg` avvises.
     - `photo_path` kan ikke peke på en annen persons mappe, og bilde-modus krever bilde. Barn kan ikke endre `photo_path`. `set_my_avatar_mode` endrer bare egen rad og avviser `photo` uten bilde.
     - `my_photo_folders_to_delete` gir riktige mapper for siste voksne, voksen med andre voksne og barn. Bildet av et slettet medlem kan ikke leses.
+
+18. Opprydding av anonyme brukere (`anonymous_cleanup.test.sql`):
+    - Ukoblet og eldre enn 24 timer slettes. Ukoblet og ny beholdes, til den passerer 24 timer.
+    - Koblet barn (koblingen består), koblet skjerm (raden består), e-postbruker uten kobling og voksen beholdes.
+    - Timesjobben finnes. Innloggede kan ikke kjøre funksjonen.
 
 ---
 

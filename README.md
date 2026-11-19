@@ -1,6 +1,16 @@
 # MittAnsvar
 A family responsibility and household task management app for parents and children.
 
+## Misbruksvern for anonym innlogging (20. november 2026)
+
+- **Hvorfor:** barnets enhet og familieskjermen logger inn anonymt før koden løses inn. Hvem som
+  helst kan dermed lage anonyme brukere.
+- **Nå:** en timesjobb (pg_cron, minutt 35) sletter anonyme brukere som er eldre enn 24 timer og
+  ikke er koblet som barn eller familieskjerm. Brukere med e-post og koblede enheter røres aldri.
+  Se docs/DATABASE.md §5.
+- **Før offentlig lansering:** slå på CAPTCHA (hCaptcha eller Turnstile, `[auth.captcha]`), og
+  sjekk grensen for anonyme innlogginger per IP (lokalt 30 per time) i Supabase-dashbordet.
+
 ## Familieskjerm (19. november 2026)
 
 - **Hva:** et nettbrett på kjøkkenet viser dagens oppgaver for hele husstanden, med ett kort per
@@ -105,5 +115,5 @@ npx eas-cli env:create --name EXPO_PUBLIC_SUPABASE_KEY --value <anon-nøkkel> \
 ```bash
 npm test          # enhetstester (Jest), f.eks. planlegging av påminnelser
 npm run db:test   # databasetester (pgTAP), krever at Supabase kjører lokalt (npm run db:start)
-                  # pg_cron (timesjobben for sesongoppgaver) følger med i Supabase CLI
+                  # pg_cron (timesjobbene for sesongoppgaver og anonyme brukere) følger med i Supabase CLI
 ```

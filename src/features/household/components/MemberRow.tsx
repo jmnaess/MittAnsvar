@@ -14,7 +14,7 @@ type Props = {
 
 function describe(member: Member): string {
   if (member.role === 'adult') return 'Voksen';
-  return member.birth_year ? `Barn, født ${member.birth_year}` : 'Barn';
+  return member.birth_year ? `Barn, ${member.birth_year}` : 'Barn';
 }
 
 export function MemberRow({ member, extra, onPress, accessibilityHint = 'Endre eller slette' }: Props) {

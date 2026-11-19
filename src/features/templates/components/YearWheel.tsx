@@ -138,10 +138,10 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
     });
   }
 
-  function chooseRecommended() {
+  function checkAll() {
     const ids = notActive.map((t) => t.id);
     Alert.alert(
-      'Velg anbefalte?',
+      'Huke av alle?',
       `${ids.length} ${ids.length === 1 ? 'oppgave' : 'oppgaver'} legges til i årshjulet. Du kan slå av enkeltoppgaver etterpå.`,
       [
         { text: 'Avbryt', style: 'cancel' },
@@ -183,9 +183,9 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
           </Text>
           {isAdult && notActive.length > 0 && (
             <Button
-              title="Velg anbefalte"
+              title="Huk av alle"
               variant="secondary"
-              onPress={chooseRecommended}
+              onPress={checkAll}
               disabled={activate.isPending}
             />
           )}

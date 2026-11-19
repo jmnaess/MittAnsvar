@@ -1,4 +1,5 @@
-import { MultiChoiceChips } from '../../../ui';
+import { Avatar, MultiChoiceChips } from '../../../ui';
+import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
 
 // MultiChoiceChips trenger en verdi for «alle barna». Tom liste kan ikke vises som et valg.
@@ -18,9 +19,14 @@ type Props = {
  * Velges «Alle barna», fjernes enkeltbarna. Fjernes det siste barnet, blir det «Alle barna».
  */
 export function JobMembersPicker({ label, members, value, onChange, disabled }: Props) {
+  const photoOf = useMemberPhotoLookup(members[0]?.household_id);
   const options = [
-    { value: ALL_CHILDREN, label: 'Alle barna' },
-    ...members.filter((m) => m.role === 'child').map((m) => ({ value: m.id, label: m.display_name })),
+    { value: ALL_CHILDREN, label: 'Alle barna', icon: 'people-outline' as const },
+    ...members.filter((m) => m.role === 'child').map((m) => ({
+      value: m.id,
+      label: m.display_name,
+      left: <Avatar avatar={m.avatar} photo={photoOf(m)} size={20} />,
+    })),
   ];
   const selected = value.length === 0 ? [ALL_CHILDREN] : value;
 

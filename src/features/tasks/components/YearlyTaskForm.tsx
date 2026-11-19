@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
+import { Avatar, ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import { MONTH_NAMES } from '../../../lib/dates';
+import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
 import type { CategoryKey } from '../categories';
 import { MAX_REWARD_NOK, parseReward } from '../reward';
@@ -55,9 +56,14 @@ type Props = { form: YearlyTaskFormState; members: Member[]; disabled?: boolean 
  * Hver måned blir en egen årlig oppgave med hele måneden som frist.
  */
 export function YearlyTaskFields({ form, members, disabled }: Props) {
+  const photoOf = useMemberPhotoLookup(members[0]?.household_id);
   const assigneeOptions = [
-    { value: SHARED, label: 'Felles' },
-    ...members.map((m) => ({ value: m.id, label: m.display_name })),
+    { value: SHARED, label: 'Felles', icon: 'people-outline' as const },
+    ...members.map((m) => ({
+      value: m.id,
+      label: m.display_name,
+      left: <Avatar avatar={m.avatar} photo={photoOf(m)} size={20} />,
+    })),
   ];
 
   // Voksne får aldri lønn, så feltet skjules (og tømmes) når en voksen har ansvaret.

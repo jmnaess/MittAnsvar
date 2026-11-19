@@ -16,7 +16,7 @@ export { Card } from './Card';
 export { Checkbox } from './Checkbox';
 export { CheckRow } from './CheckRow';
 export { Chip, type ChipTone } from './Chip';
-export { ChoiceChip } from './ChoiceChip';
+export { ChoiceChip, type ChipIconName } from './ChoiceChip';
 export { ChoiceChips } from './ChoiceChips';
 export { DateField } from './DateField';
 export { EmptyState } from './EmptyState';

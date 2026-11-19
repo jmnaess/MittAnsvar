@@ -79,13 +79,13 @@ const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     wrapper: { gap: 8 },
     input: {
-      minHeight: minTouch + 6,
-      borderWidth: 1.5,
-      borderColor: colors.borderStrong,
-      borderRadius: radius.row,
+      minHeight: minTouch,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.search,
       backgroundColor: colors.surface,
       paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingVertical: 10,
       fontFamily: fonts.regular,
       fontSize: 16,
       color: colors.text,

@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { TextField } from './TextField';
 import { makeStyles } from './makeStyles';
-import { minTouch, radius, typography } from './theme';
+import { minTouch, typography } from './theme';
 import { useTheme } from './ThemeProvider';
 
 type Props = {
@@ -47,15 +47,12 @@ export function SearchField({ value, onChangeText, placeholder = 'Søk' }: Props
   );
 }
 
-const useStyles = makeStyles(({ colors }) => StyleSheet.create({
+const useStyles = makeStyles(() => StyleSheet.create({
   input: {
     minHeight: 40,
     paddingVertical: 8,
     paddingLeft: ICON_SPACE,
     paddingRight: minTouch,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.search,
     fontFamily: typography.search.fontFamily,
     fontSize: typography.search.fontSize,
   },

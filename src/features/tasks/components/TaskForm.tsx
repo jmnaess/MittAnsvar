@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { toIsoDate } from '../../../lib/dates';
-import { ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
+import { Avatar, ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
+import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
 import { allAdults, nextAssignees, SHARED, toTaskInputs } from '../assignees';
 import { type CategoryKey, toCategory } from '../categories';
@@ -98,9 +99,14 @@ type Props = {
 
 /** Tittel, når, hvem som har ansvaret, kategori og lønn. */
 export function TaskFields({ form, members, canSetReward, showWhen = true, disabled }: Props) {
+  const photoOf = useMemberPhotoLookup(members[0]?.household_id);
   const assigneeOptions = [
-    { value: SHARED, label: 'Felles' },
-    ...members.map((m) => ({ value: m.id, label: m.display_name })),
+    { value: SHARED, label: 'Felles', icon: 'people-outline' as const },
+    ...members.map((m) => ({
+      value: m.id,
+      label: m.display_name,
+      left: <Avatar avatar={m.avatar} photo={photoOf(m)} size={20} />,
+    })),
   ];
 
   // Voksne får aldri lønn, så feltet skjules når alle valgte er voksne. Er noen barn, vises

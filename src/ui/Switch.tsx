@@ -23,7 +23,7 @@ export function Switch({ value, onValueChange, disabled, accessibilityLabel, lab
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
       trackColor={{ true: colors.primary, false: colors.borderStrong }}
-      thumbColor={colors.surface}
+      thumbColor={colors.switchThumb}
       ios_backgroundColor={colors.borderStrong}
     />
   );

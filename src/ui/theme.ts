@@ -51,6 +51,8 @@ export const lightColors = {
   qrBg: '#FFFFFF',
   /** Bak kameraet før bildet kommer. */
   cameraBg: '#000000',
+  /** Tommelen på bryteren. Lys i begge tema, som standard på iOS. */
+  switchThumb: '#FFFFFF',
 };
 
 export type ThemeColors = typeof lightColors;
@@ -92,6 +94,7 @@ export const darkColors: ThemeColors = {
   qrInk: '#2B2118',
   qrBg: '#FFFFFF',
   cameraBg: '#000000',
+  switchThumb: '#FFFFFF',
 };
 
 /** Myk skygge under kort. elevation er Android. I mørkt gjør flatenes lyshet mesteparten av jobben. */

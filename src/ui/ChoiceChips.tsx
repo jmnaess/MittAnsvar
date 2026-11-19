@@ -1,8 +1,15 @@
 import { StyleSheet, View } from 'react-native';
-import { ChoiceChip } from './ChoiceChip';
+import type { ReactNode } from 'react';
+import { ChoiceChip, type ChipIconName } from './ChoiceChip';
 import { Text } from './Text';
 
-type Option<T extends string | number> = { value: T; label: string };
+type Option<T extends string | number> = {
+  value: T;
+  label: string;
+  /** Foran teksten, f.eks. en Avatar på 20 px. */
+  left?: ReactNode;
+  icon?: ChipIconName;
+};
 
 type Props<T extends string | number> = {
   label?: string;
@@ -22,6 +29,8 @@ export function ChoiceChips<T extends string | number>({ label, options, value, 
           <ChoiceChip
             key={option.value}
             label={option.label}
+            left={option.left}
+            icon={option.icon}
             selected={option.value === value}
             onPress={() => onChange(option.value)}
             disabled={disabled}
@@ -35,5 +44,5 @@ export function ChoiceChips<T extends string | number>({ label, options, value, 
 
 const styles = StyleSheet.create({
   wrapper: { gap: 8 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

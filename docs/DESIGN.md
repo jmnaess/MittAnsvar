@@ -68,6 +68,7 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 | onRing | `#FFFFFF` | `#14201F` | haken i avkrysset sjekkboks |
 | qrInk / qrBg | `#2B2118` / `#FFFFFF` | samme | QR-koden, alltid mørk på lys |
 | cameraBg | `#000000` | `#000000` | bak kameraet |
+| switchThumb | `#FFFFFF` | `#FFFFFF` | tommelen på `Switch`, lys i begge tema (som iOS) |
 
 I mørkt tema blir hovedknappene lys petrol med mørk tekst: mørk petrol har bare ~3:1 mot mørk
 bakgrunn, og ett primary-token brukes både som fyll og som tekst.
@@ -115,7 +116,7 @@ Mørkt tema (`darkPersonColors`): dyp, mettet tint, lys pastell som ink og en ly
 ### Avrunding og avstand
 
 - Avrunding: seksjonskort 24, kort 20, rader i kort 16, knapper 22 (pille), merkelapper 12,
-  ikonknapper sirkel.
+  valgbrikker 14 (`filterChip`), tekstfelt og søkefelt 12 (`search`), ikonknapper sirkel.
 - Avstand: sidepadding 20, mellom seksjoner 18, i kort 14, mellom rader 10.
 - Bredde: innholdet er maks 640 bredt og sentrert på iPad (`contentMaxWidth`). Hver skjerm legger
   `...pageWidth` på innholdsbeholderen (`contentContainerStyle` i ScrollView og lister).
@@ -181,13 +182,14 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `GroupCard` | hvitt kort for én gruppe (radius 16, skygge, overflow hidden): overskrift øverst, rader med 1 px `border` mellom |
 | `GroupHeader` | overskrift i et `GroupCard`, foldes ut og inn: ikon/avatar (34), navn, antall, pil ned (åpen) / høyre (lukket) (`accessibilityState.expanded`) |
 | `SegmentedControl` | segmentert kontroll i full bredde («Kategori \| Person»). Valgt segment er en løftet flate med skygge |
-| `FilterChips` | små filterbrikker på én rad som rulles sidelengs, aldri linjeskift. Valgfri avatar foran. Valgt = fylt primary |
+| `FilterChips` | `ChoiceChip`-er på én rad som rulles sidelengs, aldri linjeskift (filteret i «Oppgaver») |
 | `Message` / `Hint` | feil, bekreftelse eller nøytral tekst / hjelpetekst under et felt |
-| `TextField` | tekstfelt med etikett. `code` gir stor, sentrert tekst |
-| `SearchField` | kompakt søkefelt (radius 12, tynn kant, tekst 14): `TextField` med forstørrelsesglass og «Tøm søket» når det har tekst |
+| `TextField` | kompakt tekstfelt med etikett: høyde 44, radius 12, 1 px `border`, tekst 16. `code` gir stor, sentrert tekst |
+| `SearchField` | søkefelt (høyde 40, tekst 14): `TextField` med forstørrelsesglass og «Tøm søket» når det har tekst |
 | `DateField` | datovelger med etikett. iOS: kompakt velger i raden, Android: knapp som åpner kalenderen. `minimumDate` stopper datoer bakover |
-| `ChoiceChip`, `ChoiceChips`, `MultiChoiceChips` | valgknapper (ett eller flere valg). Valgt = fylt primary |
-| `Switch` | bryter i primary, med valgfri etikett |
+| `ChoiceChip` | den eneste valgbrikken i appen: høyde 32 (+ hitSlop 6 over og under = 44), radius 14, 1 px `border` på `surface`, tekst `label`. Valgt = fylt `primary` med `onPrimary`. Valgfritt `left` (avatar 20) eller `icon` (Ionicons 16, `textMuted`, `onPrimary` når valgt) |
+| `ChoiceChips`, `MultiChoiceChips` | ett eller flere valg med `ChoiceChip`, bryter linje (`flexWrap`, gap 6) så alle valg synes. Brukes i alle skjemaer |
+| `Switch` | bryter i primary med lys tommel (`switchThumb`), med valgfri etikett |
 | `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |
 | `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
 | `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
@@ -214,6 +216,14 @@ står kategorien først i undertittelen. Innholdet ligger i `pageWidth`.
 
 Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.
+
+### Skjemaene
+
+Ny og endre oppgave, «Oppgave i dag», ny og endre jobb og årshjulsoppgaven bruker samme brikker og
+felt som «Oppgaver». Alle valg er `ChoiceChips`/`MultiChoiceChips` som bryter linje, aldri sidelengs rulling.
+«Hvem har ansvaret?» / «For hvem?»: hver person med avatar 20 (`left`), «Felles» og «Alle barna» med
+ikonet `people-outline`. «Kategori»: kategoriens ikon fra `features/tasks/categories.ts`, samme som i
+gruppeoverskriftene. Gjentakelse, ukedager og måneder: samme brikke uten ikon.
 
 ## Avatarer
 

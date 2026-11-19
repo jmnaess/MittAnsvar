@@ -14,6 +14,6 @@ type Props = {
  */
 export function CategoryPicker({ value, onChange, disabled }: Props) {
   const { data: household } = useMyHousehold();
-  const options = categoryOptions(household ?? null).map((c) => ({ value: c.key, label: c.label }));
+  const options = categoryOptions(household ?? null).map((c) => ({ value: c.key, label: c.label, icon: c.icon }));
   return <ChoiceChips label="Kategori" options={options} value={value} onChange={onChange} disabled={disabled} />;
 }

@@ -38,9 +38,7 @@ export function DateField({ label, value, onChange, minimumDate, disabled }: Pro
       value: date,
       mode: 'date',
       minimumDate: min,
-      onChange: (event, picked) => {
-        if (event.type === 'set' && picked) onChange(toIsoDate(picked));
-      },
+      onValueChange: (_, picked) => onChange(toIsoDate(picked)),
     });
   }
 
@@ -57,7 +55,7 @@ export function DateField({ label, value, onChange, minimumDate, disabled }: Pro
           accentColor={colors.primary}
           minimumDate={min}
           disabled={disabled}
-          onChange={(_, picked) => picked && onChange(toIsoDate(picked))}
+          onValueChange={(_, picked) => onChange(toIsoDate(picked))}
         />
       ) : (
         <Pressable

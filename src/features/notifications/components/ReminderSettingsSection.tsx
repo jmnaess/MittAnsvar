@@ -95,7 +95,7 @@ function TimePicker({ hour, minute, onChange }: TimePickerProps) {
         locale="nb-NO"
         themeVariant={scheme}
         accentColor={colors.primary}
-        onChange={(_, date) => date && onChange(date.getHours(), date.getMinutes())}
+        onValueChange={(_, date) => onChange(date.getHours(), date.getMinutes())}
       />
     );
   }
@@ -105,9 +105,7 @@ function TimePicker({ hour, minute, onChange }: TimePickerProps) {
       value,
       mode: 'time',
       is24Hour: true,
-      onChange: (event, date) => {
-        if (event.type === 'set' && date) onChange(date.getHours(), date.getMinutes());
-      },
+      onValueChange: (_, date) => onChange(date.getHours(), date.getMinutes()),
     });
   }
 

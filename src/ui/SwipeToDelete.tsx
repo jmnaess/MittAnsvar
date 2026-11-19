@@ -94,7 +94,7 @@ function DeleteAction({ translation, threshold, onThresholdChange, onPress }: Ac
     (past, previous) => {
       if (past !== previous) scheduleOnRN(onThresholdChange, past);
     },
-    [threshold],
+    // Ingen dependencies: på native følger Reanimated threshold i closuren selv.
   );
 
   const fill = useAnimatedStyle(() => ({

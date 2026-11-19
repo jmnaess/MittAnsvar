@@ -24,6 +24,8 @@ export type ReminderTask = {
   /** null = felles */
   assigned_member_id: string | null;
   is_month_task: boolean;
+  /** Daglig (isDailyRecurrence): blir aldri forfalt. */
+  is_daily: boolean;
 };
 
 /** Én forekomst fra get_upcoming_occurrences. */

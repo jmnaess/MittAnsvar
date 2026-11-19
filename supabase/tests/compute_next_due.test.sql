@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(61);
+select plan(68);
 
 create schema tests;
 
@@ -241,6 +241,26 @@ select is(private.is_month_task(tests.task('calendar', 'month', 1, p_month_day =
   'den 1. hver måned er ikke en månedsoppgave');
 select is(private.due_by(tests.task('once', p_next => null)), null::date,
   'utført engangsoppgave har ingen siste frist');
+
+-- ===========================================================================
+-- Daglige oppgaver blir aldri forfalt (20261123100000_daily_never_overdue.sql).
+-- 2026-11-20 er fredag, 21. lørdag og 23. mandag.
+-- ===========================================================================
+select is(private.is_overdue(tests.task('calendar', 'day', 1, p_next => '2026-11-19'), '2026-11-20'),
+  false, 'hver dag, glemt i går: ikke forfalt');
+select is(private.is_overdue(tests.task('interval', 'day', 1, p_next => '2026-11-19'), '2026-11-20'),
+  false, '1 dag etter sist, glemt i går: ikke forfalt');
+select is(private.is_overdue(tests.task('calendar', 'week', 1, '{1,2,3,4,5}', p_next => '2026-11-20'), '2026-11-23'),
+  false, 'hverdager, glemt fredag: ikke forfalt mandag');
+select is(private.is_overdue(tests.task('calendar', 'week', 1, '{1,4}', p_next => '2026-11-19'), '2026-11-20'),
+  true, 'mandag og torsdag, glemt torsdag: forfalt fredag');
+select is(private.is_overdue(tests.task('calendar', 'day', 2, p_next => '2026-11-18'), '2026-11-20'),
+  true, 'hver 2. dag er ikke daglig og kan bli forfalt');
+select is(private.matches_pattern(tests.task('calendar', 'week', 1, '{1,2,3,4,5}'), '2026-11-21'),
+  false, 'hverdager: lørdag er ingen forekomst (vises ikke i «I dag»)');
+select is(private.compute_next_due(
+    tests.task('calendar', 'week', 1, '{1,2,3,4,5}', p_next => '2026-11-20'), '2026-11-23'),
+  '2026-11-24'::date, 'hverdager, glemt fredag og gjort mandag: neste frist tirsdag');
 
 select * from finish();
 rollback;

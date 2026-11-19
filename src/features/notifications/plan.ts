@@ -32,9 +32,10 @@ export function inScope(task: ReminderTask, settings: ReminderSettings, myMember
  * Er oppgaven forfalt på dato, gitt at ingenting blir gjort før det?
  * - Vanlig oppgave: fristen er passert, og det er ikke en ny forekomst den dagen.
  * - Månedsoppgave: først etter siste dag i måneden (som due_by i databasen).
+ * - Daglig oppgave: aldri.
  */
 export function isOverdueOn(task: ReminderTask, date: string, dueToday: boolean): boolean {
-  if (!task.next_due_on) return false;
+  if (!task.next_due_on || task.is_daily) return false;
   if (task.is_month_task) return date > lastDayOfMonth(task.next_due_on);
   return !dueToday && task.next_due_on < date;
 }

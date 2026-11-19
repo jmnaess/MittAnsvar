@@ -8,7 +8,7 @@ const CHILD = 'member-child';
 const ON = { ...DEFAULT_REMINDER_SETTINGS, enabled: true };
 
 function task(id: string, nextDue: string | null, extra: Partial<ReminderTask> = {}): ReminderTask {
-  return { id, title: id, next_due_on: nextDue, assigned_member_id: null, is_month_task: false, ...extra };
+  return { id, title: id, next_due_on: nextDue, assigned_member_id: null, is_month_task: false, is_daily: false, ...extra };
 }
 
 function plan(input: Partial<PlanInput> & Pick<PlanInput, 'tasks' | 'occurrences'>) {
@@ -46,6 +46,13 @@ describe('planReminders', () => {
     // men der ville den vært forfalt.
     expect(Object.keys(bodies({ tasks, occurrences }))).toEqual(['2026-11-22', '2026-11-23']);
     expect(bodies({ tasks, occurrences })['2026-11-23']).toBe('1 forfalt oppgave venter');
+  });
+
+  it('daglige oppgaver telles aldri som forfalt', () => {
+    // Hverdager, glemt fredag 20. november: lørdag og søndag ingen varsel.
+    const tasks = [task('Re opp senga', '2026-11-20', { is_daily: true })];
+    const occurrences = [{ task_id: 'Re opp senga', due_on: '2026-11-23' }];
+    expect(Object.keys(bodies({ tasks, occurrences }))).toEqual(['2026-11-23']);
   });
 
   it('planlegger 7 dager fram', () => {

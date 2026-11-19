@@ -273,7 +273,7 @@ Tatt 29.09.2026. Alle forslagene fra analysen i §1 er godkjent.
 
 1. **Boligtype ved oppstart:** ja – leilighet, rekkehus eller enebolig.
 2. **Tildeling:** én ansvarlig eller «hvem som helst». Ingen rundgang i MVP.
-3. **Glemt kalenderoppgave:** én forfalt forekomst vises til den er utført. Ingen opphopning.
+3. **Glemt kalenderoppgave:** én forfalt forekomst vises til den er utført. Ingen opphopning. Daglige oppgaver blir aldri forfalt, de starter bare på nytt (se [DATABASE.md](DATABASE.md)).
 4. **Prøvetid:** i appen, uten kort.
 5. **Etter utløpt abonnement:** skrivebeskyttet. Ingen data slettes.
 6. **Voksne:** alle er like, ingen «eier».
@@ -340,7 +340,7 @@ Denne måneden: Rense takrenner
 ```
 
 - **Forfaller i dag:** oppgaver med en forekomst den dagen. Månedsoppgaver er ikke med her.
-- **Forfalt:** fristen er passert, og oppgaven har ikke en ny forekomst den dagen. En månedsoppgave er først forfalt etter siste dag i måneden sin (som `due_by`). Forfalte oppgaver nevnes bare som antall. Er det *bare* forfalte, blir teksten «2 forfalte oppgaver venter».
+- **Forfalt:** fristen er passert, og oppgaven har ikke en ny forekomst den dagen. En månedsoppgave er først forfalt etter siste dag i måneden sin (som `due_by`). Daglige oppgaver er aldri forfalt. Forfalte oppgaver nevnes bare som antall. Er det *bare* forfalte, blir teksten «2 forfalte oppgaver venter».
 - **Månedsoppgaver:** nevnes den 1. («Denne måneden: …») og første dag i siste uke, altså siste dag − 6 («Fortsatt denne måneden: …»), hvis de fortsatt ikke er gjort. Linjen slås sammen med dagsoppsummeringen.
 - Maks 4 titler, deretter «og 3 til». Er det ingenting å si, sendes ikke noe varsel den dagen.
 - **Omfang:** «Mine og felles» er oppgaver til meg og oppgaver uten ansvarlig. «Hele husstanden» er alle.

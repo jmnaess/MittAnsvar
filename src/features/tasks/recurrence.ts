@@ -23,6 +23,25 @@ export function isSeasonal(r: Pick<Recurrence, 'season_start_month'>): boolean {
   return r.season_start_month !== null;
 }
 
+const WORKDAYS = [1, 2, 3, 4, 5];
+
+/**
+ * Daglig: hver dag (fast eller 1 dag etter sist), eller hver uke på minst alle hverdagene.
+ * Blir aldri forfalt, men starter på nytt neste dag den skal gjøres.
+ * Samme regel som private.is_daily i databasen.
+ */
+export function isDailyRecurrence(
+  r: Pick<Recurrence, 'recurrence_type' | 'recurrence_unit' | 'recurrence_every' | 'weekdays'>,
+): boolean {
+  if (r.recurrence_every !== 1) return false;
+  if (r.recurrence_unit === 'day') return r.recurrence_type === 'calendar' || r.recurrence_type === 'interval';
+  return (
+    r.recurrence_type === 'calendar' &&
+    r.recurrence_unit === 'week' &&
+    WORKDAYS.every((d) => r.weekdays?.includes(d))
+  );
+}
+
 /** Ledig jobb: ingen dato, blir aldri forfalt (steg 9). */
 export function isJob(r: Pick<Recurrence, 'recurrence_type'>): boolean {
   return r.recurrence_type === 'job';

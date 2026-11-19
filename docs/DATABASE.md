@@ -155,10 +155,12 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 
 **Trigger `tasks_set_defaults`** (before insert/update): ved insert settes `anchor_on` = i dag i husstandens tidssone, `created_by` = innlogget medlem og `next_due_on` = `private.first_due(oppgaven)`. Endres gjentakelseskolonnene (også `once_on` og periodekolonnene), settes `anchor_on` til i dag og fristen beregnes på nytt. Klienten har ikke kolonnerettighet til `next_due_on`, `anchor_on` eller `created_by` (kolonnerettigheter sjekker bare kolonnene i selve spørringen, så triggeren kan sette dem).
 
-**View `today_tasks`** (`security_invoker = true`, så RLS på `tasks` gjelder): aktive oppgaver med `next_due_on <= private.household_today(household_id)`, og alle aktive jobber (steg 9). Viewet har tre ekstra kolonner:
+**View `today_tasks`** (`security_invoker = true`, så RLS på `tasks` gjelder): aktive oppgaver med `next_due_on <= private.household_today(household_id)`, og alle aktive jobber (steg 9). En daglig oppgave (`private.is_daily`, se under) vises bare på dager den skal gjøres (`matches_pattern`) eller på datoen den er utsatt til, så en man–fre-oppgave fra fredag står ikke i «I dag» i helgen. Viewet har tre ekstra kolonner:
 - `is_month_task`: oppgaven er en månedsoppgave (se §2), og ikke utsatt.
 - `due_by`: siste frist. Det er siste dag i måneden for månedsoppgaver, ellers `next_due_on`. En utsatt månedsoppgave har `next_due_on` som frist.
-- `is_overdue`: `due_by < i dag`. Alltid `false` for jobber (`coalesce`), fordi de ikke har frist.
+- `is_overdue`: `due_by < i dag`. Alltid `false` for jobber (`coalesce`), fordi de ikke har frist, og for daglige oppgaver.
+
+**Daglige oppgaver blir aldri forfalt** (`20261123100000_daily_never_overdue.sql`). Daglig (`private.is_daily`, i appen `isDailyRecurrence`) er hver dag (fast kalender eller 1 dag etter sist), eller hver uke på minst alle hverdagene. En glemt daglig oppgave starter bare på nytt: `next_due_on` blir stående på den glemte dagen, men `is_overdue` er `false`, og avkrysning gir riktig neste frist fordi `compute_next_due` bruker `greatest(next_due_on, completed_on)`. Ukentlige og sjeldnere oppgaver kan fortsatt bli forfalt.
 
 «I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden», og jobber i «Ledige jobber».
 

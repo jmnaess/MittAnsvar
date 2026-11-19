@@ -2,6 +2,7 @@ import {
   defaultRecurrenceForm,
   describeSchedule,
   fromRecurrence,
+  isDailyRecurrence,
   sameWhen,
   toRecurrence,
   type Schedule,
@@ -85,5 +86,32 @@ describe('describeSchedule', () => {
     expect(describeSchedule(s(today), today)).toBe('I dag');
     expect(describeSchedule(s('2026-11-19'), today)).toBe('I morgen');
     expect(describeSchedule(s('2026-11-26'), today)).toBe('Tor. 26. nov.');
+  });
+});
+
+describe('isDailyRecurrence', () => {
+  const r = (
+    recurrence_type: 'calendar' | 'interval' | 'once' | 'job',
+    recurrence_unit: 'day' | 'week' | 'month' | 'year' | null,
+    recurrence_every: number | null,
+    weekdays: number[] | null = null,
+  ) => ({ recurrence_type, recurrence_unit, recurrence_every, weekdays });
+
+  it('hver dag og 1 dag etter sist er daglig', () => {
+    expect(isDailyRecurrence(r('calendar', 'day', 1))).toBe(true);
+    expect(isDailyRecurrence(r('interval', 'day', 1))).toBe(true);
+  });
+
+  it('hver uke på alle hverdagene er daglig', () => {
+    expect(isDailyRecurrence(r('calendar', 'week', 1, [1, 2, 3, 4, 5]))).toBe(true);
+    expect(isDailyRecurrence(r('calendar', 'week', 1, [1, 2, 3, 4, 5, 6, 7]))).toBe(true);
+  });
+
+  it('sjeldnere enn daglig er ikke daglig', () => {
+    expect(isDailyRecurrence(r('calendar', 'day', 2))).toBe(false);
+    expect(isDailyRecurrence(r('calendar', 'week', 1, [1, 2, 3, 4]))).toBe(false);
+    expect(isDailyRecurrence(r('calendar', 'week', 2, [1, 2, 3, 4, 5]))).toBe(false);
+    expect(isDailyRecurrence(r('interval', 'week', 1))).toBe(false);
+    expect(isDailyRecurrence(r('once', null, null))).toBe(false);
   });
 });

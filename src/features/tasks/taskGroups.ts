@@ -4,7 +4,7 @@ import { type Category, CATEGORIES, toCategory } from './categories';
 import { jobMembers } from './job';
 import { isPostponed } from './postpone';
 import { formatKroner } from './reward';
-import { describeRecurrence, isJob, isMonthTask } from './recurrence';
+import { describeRecurrence, isDailyRecurrence, isJob, isMonthTask } from './recurrence';
 import type { Task } from './types';
 
 // Gruppering, filtrering, søk og sortering for «Oppgaver». Ren logikk, testes med Jest.
@@ -93,9 +93,12 @@ function dueBy(task: DueTask): string | null {
 type DueTask = Parameters<typeof describeRecurrence>[0] &
   Pick<Task, 'next_due_on' | 'postponed_to'>;
 
-/** Fristen er passert. Jobber og fullførte engangsoppgaver har ingen frist. */
+/**
+ * Fristen er passert. Jobber og fullførte engangsoppgaver har ingen frist.
+ * Daglige oppgaver blir aldri forfalt (som private.is_overdue).
+ */
 export function isTaskOverdue(task: DueTask, today: string): boolean {
-  if (isJob(task)) return false;
+  if (isJob(task) || isDailyRecurrence(task)) return false;
   const due = dueBy(task);
   return due !== null && due < today;
 }

@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(33);
+select plan(37);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i de andre testfilene)
@@ -239,6 +239,36 @@ select set_eq($$select title from public.today_tasks$$, array['B i dag'],
 select tests.login_as('00000000-0000-0000-0000-00000000f001');
 select is((select count(*)::int from public.today_tasks), 0,
   'bruker uten medlemskap ser ingenting i today_tasks');
+
+-- ===========================================================================
+-- 6. Daglige oppgaver blir aldri forfalt (20261123100000_daily_never_overdue.sql)
+-- ===========================================================================
+select tests.logout();
+insert into public.tasks
+  (id, household_id, title, recurrence_type, recurrence_unit, recurrence_every, weekdays,
+   season_start_month, season_end_month) values
+  ('11111111-0000-0000-0000-000000000030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Daglig glemt',
+   'calendar', 'day', 1, null, null, null),
+  ('11111111-0000-0000-0000-000000000031', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Ukentlig glemt',
+   'calendar', 'week', 1, array[(select extract(isodow from today - 1)::smallint from tests.d)], null, null),
+  -- Periode som ikke inkluderer denne måneden: i dag er ingen forekomst.
+  ('11111111-0000-0000-0000-000000000032', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Daglig utenfor periode',
+   'calendar', 'day', 1, null,
+   (select extract(month from today)::int % 12 + 1 from tests.d),
+   (select (extract(month from today)::int + 1) % 12 + 1 from tests.d));
+update public.tasks set next_due_on = (select today - 1 from tests.d)
+  where id in ('11111111-0000-0000-0000-000000000030', '11111111-0000-0000-0000-000000000031',
+               '11111111-0000-0000-0000-000000000032');
+
+select tests.login_as('00000000-0000-0000-0000-00000000a001');
+select is((select is_overdue from public.today_tasks where title = 'Daglig glemt'), false,
+  'daglig oppgave glemt i går står i today_tasks uten is_overdue');
+select is((select is_overdue from public.today_tasks where title = 'Ukentlig glemt'), true,
+  'ukentlig oppgave glemt i går er forfalt');
+select is((select count(*)::int from public.today_tasks where title = 'Daglig utenfor periode'), 0,
+  'daglig oppgave vises ikke på en dag som ikke er en forekomst');
+select is((select count(*)::int from public.today_tasks where title like 'Daglig glemt'), 1,
+  'daglig oppgave glemt i går vises én gang');
 
 select * from finish();
 rollback;

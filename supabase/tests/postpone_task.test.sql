@@ -145,14 +145,15 @@ select is(tests.upcoming('Daglig', (select today + 1 from tests.d), (select toda
   (select array[today + 3, today + 4] from tests.d), 'daglig: dagene før den nye datoen hoppes over');
 
 -- ===========================================================================
--- 3. Forfalt oppgave
+-- 3. Glemt oppgave (frist passert). Daglige blir aldri forfalt, men står i «I dag».
 -- ===========================================================================
 select tests.logout();
 select tests.set_due('Daglig', (select today - 3 from tests.d));
 select tests.login_as('00000000-0000-0000-0000-00000000a001');
-select ok((select is_overdue from public.today_tasks where title = 'Daglig'), 'oppgaven er forfalt');
+select ok((select not is_overdue from public.today_tasks where title = 'Daglig'),
+  'glemt daglig oppgave står i «I dag», uten forfalt');
 select is(public.postpone_task(tests.tid('Daglig'), (select today + 1 from tests.d)),
-  (select today - 3 from tests.d), 'forfalt oppgave kan utsettes');
+  (select today - 3 from tests.d), 'glemt oppgave kan utsettes');
 select ok(not exists (select 1 from public.today_tasks where title = 'Daglig'), 'og er borte fra «I dag»');
 
 -- ===========================================================================
@@ -160,7 +161,8 @@ select ok(not exists (select 1 from public.today_tasks where title = 'Daglig'), 
 -- ===========================================================================
 select lives_ok(format($$select public.undo_postpone(%L)$$, tests.tid('Daglig')), 'voksen kan angre');
 select is(tests.due('Daglig'), (select today - 3 from tests.d), 'fristen er tilbake');
-select ok((select is_overdue from public.today_tasks where title = 'Daglig'), 'og oppgaven er forfalt igjen');
+select ok((select not is_overdue from public.today_tasks where title = 'Daglig'),
+  'og oppgaven står i «I dag» igjen, uten forfalt');
 select is((tests.task('Daglig')).postponed_to, null, 'utsettelsen er fjernet');
 select throws_ok(format($$select public.undo_postpone(%L)$$, tests.tid('Daglig')),
   'P0001', 'undo_postpone_expired', 'kan ikke angre to ganger');

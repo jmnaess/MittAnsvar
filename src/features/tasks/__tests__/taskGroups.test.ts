@@ -196,6 +196,14 @@ describe('isTaskOverdue', () => {
     expect(isTaskOverdue(task({ ...month, next_due_on: '2026-10-01' }), TODAY)).toBe(true);
   });
 
+  it('daglige oppgaver er aldri forfalt, ukentlige kan være det', () => {
+    const daily = { recurrence_unit: 'day' as const, recurrence_every: 1, weekdays: null };
+    expect(isTaskOverdue(task({ ...daily, next_due_on: '2026-11-12' }), TODAY)).toBe(false);
+    const workdays = { weekdays: [1, 2, 3, 4, 5], next_due_on: '2026-11-12' };
+    expect(isTaskOverdue(task(workdays), TODAY)).toBe(false);
+    expect(isTaskOverdue(task({ weekdays: [1, 4], next_due_on: '2026-11-12' }), TODAY)).toBe(true);
+  });
+
   it('jobber og fullførte engangsoppgaver er aldri forfalt', () => {
     expect(isTaskOverdue(task({ recurrence_type: 'job', next_due_on: '2026-11-01' }), TODAY)).toBe(false);
     const once = { recurrence_type: 'once' as const, recurrence_unit: null, weekdays: null };

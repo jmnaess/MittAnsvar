@@ -6,7 +6,7 @@ import { AppState } from 'react-native';
 import { addDays, toIsoDate } from '../../lib/dates';
 import { useTasks, useUpcomingOccurrences } from '../tasks/hooks';
 import { isPostponed } from '../tasks/postpone';
-import { isMonthTask } from '../tasks/recurrence';
+import { isDailyRecurrence, isMonthTask } from '../tasks/recurrence';
 import { getPermission, requestPermission, type PermissionState } from './permissions';
 import { PLAN_DAYS, planReminders } from './plan';
 import { clearReminders, REMINDER_URL, rescheduleReminders } from './schedule';
@@ -138,6 +138,7 @@ export function useReminderSync(householdId: string, userId: string, myMemberId:
       assigned_member_id: t.assigned_member_id,
       // En utsatt månedsoppgave har en fast dato (som due_by i databasen).
       is_month_task: isMonthTask(t) && !isPostponed(t),
+      is_daily: isDailyRecurrence(t),
     }));
     rescheduleReminders(
       planReminders({ today, tasks: reminderTasks, occurrences, settings, myMemberId }),

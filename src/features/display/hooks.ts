@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { completeTask, undoCompletion } from '../completions/api';
 import {
   createDisplayLinkCode,
   getFamilyBoard,
   listDisplays,
   unlinkDisplay,
 } from './api';
+import { loadKeepAwake, saveKeepAwake } from './settings';
 import type { HouseholdDisplay } from './types';
 
 export const displayKeys = {
   board: ['family-board'] as const,
   list: (householdId: string) => ['displays', householdId] as const,
+  keepAwake: ['display-keep-awake'] as const,
 };
 
 /** Hvor ofte en koblet skjerm henter nye data. Stopper når appen ikke er i forgrunnen. */
@@ -52,4 +55,35 @@ export function useUnlinkDisplay(householdId: string) {
     mutationFn: unlinkDisplay,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: displayKeys.list(householdId) }),
   });
+}
+
+function useInvalidateBoard() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: displayKeys.board });
+}
+
+/** Tavla hentes på nytt før mutasjonen regnes som ferdig, så raden ikke blinker tilbake. */
+export function useCompleteOnBoard() {
+  const onSettled = useInvalidateBoard();
+  return useMutation({
+    mutationFn: ({ taskId, memberId }: { taskId: string; memberId: string }) =>
+      completeTask(taskId, memberId),
+    onSettled,
+  });
+}
+
+export function useUndoOnBoard() {
+  const onSettled = useInvalidateBoard();
+  return useMutation({ mutationFn: undoCompletion, onSettled });
+}
+
+/** «Hold skjermen våken». Lagres på enheten. */
+export function useKeepAwakeSetting() {
+  const queryClient = useQueryClient();
+  const { data: enabled = true } = useQuery({ queryKey: displayKeys.keepAwake, queryFn: loadKeepAwake });
+  const { mutate: setEnabled } = useMutation({
+    mutationFn: saveKeepAwake,
+    onMutate: (value: boolean) => queryClient.setQueryData(displayKeys.keepAwake, value),
+  });
+  return { enabled, setEnabled };
 }

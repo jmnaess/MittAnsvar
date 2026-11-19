@@ -47,7 +47,10 @@ export function jobMembers<M extends Pick<Member, 'id' | 'role'>>(jobMemberIds: 
 }
 
 /** «Alle barna», «Leah», «Leah og Ola» eller «Leah, Ola og Emma». */
-export function describeJobMembers(jobMemberIds: string[], members: Member[]): string {
+export function describeJobMembers(
+  jobMemberIds: string[],
+  members: Pick<Member, 'id' | 'role' | 'display_name'>[],
+): string {
   const names = members
     .filter((m) => m.role === 'child' && jobMemberIds.includes(m.id))
     .map((m) => m.display_name);

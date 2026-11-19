@@ -7,16 +7,18 @@ type Props = {
   checked: boolean;
   /** Fyllfarge når avkrysset: personens ring-farge, primary for «Felles». */
   color?: string;
+  /** Større sirkel, til familieskjermen. */
+  large?: boolean;
 };
 
 /** Rund sjekkboks. Bare visning: trykket håndteres av raden rundt. */
-export function Checkbox({ checked, color }: Props) {
+export function Checkbox({ checked, color, large }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   const fill = color ?? colors.primary;
   return (
-    <View style={[styles.box, checked && { backgroundColor: fill, borderColor: fill }]}>
-      {checked && <Ionicons name="checkmark" size={20} color={colors.onRing} />}
+    <View style={[styles.box, large && styles.large, checked && { backgroundColor: fill, borderColor: fill }]}>
+      {checked && <Ionicons name="checkmark" size={large ? 26 : 20} color={colors.onRing} />}
     </View>
   );
 }
@@ -33,5 +35,6 @@ const useStyles = makeStyles(({ colors }) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    large: { width: 38, height: 38, borderRadius: 19 },
   }),
 );

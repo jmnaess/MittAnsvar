@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Checkbox } from './Checkbox';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
-import { minTouch, radius } from './theme';
+import { largeTouch, minTouch, radius } from './theme';
 import { useTheme } from './ThemeProvider';
 
 type Props = {
@@ -17,6 +17,8 @@ type Props = {
   disabled?: boolean;
   /** Raden ligger i et hvitt kort: bruk surfaceMuted som bakgrunn. */
   muted?: boolean;
+  /** Stor rad med stor trykkflate, til familieskjermen. */
+  large?: boolean;
   /** Utelatt = bare visning (f.eks. «Gjort siste 3 dager»). */
   onPress?: () => void;
   onLongPress?: () => void;
@@ -33,12 +35,12 @@ type Props = {
 
 /** Én oppgave med sjekkboks: hvit rad, tittel og valgfri metalinje. */
 export function TaskRow({
-  title, meta, right, done = false, checkColor, disabled, muted, onPress, onLongPress,
+  title, meta, right, done = false, checkColor, disabled, muted, large, onPress, onLongPress,
   onCheckPress, checkAccessibilityLabel, accessibilityLabel, accessibilityHint,
 }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const checkbox = <Checkbox checked={done} color={checkColor} />;
+  const checkbox = <Checkbox checked={done} color={checkColor} large={large} />;
   return (
     <Pressable
       onPress={onPress}
@@ -50,6 +52,7 @@ export function TaskRow({
       accessibilityHint={accessibilityHint}
       style={({ pressed }) => [
         styles.row,
+        large && styles.large,
         muted && styles.muted,
         pressed && (muted ? styles.mutedPressed : styles.pressed),
       ]}
@@ -71,7 +74,7 @@ export function TaskRow({
       )}
       <View style={styles.text}>
         <Text
-          variant="rowTitle"
+          variant={large ? 'rowTitleLarge' : 'rowTitle'}
           color={done ? colors.textMuted : colors.text}
           style={done && styles.strike}
         >
@@ -96,6 +99,7 @@ const useStyles = makeStyles(({ colors }) =>
       borderRadius: radius.row,
       backgroundColor: colors.surface,
     },
+    large: { minHeight: largeTouch, gap: 14, paddingHorizontal: 14 },
     pressed: { backgroundColor: colors.surfaceMuted },
     muted: { backgroundColor: colors.surfaceMuted },
     mutedPressed: { backgroundColor: colors.border },

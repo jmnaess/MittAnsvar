@@ -31,6 +31,8 @@ type Props = {
   /** Alle utførte vises (ellers bare de to siste, se visibleDone). */
   expanded: boolean;
   onToggleExpanded: () => void;
+  /** Store rader, til familieskjermen. */
+  large?: boolean;
 };
 
 /**
@@ -41,7 +43,7 @@ type Props = {
  */
 export function DoneList({
   done, sectionKey, allDone, nameOf, checkColor, isAdult, userId, busyId, onUndo, adultActions,
-  expanded, onToggleExpanded,
+  expanded, onToggleExpanded, large,
 }: Props) {
   const { colors } = useTheme();
   if (done.length === 0) return null;
@@ -91,6 +93,7 @@ export function DoneList({
             title={c.title}
             meta={doneBy}
             done
+            large={large}
             checkColor={checkColor}
             disabled={!undoable || busyId === c.id}
             // Tiden sjekkes på nytt ved trykk, i tilfelle raden har stått lenge.

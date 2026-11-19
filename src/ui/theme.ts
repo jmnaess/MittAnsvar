@@ -129,6 +129,9 @@ export const pageWidth: ViewStyle = { width: '100%', maxWidth: contentMaxWidth, 
 /** Minste trykkflate (bredde og høyde). */
 export const minTouch = 44;
 
+/** Radhøyde på familieskjermen, der flere trykker på en skjerm på avstand. */
+export const largeTouch = 68;
+
 /**
  * Familienavnene fontene lastes med i app/_layout.tsx. Med egne fonter velges vekten med
  * familienavnet. fontWeight virker ikke på Android, så den brukes ikke.
@@ -149,6 +152,7 @@ export const typography = {
   jobAmount: { fontFamily: fonts.heading, fontSize: 22, lineHeight: 28 },
   date: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20 },
   rowTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 21 },
+  rowTitleLarge: { fontFamily: fonts.bold, fontSize: 19, lineHeight: 25 },
   jobTitle: { fontFamily: fonts.extrabold, fontSize: 15, lineHeight: 20 },
   body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
   bodyStrong: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22 },

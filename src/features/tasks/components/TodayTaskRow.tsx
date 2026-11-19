@@ -2,16 +2,22 @@ import { Chip, JobCard, TaskRow } from '../../../ui';
 import { monthName } from '../../../lib/dates';
 import { describeRecurrence } from '../recurrence';
 import { formatKroner } from '../reward';
-import type { TodayTask } from '../types';
+import type { Recurrence, TodayTask } from '../types';
+
+/** Feltene raden viser. Familieskjermen får ikke hele oppgaven. */
+type RowTask = Recurrence &
+  Pick<TodayTask, 'title' | 'is_month_task' | 'is_overdue' | 'next_due_on' | 'reward_nok'>;
 
 type Props = {
-  task: TodayTask;
+  task: RowTask;
   /** Vises i «Denne måneden» og «Ledige jobber», der oppgavene ikke er gruppert per person. */
   assigneeName?: string;
   /** Fyllfarge på sjekkboksen: personens ring-farge. */
   checkColor?: string;
   /** Raden ligger i et hvitt kort («Denne måneden»). */
   muted?: boolean;
+  /** Stor rad, til familieskjermen. */
+  large?: boolean;
   busy?: boolean;
   /** Utført. */
   onPress: () => void;
@@ -32,12 +38,13 @@ const DEFAULT_HINT = 'Hold inne for å velge hvem som gjorde det';
  * Linjen under tittelen: «I løpet av november» for månedsoppgaver, ellers gjentakelsen.
  * Forfalt vises som merkelapp til høyre, aldri med dato.
  */
-function metaText(task: TodayTask, assigneeName?: string): string {
+function metaText(task: RowTask, assigneeName?: string): string {
   if (task.is_month_task && task.next_due_on) {
     const text = `I løpet av ${monthName(task.next_due_on)}`;
     return assigneeName ? `${text} · ${assigneeName}` : text;
   }
-  return describeRecurrence(task);
+  const text = describeRecurrence(task);
+  return assigneeName ? `${text} · ${assigneeName}` : text;
 }
 
 /**
@@ -46,7 +53,8 @@ function metaText(task: TodayTask, assigneeName?: string): string {
  * Mens avkrysningen pågår, vises raden som utført.
  */
 export function TodayTaskRow({
-  task, assigneeName, checkColor, muted, busy, onPress, onOpen, onLongPress, longPressHint = DEFAULT_HINT,
+  task, assigneeName, checkColor, muted, large, busy, onPress, onOpen, onLongPress,
+  longPressHint = DEFAULT_HINT,
 }: Props) {
   const label = `${task.title}${task.is_overdue ? ', forfalt' : ''}`;
   const hasChips = task.reward_nok !== null || !!task.is_overdue;
@@ -58,6 +66,7 @@ export function TodayTaskRow({
       disabled={busy}
       checkColor={checkColor}
       muted={muted}
+      large={large}
       onPress={onOpen ?? onPress}
       onCheckPress={onOpen ? onPress : undefined}
       checkAccessibilityLabel={onOpen ? `Marker ${task.title} som utført` : undefined}

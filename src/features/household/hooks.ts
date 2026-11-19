@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createContext, useContext } from 'react';
 import {
   acceptInvite,
   addChild,
@@ -122,7 +123,11 @@ export function useDeleteChild(householdId: string) {
  */
 export function useMemberPhotoUrls(householdId: string | undefined) {
   const { data: members } = useMembers(householdId);
-  const paths = members ? photoPathsToSign(members) : [];
+  return usePhotoUrls(householdId, members ? photoPathsToSign(members) : []);
+}
+
+/** Signerte URL-er til stiene. Familieskjermen får stiene fra tavla, ikke fra members. */
+export function usePhotoUrls(householdId: string | undefined, paths: string[]) {
   return useQuery({
     queryKey: householdKeys.photoUrls(householdId ?? '', paths),
     queryFn: () => getSignedPhotoUrls(paths),
@@ -132,12 +137,19 @@ export function useMemberPhotoUrls(householdId: string | undefined) {
   });
 }
 
+/**
+ * Satt på familieskjermen: URL-ene som MemberAvatar skal bruke. Skjermen kan ikke lese members,
+ * så useMemberPhoto må ikke hente dem der.
+ */
+export const MemberPhotoUrlsContext = createContext<Record<string, string> | null>(null);
+
 /** Bildet som skal vises for et medlem, eller undefined (figuren). */
 export function useMemberPhoto(
   member: Pick<Member, 'household_id' | 'avatar_mode' | 'photo_path'> | undefined,
 ): AvatarPhoto | undefined {
-  const { data: urls } = useMemberPhotoUrls(member?.household_id);
-  return member ? memberPhoto(member, urls) : undefined;
+  const provided = useContext(MemberPhotoUrlsContext);
+  const { data: fetched } = useMemberPhotoUrls(provided ? undefined : member?.household_id);
+  return member ? memberPhoto(member, provided ?? fetched) : undefined;
 }
 
 /** Funksjon som gir bildet for et medlem. For lister, der en hook per rad ikke går. */

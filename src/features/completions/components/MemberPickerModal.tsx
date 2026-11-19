@@ -4,10 +4,16 @@ import { Button, makeStyles, minTouch, radius, Sheet, Text, useTheme } from '../
 import { MemberAvatar } from '../../household/components/MemberAvatar';
 import type { Member } from '../../household/types';
 
-type Props = {
+/** Det velgeren viser. Familieskjermen får ikke hele medlemsraden. */
+type PickableMember = Pick<
+  Member,
+  'id' | 'household_id' | 'display_name' | 'avatar' | 'avatar_mode' | 'photo_path'
+>;
+
+type Props<M extends PickableMember> = {
   /** Oppgaven det gjelder. null = skjult. */
   taskTitle: string | null;
-  members: Member[];
+  members: M[];
   /**
    * Satt: raden er valgt fra start, og «Kryss av» bekrefter (oppgaver med lønn).
    * Ikke satt: trykk på en person krysser av med en gang.
@@ -17,7 +23,7 @@ type Props = {
   meId?: string;
   /** Teksten på bekreft-knappen når preselectedId er satt. Standard «Kryss av». */
   confirmLabel?: string;
-  onPick: (member: Member) => void;
+  onPick: (member: M) => void;
   onClose: () => void;
 };
 
@@ -25,9 +31,9 @@ type Props = {
  * «Hvem gjorde det?» Ved langt trykk, ledige jobber og oppgaver med lønn i «I dag», og når en
  * voksen flytter en utført oppgave til en annen person.
  */
-export function MemberPickerModal({
+export function MemberPickerModal<M extends PickableMember>({
   taskTitle, members, preselectedId, meId, confirmLabel = 'Kryss av', onPick, onClose,
-}: Props) {
+}: Props<M>) {
   const { colors, personColor } = useTheme();
   const styles = useStyles();
   const confirm = !!preselectedId;

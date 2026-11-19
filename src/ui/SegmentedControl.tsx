@@ -14,7 +14,7 @@ type Props<T extends string> = {
 
 const PADDING = 3;
 
-/** Segmentert kontroll i full bredde, f.eks. «Kategori | Person». Valgt segment er en løftet flate. */
+/** Segmentert kontroll i full bredde, f.eks. «Hverdag | Årshjul». Valgt segment er en løftet flate. */
 export function SegmentedControl<T extends string>({ options, value, onChange }: Props<T>) {
   const { colors } = useTheme();
   const styles = useStyles();

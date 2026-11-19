@@ -11,18 +11,24 @@ type Props = {
   value: boolean;
   disabled: boolean;
   onToggle: (on: boolean) => void;
+  /** Gjentakelse og neste frist i én tekst («Hver 3. måned · neste i mars»). Brukes i «Med jevne mellomrom». */
+  when?: string;
 };
 
 /** Én mal i årshjulet: tittel, kort forklaring, bryter og neste frist når den er aktivert. */
-export function TemplateRow({ template, task, value, disabled, onToggle }: Props) {
+export function TemplateRow({ template, task, value, disabled, onToggle, when }: Props) {
   return (
     <ListRow
       title={template.title}
-      meta={[
-        isSeasonal(template) && describeRecurrence({ ...template, job_repeats: false }),
-        template.description,
-        task && `Neste frist: ${formatNextDue(task)}`,
-      ]}
+      meta={
+        when
+          ? [when, template.description]
+          : [
+              isSeasonal(template) && describeRecurrence({ ...template, job_repeats: false }),
+              template.description,
+              task && `Neste frist: ${formatNextDue(task)}`,
+            ]
+      }
       right={
         <Switch
           value={value}

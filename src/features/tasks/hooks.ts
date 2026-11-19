@@ -13,6 +13,7 @@ import {
   updateTask,
 } from './api';
 import { openGroups } from './openGroups';
+import { revealSaved } from './tasksSegment';
 import { groupKeysFor } from './taskGroups';
 import type { TaskInput } from './types';
 import { buildUpcoming, EMPTY_UPCOMING, upcomingWindow, type MemberUpcoming } from './upcoming';
@@ -88,7 +89,8 @@ export function useInvalidateTasks(householdId: string) {
   return () => queryClient.invalidateQueries({ queryKey: taskKeys.all(householdId) });
 }
 
-// Etter lagring åpnes gruppene oppgaven havner i under «Oppgaver» (se openGroups.ts).
+// Etter lagring åpnes gruppene oppgaven havner i under «Oppgaver» (se openGroups.ts), og
+// «Oppgaver» bytter til segmentet der den havnet (se tasksSegment.ts).
 
 export function useCreateTask(householdId: string) {
   const invalidate = useInvalidateTasks(householdId);
@@ -96,6 +98,7 @@ export function useCreateTask(householdId: string) {
     mutationFn: (input: TaskInput) => createTask(householdId, input),
     onSuccess: (_data, input) => {
       openGroups(groupKeysFor(input));
+      revealSaved([input]);
       return invalidate();
     },
   });
@@ -107,6 +110,7 @@ export function useCreateTasks(householdId: string) {
     mutationFn: (inputs: TaskInput[]) => createTasks(householdId, inputs),
     onSuccess: (_data, inputs) => {
       openGroups(inputs.flatMap(groupKeysFor));
+      revealSaved(inputs);
       return invalidate();
     },
   });
@@ -118,6 +122,7 @@ export function useUpdateTask(householdId: string) {
     mutationFn: ({ taskId, input }: { taskId: string; input: TaskInput }) => updateTask(taskId, input),
     onSuccess: (_data, { input }) => {
       openGroups(groupKeysFor(input));
+      revealSaved([input]);
       return invalidate();
     },
   });

@@ -1,7 +1,8 @@
 import { MONTH_NAMES } from '../../lib/dates';
 import type { Household, HomeProfile } from '../household/types';
 import { describeRecurrence, isSeasonal } from '../tasks/recurrence';
-import type { Task } from '../tasks/types';
+import { isLongInterval, taskSection } from '../tasks/section';
+import type { Recurrence, Task } from '../tasks/types';
 import { meetsRequires } from './requires';
 import type { TaskTemplate } from './types';
 
@@ -17,9 +18,12 @@ export function fitsHousehold(t: TaskTemplate, household: SuggestionHousehold): 
   );
 }
 
-/** Årshjulet: årlige maler med måned, og sesongmaler (vises i periodens første måned). */
+/**
+ * Årshjulet: årlige maler med måned, sesongmaler (i periodens første måned) og lange
+ * intervallmaler (minst ca. 3 måneder, under «Med jevne mellomrom»). Se tasks/section.ts.
+ */
 function isYearWheelTemplate(t: TaskTemplate): boolean {
-  return (t.recurrence_unit === 'year' && t.month !== null) || isSeasonal(t);
+  return (t.recurrence_unit === 'year' && t.month !== null) || isSeasonal(t) || isLongInterval(t);
 }
 
 /** Måneden en rad står under i årshjulet: årlig måned, eller periodens første måned. */
@@ -27,7 +31,7 @@ export function yearWheelMonth(r: Pick<Task, 'month' | 'season_start_month'>): n
   return r.month ?? r.season_start_month;
 }
 
-/** Intervallmal («hver 8. uke etter sist utført»). Foreslås fra hjemprofilen, men er ikke i årshjulet. */
+/** Intervallmal («hver 8. uke etter sist utført»). Foreslås fra hjemprofilen. Lange intervaller er også i årshjulet. */
 export function isIntervalTemplate(t: Pick<TaskTemplate, 'recurrence_type'>): boolean {
   return t.recurrence_type === 'interval';
 }
@@ -136,17 +140,15 @@ export function formatSuggestionWhen(months: number[]): string {
 }
 
 /**
- * Husstandens egne årlige oppgaver: én gang i året i en bestemt måned (med eller uten dag),
- * og ikke vist som en mal i årshjulet (de vises som malen, med bryter). En oppgave fra en mal
+ * Husstandens egne oppgaver i årshjulet (taskSection = 'year': årlige, sesong og lange intervaller),
+ * som ikke vises som en mal i årshjulet (de vises som malen, med bryter). En oppgave fra en mal
  * som ikke vises (f.eks. deaktivert), regnes som egen, så den ikke forsvinner fra årshjulet.
- * Arkiverte er allerede borte fra listen. «Hvert år etter sist utført» (intervall) har ingen fast
- * måned og er ikke med. Oppgaver med periode («Hver uke · mai–sep») er med, i periodens første måned.
+ * Arkiverte er allerede borte fra listen.
  */
 export function isOwnYearlyTask(task: Task, shownTemplateIds: Set<string>): boolean {
   return (
     (task.template_id === null || !shownTemplateIds.has(task.template_id)) &&
-    ((task.recurrence_type === 'calendar' && task.recurrence_unit === 'year' && task.month !== null) ||
-      isSeasonal(task))
+    taskSection(task) === 'year'
   );
 }
 
@@ -155,41 +157,80 @@ export type YearItem =
   | { kind: 'template'; key: string; template: TaskTemplate }
   | { kind: 'own'; key: string; task: Task };
 
+/** Nøkkelen til seksjonen «Med jevne mellomrom», etter desember. */
+export const INTERVAL_SECTION_KEY = 'interval';
+
 export type MonthSection = {
-  /** 1–12 */
-  month: number;
+  key: string;
+  /** 1–12, null for «Med jevne mellomrom». */
+  month: number | null;
   title: string;
   data: YearItem[];
 };
 
 /**
- * Tolv måneder med denne måneden først (november → desember → januar …).
- * I hver måned: malene først (i malenes rekkefølge), så egne oppgaver alfabetisk.
- * Måneder uten noe er med, så hele året vises (og «+» finnes for hver måned).
+ * Seksjonen en rad står i: måneden (årlig måned eller periodens første), eller
+ * «Med jevne mellomrom» for lange intervaller uten periode (de har ingen fast måned).
  */
-export function groupByMonth(
-  templates: TaskTemplate[],
-  ownTasks: Task[],
-  currentMonth: number,
-): MonthSection[] {
+export function yearSectionKey(r: Pick<Task, 'month' | 'season_start_month'>): string {
+  const month = yearWheelMonth(r);
+  return month === null ? INTERVAL_SECTION_KEY : `month-${month}`;
+}
+
+/**
+ * Januar til desember, så «Med jevne mellomrom». I hver seksjon: malene først (i malenes
+ * rekkefølge), så egne oppgaver alfabetisk. Seksjoner uten noe er med, så hele året vises.
+ */
+export function groupByMonth(templates: TaskTemplate[], ownTasks: Task[]): MonthSection[] {
   const shown = new Set(templates.map((t) => t.id));
   const own = ownTasks
     .filter((t) => isOwnYearlyTask(t, shown))
     .sort((a, b) => a.title.localeCompare(b.title, 'nb'));
-  return Array.from({ length: 12 }, (_, i) => {
-    const month = ((currentMonth - 1 + i) % 12) + 1;
-    const name = MONTH_NAMES[month - 1];
-    return {
-      month,
-      title: name.charAt(0).toUpperCase() + name.slice(1),
-      data: [
-        ...templates
-          .filter((t) => yearWheelMonth(t) === month)
-          .map((template): YearItem => ({ kind: 'template', key: `t-${template.id}`, template })),
-        ...own
-          .filter((t) => yearWheelMonth(t) === month)
-          .map((task): YearItem => ({ kind: 'own', key: `o-${task.id}`, task })),
-      ],
-    };
+  const section = (key: string, month: number | null, title: string): MonthSection => ({
+    key,
+    month,
+    title,
+    data: [
+      ...templates
+        .filter((t) => yearSectionKey(t) === key)
+        .map((template): YearItem => ({ kind: 'template', key: `t-${template.id}`, template })),
+      ...own
+        .filter((t) => yearSectionKey(t) === key)
+        .map((task): YearItem => ({ kind: 'own', key: `o-${task.id}`, task })),
+    ],
   });
+  return [
+    ...MONTH_NAMES.map((name, i) =>
+      section(`month-${i + 1}`, i + 1, name.charAt(0).toUpperCase() + name.slice(1)),
+    ),
+    section(INTERVAL_SECTION_KEY, null, 'Med jevne mellomrom'),
+  ];
 }
+
+/**
+ * Raden i «Med jevne mellomrom»: «Hver 3. måned · neste i mars». Året tas med når fristen
+ * ikke er i løpet av de neste tolv månedene («Hvert 2. år · neste i mars 2028»).
+ * Uten frist (mal som ikke er på) bare gjentakelsen.
+ */
+export function describeEvery(
+  r: Pick<Recurrence, 'recurrence_unit' | 'recurrence_every'>,
+  nextDueOn: string | null,
+  today: string,
+): string {
+  const every = r.recurrence_every ?? 1;
+  const unit = r.recurrence_unit ?? 'month';
+  const base =
+    unit === 'year'
+      ? every === 1 ? 'Hvert år' : `Hvert ${every}. år`
+      : every === 1
+        ? `Hver ${UNIT_SINGULAR[unit]}`
+        : `Hver ${every}. ${UNIT_SINGULAR[unit]}`;
+  if (!nextDueOn) return base;
+  const [year, month] = nextDueOn.split('-').map(Number);
+  const [todayYear, todayMonth] = today.split('-').map(Number);
+  const ahead = (year - todayYear) * 12 + (month - todayMonth);
+  const name = MONTH_NAMES[month - 1];
+  return `${base} · neste i ${ahead >= 0 && ahead < 12 ? name : `${name} ${year}`}`;
+}
+
+const UNIT_SINGULAR: Record<'day' | 'week' | 'month', string> = { day: 'dag', week: 'uke', month: 'måned' };

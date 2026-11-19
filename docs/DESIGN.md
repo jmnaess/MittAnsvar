@@ -177,11 +177,11 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `JobCard` / `JobGrid` | ledige jobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
-| `ListRow` | rad i lister (Oppgaver, Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil |
+| `ListRow` | rad i lister (Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil |
 | `Section` | seksjon på en side: tittel, forklaring og innhold |
 | `GroupCard` | hvitt kort for én gruppe (radius 16, skygge, overflow hidden): overskrift øverst, rader med 1 px `border` mellom |
 | `GroupHeader` | overskrift i et `GroupCard`, foldes ut og inn: ikon/avatar (34), navn, antall, pil ned (åpen) / høyre (lukket) (`accessibilityState.expanded`) |
-| `SegmentedControl` | segmentert kontroll i full bredde («Kategori \| Person»). Valgt segment er en løftet flate med skygge |
+| `SegmentedControl` | segmentert kontroll i full bredde («Hverdag \| Årshjul»). Valgt segment er en løftet flate med skygge |
 | `FilterChips` | `ChoiceChip`-er på én rad som rulles sidelengs, aldri linjeskift (filteret i «Oppgaver») |
 | `Message` / `Hint` | feil, bekreftelse eller nøytral tekst / hjelpetekst under et felt |
 | `TextField` | kompakt tekstfelt med etikett: høyde 44, radius 12, 1 px `border`, tekst 16. `code` gir stor, sentrert tekst |
@@ -193,31 +193,46 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |
 | `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
 | `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
-| `Toast` / `UndoToast` | mørkt banner nederst med «Angre» |
+| `Toast` / `UndoToast` / `NoticeToast` | mørkt banner nederst. `UndoToast` har «Angre» i 5 s, `NoticeToast` er bare en kort melding i 3 s («Lagt i Årshjul») |
 | `tabIcon` | Ionicons-ikon til fanene, fylt når valgt |
 | `tabScreenOptions(colors)`, `modalScreenOptions(colors)`, `navigationTheme(scheme, colors)` | utseendet på fanelinjen, headerne og navigasjonen (`tabOptions.tsx`) |
 | `ThemeProvider`, `useTheme`, `useAppearance`, `makeStyles` | temaet som vises, valget under «Utseende», temaavhengige stiler |
 
 ### «Oppgaver»
 
-Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`) og en rund + (`IconButton` 38). + åpner
-«Hva vil du lage?»; med en person valgt i filteret går den rett til `/task/new` med personen forhåndsvalgt.
-Under: `SearchField`, `SegmentedControl` («Kategori | Person») og `FilterChips` («Alle» + hver person med
-avatar på 20 px). Hver gruppe er ett `GroupCard` med 10 px mellom kortene. Ikonet i overskriften:
-kategori = `IconBadge shape="square"` i `iconTint`/`primary`, person = avatar 34, «Felles» og «Ledige jobber»
-= nøytral rund `IconBadge`. Gruppene er lukket til de åpnes; enheten husker hvilke som er åpne
+Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`), en rund + (`IconButton` 38) og under dem
+`SegmentedControl` («Hverdag | Årshjul»). Valget huskes per enhet (`features/tasks/tasksSegment.ts`,
+`secureStorage`). `/tasks?view=year` velger Årshjul, og den gamle ruten `/year` sender dit.
+Hvilket segment en oppgave står i, avgjør `taskSection` i `features/tasks/section.ts`: Årshjul for årlige
+oppgaver, sesongoppgaver og intervaller på minst ca. 3 måneder (90 dager, 13 uker, 3 måneder eller år).
+Alt annet står i Hverdag, også engangsoppgaver langt fram og ledige jobber.
+Etter lagring i et skjema byttes det til segmentet oppgaven havnet i. I Årshjul rulles det til måneden.
+Var det et annet segment, vises `NoticeToast` («Lagt i Årshjul» / «Lagt i Hverdag»).
+
+**Hverdag** (`features/tasks/components/EverydayTasks.tsx`). + åpner «Hva vil du lage?»; med en person valgt i
+filteret går den rett til `/task/new` med personen forhåndsvalgt. Under segmentene: `SearchField` og
+`FilterChips` («Alle» + hver person med avatar på 20 px), bare i Hverdag. Én gruppe per kategori, hver gruppe er
+ett `GroupCard` med 10 px mellom kortene. Ikonet i overskriften er `IconBadge shape="square"` i
+`iconTint`/`primary`. Gruppene er lukket til de åpnes; enheten husker hvilke som er åpne
 (`features/tasks/openGroups.ts`, `secureStorage`). Gruppen en oppgave havner i, åpnes når den lages eller
 endres. Under søk er alle grupper med treff åpne. Kategoriene og ikonene står i `features/tasks/categories.ts`.
 Raden (`features/tasks/components/TaskRow.tsx`) er kompakt, uten ikon til venstre og uten pil: tittel og
 undertittel «Hver torsdag · neste tor. 21. nov.» (engangs: bare datoen). Til høyre: «Forfalt» som
 `Chip tone="overdue"` (aldri i undertittelen), lønn som `Chip tone="money"`, og avatarene (24 px, overlappende)
-til de tildelte. Felles oppgaver og jobber uten barn får et lite nøytralt personer-ikon. I Person-visningen
-står kategorien først i undertittelen. Innholdet ligger i `pageWidth`.
-I Kategori-visningen er like oppgaver for flere personer én rad med alle avatarene (`bundleTasks` i
+til de tildelte. Felles oppgaver og jobber uten barn får et lite nøytralt personer-ikon. Innholdet ligger i
+`pageWidth`.
+Like oppgaver for flere personer er én rad med alle avatarene (`bundleTasks` i
 `features/tasks/taskGroups.ts`: samme mal, eller samme tittel, kategori og gjentakelse). Raden viser nærmeste
 frist, «Forfalt» hvis én er forfalt, og lønnsspenn («10–20 kr»). Trykk åpner «Hvem sin oppgave vil du endre?»
 (`MemberPickerModal`), sveip-slett sletter alle i raden, og «Angre» henter alle tilbake. Antallet i
 overskriften teller rader. Bare visningen: hver person har fortsatt sin egen oppgave.
+
+**Årshjul** (`features/templates/components/YearWheel.tsx`). Januar til desember, så «Med jevne mellomrom»
+(lange intervaller, raden viser «Hver 3. måned · neste i mars»). Maler med bryter (`TemplateRow`) og egne
+oppgaver merket «Egen» (`OwnYearTaskRow`), begge `ListRow`. Øverst en kort forklaring, «Velg anbefalte» og
+«Fortell om hjemmet for flere forslag» (voksne). + åpner «Ny årlig oppgave» og vises bare for voksne. Der kan
+bare voksne og Felles velges som ansvarlig, og det samme gjelder når en årsoppgave endres (den som har den nå,
+beholdes). Ikke personfilter.
 
 Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.

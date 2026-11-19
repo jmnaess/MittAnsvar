@@ -1,38 +1,49 @@
-import { router, useNavigation } from 'expo-router';
-import { useCallback, useLayoutEffect, useState } from 'react';
+import { router } from 'expo-router';
+import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, SectionList, StyleSheet, View } from 'react-native';
-import { Button, IconButton, makeStyles, Message, pageWidth, spacing, Text, useTheme } from '../../../src/ui';
-import { useSession } from '../../../src/features/auth/SessionProvider';
-import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
-import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
-import { useArchiveTask, useTasks } from '../../../src/features/tasks/hooks';
-import type { Task } from '../../../src/features/tasks/types';
-import { OwnYearTaskRow } from '../../../src/features/templates/components/OwnYearTaskRow';
-import { TemplateRow } from '../../../src/features/templates/components/TemplateRow';
-import { useActivateTemplates, useTemplates } from '../../../src/features/templates/hooks';
+import { Button, makeStyles, Message, pageWidth, spacing, Text, useTheme } from '../../../ui';
+import { toIsoDate } from '../../../lib/dates';
+import { toNorwegianMessage } from '../../../lib/errors';
+import { usePullToRefresh } from '../../../lib/usePullToRefresh';
+import { hasAnyAnswer } from '../../household/homeProfile';
+import { useMembers, useMyHousehold, useMyMember } from '../../household/hooks';
+import { useArchiveTask, useTasks } from '../../tasks/hooks';
+import type { Task } from '../../tasks/types';
+import { useActivateTemplates, useTemplates } from '../hooks';
 import {
   activeTemplateIds,
+  describeEvery,
   groupByMonth,
+  INTERVAL_SECTION_KEY,
+  type MonthSection,
+  type YearItem,
   yearWheelTemplates,
-} from '../../../src/features/templates/suggest';
-import type { TaskTemplate } from '../../../src/features/templates/types';
-import { toNorwegianMessage } from '../../../src/lib/errors';
-import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
+} from '../suggest';
+import type { TaskTemplate } from '../types';
+import { OwnYearTaskRow } from './OwnYearTaskRow';
+import { TemplateRow } from './TemplateRow';
+
+type Props = {
+  /** Toppen av fanen (tittel, pluss og segmentene). Ruller med listen. */
+  header: ReactElement;
+  /** Seksjonen som skal rulles fram (etter lagring). id endres for hver ny lagring. */
+  reveal: { sectionKey: string; id: number } | null;
+};
 
 /**
- * Årshjul: tolv måneder med denne måneden øverst. Hver måned viser malene som passer
- * husstanden, med en bryter for å aktivere (lage oppgave) eller deaktivere (arkivere den),
- * og husstandens egne årlige oppgaver, merket «Egen». Trykk på en egen oppgave åpner den.
- * Voksne lager nye med «+» øverst til høyre (én eller flere måneder).
+ * «Årshjul» i «Oppgaver»: januar til desember, så «Med jevne mellomrom» (lange intervaller).
+ * Hver seksjon viser malene som passer husstanden, med en bryter for å aktivere (lage oppgave) eller
+ * deaktivere (arkivere den), og husstandens egne oppgaver, merket «Egen». Trykk på en egen oppgave
+ * åpner den. Voksne lager nye med «+» øverst (én eller flere måneder).
  */
-export default function YearScreen() {
+export function YearWheel({ header, reveal }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
-  const { session } = useSession();
   const { data: members = [] } = useMembers(householdId);
+  const isAdult = useMyMember(householdId)?.role === 'adult';
   const templates = useTemplates();
   const tasks = useTasks(householdId);
   const activate = useActivateTemplates(householdId);
@@ -42,39 +53,34 @@ export default function YearScreen() {
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const isAdult = members.find((m) => m.auth_user_id === session?.user.id)?.role === 'adult';
+  const today = toIsoDate(new Date());
   const suggested = yearWheelTemplates(
     templates.data ?? [],
     household!,
     activeTemplateIds(tasks.data ?? []),
   );
-  // Bare rekkefølgen avhenger av mobilens dato. Frister regnes alltid ut i databasen.
-  const sections = groupByMonth(suggested, tasks.data ?? [], new Date().getMonth() + 1);
+  const sections = groupByMonth(suggested, tasks.data ?? []);
   const nameOf = (memberId: string | null) =>
     members.find((m) => m.id === memberId)?.display_name ?? 'Felles';
-
-  // «+» øverst til høyre åpner «Ny årlig oppgave». Bare for voksne, som i «I dag».
-  const navigation = useNavigation();
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: isAdult
-        ? () => (
-            <View style={styles.addButton}>
-              <IconButton
-                icon="add"
-                size={40}
-                accessibilityLabel="Ny årlig oppgave"
-                onPress={() => router.push('/year-task/new')}
-              />
-            </View>
-          )
-        : undefined,
-    });
-  }, [navigation, isAdult]);
 
   const taskByTemplate = new Map<string, Task>();
   for (const t of tasks.data ?? []) if (t.template_id) taskByTemplate.set(t.template_id, t);
   const notActive = suggested.filter((t) => !taskByTemplate.has(t.id));
+
+  // Rull til seksjonen der en lagret oppgave havnet, når listen er hentet.
+  const listRef = useRef<SectionList<YearItem, MonthSection>>(null);
+  const loaded = !tasks.isPending && !templates.isPending;
+  const revealIndex = reveal ? sections.findIndex((s) => s.key === reveal.sectionKey) : -1;
+  useEffect(() => {
+    if (!loaded || revealIndex < 0) return;
+    // Vent til listen er tegnet med de nye radene.
+    const timer = setTimeout(
+      () => listRef.current?.scrollToLocation({ sectionIndex: revealIndex, itemIndex: 0, viewOffset: 8 }),
+      100,
+    );
+    return () => clearTimeout(timer);
+    // Bare når en ny lagring skal vises, ikke ved hver oppdatering av listen.
+  }, [reveal?.id, loaded]);
 
   function setPendingFor(ids: string[], value: boolean | null) {
     setPending((prev) => {
@@ -130,14 +136,24 @@ export default function YearScreen() {
 
   return (
     <SectionList
-      style={styles.flex}
+      ref={listRef}
       contentContainerStyle={styles.container}
       sections={sections}
       keyExtractor={(item) => item.key}
       stickySectionHeadersEnabled={false}
       {...pullToRefresh}
+      // Uten faste høyder kan listen ikke alltid rulle rett til en seksjon langt nede.
+      // Rull omtrent dit først, og prøv igjen når radene der er tegnet.
+      onScrollToIndexFailed={(info) => {
+        listRef.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+        setTimeout(
+          () => listRef.current?.scrollToLocation({ sectionIndex: revealIndex, itemIndex: 0, viewOffset: 8 }),
+          100,
+        );
+      }}
       ListHeaderComponent={
         <View style={styles.header}>
+          {header}
           <Text variant="meta" color={colors.textMuted}>
             Faste oppgaver gjennom året. Slå på det som passer, eller lag egne med +. Når
             måneden kommer, dukker de opp under «Denne måneden» i «I dag».
@@ -169,15 +185,19 @@ export default function YearScreen() {
       ItemSeparatorComponent={Separator}
       renderSectionFooter={({ section }) =>
         section.data.length === 0 && !templates.isPending ? (
-          <Message tone="muted">Ingenting denne måneden.</Message>
+          <Message tone="muted">
+            {section.key === INTERVAL_SECTION_KEY ? 'Ingen oppgaver med jevne mellomrom.' : 'Ingenting denne måneden.'}
+          </Message>
         ) : null
       }
-      renderItem={({ item }) => {
+      renderItem={({ item, section }) => {
+        const inIntervals = section.key === INTERVAL_SECTION_KEY;
         if (item.kind === 'own') {
           return (
             <OwnYearTaskRow
               task={item.task}
               assigneeName={nameOf(item.task.assigned_member_id)}
+              when={inIntervals ? describeEvery(item.task, item.task.next_due_on, today) : undefined}
               onPress={
                 isAdult
                   ? () => router.push({ pathname: '/task/[id]', params: { id: item.task.id } })
@@ -196,6 +216,7 @@ export default function YearScreen() {
             value={isPending ? pending[template.id] : task !== null}
             disabled={!isAdult || isPending}
             onToggle={(on) => toggle(template, on)}
+            when={inIntervals ? describeEvery(template, task?.next_due_on ?? null, today) : undefined}
           />
         );
       }}
@@ -208,13 +229,11 @@ function Separator() {
   return <View style={styles.separator} />;
 }
 
-const useStyles = makeStyles(({ colors }) =>
+const useStyles = makeStyles(() =>
   StyleSheet.create({
-    flex: { flex: 1, backgroundColor: colors.background },
-    container: { ...pageWidth, padding: spacing.page, paddingBottom: 48 },
+    container: { ...pageWidth, padding: spacing.page, paddingBottom: 120 },
     header: { gap: 12 },
     month: { marginTop: spacing.section + 6, marginBottom: spacing.row },
     separator: { height: spacing.row },
-    addButton: { paddingHorizontal: 12 },
   }),
 );

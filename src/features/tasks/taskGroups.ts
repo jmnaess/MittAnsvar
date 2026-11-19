@@ -17,18 +17,9 @@ export type GroupTask = Pick<
 
 type GroupMember = Pick<Member, 'id' | 'role'>;
 
-export type GroupMode = 'category' | 'person';
+export type TaskGroup<T> = { key: string; kind: 'category'; category: Category; tasks: T[] };
 
-export type TaskGroup<T, M> =
-  | { key: string; kind: 'category'; category: Category; tasks: T[] }
-  | { key: string; kind: 'member'; member: M; tasks: T[] }
-  | { key: string; kind: 'shared'; tasks: T[] }
-  | { key: string; kind: 'jobs'; tasks: T[] };
-
-export const SHARED_GROUP_KEY = 'person:shared';
-export const JOBS_GROUP_KEY = 'person:jobs';
 const categoryKey = (category: Category) => `category:${category.key}`;
-const memberKey = (memberId: string) => `person:${memberId}`;
 
 /** Det man søker på: små bokstaver, uten mellomrom i endene. */
 function normalize(text: string): string {
@@ -65,7 +56,7 @@ export function sortByTitle<T extends Pick<Task, 'title'>>(tasks: T[]): T[] {
 }
 
 /** Én gruppe per kategori som har oppgaver, i fast rekkefølge. */
-export function groupByCategory<T extends GroupTask>(tasks: T[]): TaskGroup<T, never>[] {
+export function groupByCategory<T extends GroupTask>(tasks: T[]): TaskGroup<T>[] {
   return CATEGORIES.map((category) => ({
     key: categoryKey(category),
     kind: 'category' as const,
@@ -74,55 +65,22 @@ export function groupByCategory<T extends GroupTask>(tasks: T[]): TaskGroup<T, n
   })).filter((g) => g.tasks.length > 0);
 }
 
-/**
- * Én gruppe per person (i medlemslistens rekkefølge), så «Felles», så «Ledige jobber».
- * Bare grupper med oppgaver. En oppgave for et medlem som ikke finnes lenger, regnes som felles.
- */
-export function groupByPerson<T extends GroupTask, M extends GroupMember>(
-  tasks: T[],
-  members: M[],
-): TaskGroup<T, M>[] {
-  const jobs = tasks.filter((t) => isJob(t));
-  const others = tasks.filter((t) => !isJob(t));
-  const known = new Set(members.map((m) => m.id));
-  const groups: TaskGroup<T, M>[] = [
-    ...members.map((member) => ({
-      key: memberKey(member.id),
-      kind: 'member' as const,
-      member,
-      tasks: sortByTitle(others.filter((t) => t.assigned_member_id === member.id)),
-    })),
-    {
-      key: SHARED_GROUP_KEY,
-      kind: 'shared',
-      tasks: sortByTitle(others.filter((t) => !t.assigned_member_id || !known.has(t.assigned_member_id))),
-    },
-    { key: JOBS_GROUP_KEY, kind: 'jobs', tasks: sortByTitle(jobs) },
-  ];
-  return groups.filter((g) => g.tasks.length > 0);
+/** Gruppen oppgaven havner i. Åpnes når oppgaven lages eller endres. */
+export function groupKeysFor(task: Pick<Task, 'category'>): string[] {
+  return [categoryKey(toCategory(task.category))];
 }
 
-/** Gruppene oppgaven havner i (én i hver visning). Åpnes når oppgaven lages eller endres. */
-export function groupKeysFor(task: Pick<Task, 'category' | 'assigned_member_id' | 'recurrence_type'>): string[] {
-  const person = isJob(task)
-    ? JOBS_GROUP_KEY
-    : task.assigned_member_id
-      ? memberKey(task.assigned_member_id)
-      : SHARED_GROUP_KEY;
-  return [categoryKey(toCategory(task.category)), person];
-}
-
-export type OpenGroup<T, M> = { key: string; group: TaskGroup<T, M>; open: boolean };
+export type OpenGroup<T> = { key: string; group: TaskGroup<T>; open: boolean };
 
 /**
  * Gruppene til listen, hver med om den er åpen. Hver gruppe vises som ett kort.
  * allOpen: alle grupper vises åpne (mens man søker), uten å endre hvilke som er lagret som åpne.
  */
-export function withOpenState<T, M>(
-  groups: TaskGroup<T, M>[],
+export function withOpenState<T>(
+  groups: TaskGroup<T>[],
   openKeys: ReadonlySet<string>,
   allOpen = false,
-): OpenGroup<T, M>[] {
+): OpenGroup<T>[] {
   return groups.map((group) => ({ key: group.key, group, open: allOpen || openKeys.has(group.key) }));
 }
 
@@ -160,7 +118,7 @@ export function describeTaskSchedule(task: DueTask, today: string): string {
   return once ? date : `${recurrence} · neste ${date}`;
 }
 
-// Like oppgaver for flere personer, slått sammen til én rad i Kategori-visningen.
+// Like oppgaver for flere personer, slått sammen til én rad.
 // Bare visningen: hver person har fortsatt sin egen oppgave i databasen.
 
 /** Det sammenslåingen trenger fra en oppgave. */
@@ -221,11 +179,6 @@ export function bundleTasks<T extends BundleTask>(
     return i === -1 ? members.length : i;
   };
   return bundles.map((b) => ({ ...b, tasks: [...b.tasks].sort((a, c) => order(a) - order(c)) }));
-}
-
-/** Hver oppgave som egen rad (Person-visningen). */
-export function singleBundles<T extends Pick<Task, 'id'>>(tasks: T[]): TaskBundle<T>[] {
-  return tasks.map((task) => ({ key: task.id, tasks: [task] }));
 }
 
 /** Lønn på raden: «10 kr», «10–20 kr» når den er ulik, null uten lønn. */

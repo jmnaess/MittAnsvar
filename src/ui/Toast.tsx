@@ -7,7 +7,8 @@ import { useTheme } from './ThemeProvider';
 
 type Props = {
   children: ReactNode;
-  onUndo: () => void;
+  /** Utelatt = bare en melding, uten «Angre». */
+  onUndo?: () => void;
   onHide: () => void;
   undoing?: boolean;
   /** Ny verdi starter nedtellingen på nytt (f.eks. en ny avkrysning eller sletting). */
@@ -16,7 +17,7 @@ type Props = {
   visibleMs: number;
 };
 
-/** Mørkt banner nederst med innhold og «Angre». Felles for FeedbackToast og UndoToast. */
+/** Mørkt banner nederst med innhold og «Angre» (når onUndo er med). Felles for FeedbackToast, UndoToast og NoticeToast. */
 export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -35,15 +36,17 @@ export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs }
     <View style={styles.position} pointerEvents="box-none">
       <View style={styles.toast} accessibilityLiveRegion="polite" accessibilityRole="alert">
         <View style={styles.content}>{children}</View>
-        <Pressable
-          onPress={onUndo}
-          disabled={undoing}
-          hitSlop={10}
-          accessibilityRole="button"
-          style={[styles.undo, undoing && styles.disabled]}
-        >
-          <Text variant="bodyStrong" color={colors.toastAction}>Angre</Text>
-        </Pressable>
+        {onUndo && (
+          <Pressable
+            onPress={onUndo}
+            disabled={undoing}
+            hitSlop={10}
+            accessibilityRole="button"
+            style={[styles.undo, undoing && styles.disabled]}
+          >
+            <Text variant="bodyStrong" color={colors.toastAction}>Angre</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );

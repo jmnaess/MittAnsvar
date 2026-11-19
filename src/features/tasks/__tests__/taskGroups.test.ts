@@ -6,15 +6,11 @@ import {
   describeTaskSchedule,
   joinNames,
   sameTaskKey,
-  singleBundles,
   filterTasks,
   groupByCategory,
-  groupByPerson,
   groupKeysFor,
-  JOBS_GROUP_KEY,
   matchesPerson,
   matchesSearch,
-  SHARED_GROUP_KEY,
   sortByTitle,
   isTaskOverdue,
   withOpenState,
@@ -127,42 +123,10 @@ describe('groupByCategory', () => {
   });
 });
 
-describe('groupByPerson', () => {
-  it('medlemmene i rekkefølge, så Felles, så Ledige jobber, bare med oppgaver', () => {
-    const groups = groupByPerson(
-      [
-        task({ title: 'Jobb', recurrence_type: 'job', job_member_ids: ['leah'] }),
-        task({ title: 'Felles', assigned_member_id: null }),
-        task({ title: 'Leahs', assigned_member_id: 'leah' }),
-        task({ title: 'Mors', assigned_member_id: 'mor' }),
-      ],
-      members,
-    );
-    expect(groups.map((g) => g.key)).toEqual(['person:mor', 'person:leah', SHARED_GROUP_KEY, JOBS_GROUP_KEY]);
-  });
-
-  it('jobber står bare i Ledige jobber, ikke hos barnet', () => {
-    const groups = groupByPerson([task({ recurrence_type: 'job', job_member_ids: ['leah'] })], members);
-    expect(groups.map((g) => g.kind)).toEqual(['jobs']);
-  });
-
-  it('oppgave for et medlem som ikke finnes lenger, regnes som felles', () => {
-    const groups = groupByPerson([task({ assigned_member_id: 'borte' })], members);
-    expect(groups.map((g) => g.key)).toEqual([SHARED_GROUP_KEY]);
-  });
-});
-
 describe('groupKeysFor', () => {
-  it('kategori og person', () => {
-    expect(groupKeysFor(task({ category: 'kitchen', assigned_member_id: 'leah' }))).toEqual([
-      'category:kitchen',
-      'person:leah',
-    ]);
-  });
-
-  it('felles og jobb', () => {
-    expect(groupKeysFor(task({ category: 'pets' }))).toEqual(['category:pets', SHARED_GROUP_KEY]);
-    expect(groupKeysFor(task({ recurrence_type: 'job' }))).toEqual(['category:other', JOBS_GROUP_KEY]);
+  it('bare kategorien', () => {
+    expect(groupKeysFor(task({ category: 'kitchen', assigned_member_id: 'leah' }))).toEqual(['category:kitchen']);
+    expect(groupKeysFor(task({ recurrence_type: 'job' }))).toEqual(['category:other']);
   });
 });
 
@@ -292,10 +256,6 @@ describe('bundleTasks', () => {
   it('nøkkelen er den første oppgavens id, så den er unik i gruppen', () => {
     const tasks = [t('a', 'Lese', 'leah'), t('b', 'Lese', 'leah'), t('c', 'Lese', 'ola')];
     expect(bundleTasks(tasks, members).map((b) => b.key)).toEqual(['a', 'b']);
-  });
-
-  it('singleBundles: én rad per oppgave', () => {
-    expect(singleBundles([t('1', 'A', 'leah'), t('2', 'A', 'ola')]).map((b) => b.key)).toEqual(['1', '2']);
   });
 });
 

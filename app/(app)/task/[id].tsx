@@ -5,6 +5,7 @@ import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/h
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useArchiveTask, useTasks, useUpdateTask } from '../../../src/features/tasks/hooks';
 import { isJob } from '../../../src/features/tasks/recurrence';
+import { taskSection } from '../../../src/features/tasks/section';
 import type { Task } from '../../../src/features/tasks/types';
 import { formatDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
@@ -82,6 +83,8 @@ function EditTaskForm({ task, householdId, onArchived }: FormProps) {
         form={form}
         members={members ?? []}
         canSetReward={me?.role === 'adult'}
+        // En årsoppgave (Årshjul) kan bare gis til voksne eller Felles. Den som har den nå, beholdes.
+        adultsOnlyExcept={taskSection(task) === 'year' ? task.assigned_member_id : undefined}
         disabled={busy}
       />
       <Text variant="hint" color={colors.textMuted}>Endrer du hvor ofte, beregnes neste gang på nytt fra i dag.</Text>

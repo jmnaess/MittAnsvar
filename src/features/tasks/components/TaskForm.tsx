@@ -29,7 +29,7 @@ type Initial = Omit<TaskInput, 'category'> & { category: string; next_due_on: st
 export function useTaskForm(
   members: Member[],
   initial?: Initial,
-  /** Ny oppgave: hvem som er forhåndsvalgt (f.eks. fra personvisningen). Standard er «Felles». */
+  /** Ny oppgave: hvem som er forhåndsvalgt (f.eks. fra personfilteret i «Oppgaver»). Standard er «Felles». */
   options?: { assignees?: string[] },
 ) {
   // Enhetens dato når skjemaet åpnes. I dag og I morgen regnes fra den.
@@ -94,15 +94,24 @@ type Props = {
   canSetReward: boolean;
   /** false = uten «Når?» («Oppgave i dag» fra «I dag»). Skjemaet står da på I dag. */
   showWhen?: boolean;
+  /**
+   * Bare voksne og Felles kan velges (en årsoppgave som endres). Unntaket er den som har oppgaven
+   * nå, så et barn som allerede er ansvarlig, fortsatt vises og står valgt. undefined = alle kan velges.
+   */
+  adultsOnlyExcept?: string | null;
   disabled?: boolean;
 };
 
 /** Tittel, når, hvem som har ansvaret, kategori og lønn. */
-export function TaskFields({ form, members, canSetReward, showWhen = true, disabled }: Props) {
+export function TaskFields({ form, members, canSetReward, showWhen = true, adultsOnlyExcept, disabled }: Props) {
   const photoOf = useMemberPhotoLookup(members[0]?.household_id);
+  const choosable =
+    adultsOnlyExcept === undefined
+      ? members
+      : members.filter((m) => m.role === 'adult' || m.id === adultsOnlyExcept);
   const assigneeOptions = [
     { value: SHARED, label: 'Felles', icon: 'people-outline' as const },
-    ...members.map((m) => ({
+    ...choosable.map((m) => ({
       value: m.id,
       label: m.display_name,
       left: <Avatar avatar={m.avatar} photo={photoOf(m)} size={20} />,

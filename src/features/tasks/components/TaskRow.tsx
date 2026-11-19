@@ -1,14 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { type AvatarPhotoSource, AvatarStack, Chip, makeStyles, Text, useTheme } from '../../../ui';
-import { toCategory } from '../categories';
 import { bundleReward, bundleSchedule } from '../taskGroups';
 import type { Task } from '../types';
 
 export type RowPerson = { avatar: string; photo?: AvatarPhotoSource };
 
 type Props = {
-  /** Én oppgave, eller flere like oppgaver for ulike personer (sammenslått i Kategori-visningen). */
+  /** Én oppgave, eller flere like oppgaver for ulike personer (sammenslått). */
   tasks: Task[];
   /** De ansvarlige, eller barna som kan ta jobben. Tom = felles. */
   people: RowPerson[];
@@ -16,8 +15,6 @@ type Props = {
   assigneeName: string;
   /** Enhetens dato, for «neste …» og «Forfalt». */
   today: string;
-  /** Person-visningen: kategorien først i undertittelen. */
-  showCategory?: boolean;
   onPress: () => void;
 };
 
@@ -26,12 +23,11 @@ type Props = {
  * Til høyre: «Forfalt», lønn og avatarene til de tildelte (felles/ingen: et personer-ikon).
  * Flere oppgaver: nærmeste frist, «Forfalt» hvis én er forfalt, og lønnsspenn («10–20 kr»).
  */
-export function TaskRow({ tasks, people, assigneeName, today, showCategory, onPress }: Props) {
+export function TaskRow({ tasks, people, assigneeName, today, onPress }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   const task = tasks[0];
-  const { schedule, overdue } = bundleSchedule(tasks, today);
-  const meta = [showCategory && toCategory(task.category).label, schedule].filter(Boolean).join(' · ');
+  const { schedule: meta, overdue } = bundleSchedule(tasks, today);
   const reward = bundleReward(tasks);
 
   return (

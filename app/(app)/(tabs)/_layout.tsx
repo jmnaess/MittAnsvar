@@ -27,12 +27,11 @@ export default function TabsLayout() {
           name="index"
           options={{ title: 'I dag', tabBarIcon: tabIcon('sunny'), headerShown: false }}
         />
-        {/* «Oppgaver» tegner sin egen topp med tittel og pluss. */}
+        {/* «Oppgaver» (Hverdag og Årshjul) tegner sin egen topp med tittel, pluss og segmenter. */}
         <Tabs.Screen
           name="tasks"
           options={{ title: 'Oppgaver', tabBarIcon: tabIcon('list'), headerShown: false }}
         />
-        <Tabs.Screen name="year" options={{ title: 'Årshjul', tabBarIcon: tabIcon('calendar') }} />
         <Tabs.Screen name="household" options={{ title: 'Husstand', tabBarIcon: tabIcon('home') }} />
         <Tabs.Screen
           name="settings"

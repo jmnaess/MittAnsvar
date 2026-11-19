@@ -52,14 +52,16 @@ export type YearlyTaskFormState = ReturnType<typeof useYearlyTaskForm>;
 type Props = { form: YearlyTaskFormState; members: Member[]; disabled?: boolean };
 
 /**
- * Det korte skjemaet fra «+» i årshjulet: hva, hvem, valgfri lønn og én eller flere måneder.
+ * Det korte skjemaet fra «+» i årshjulet: hva, hvem (voksne eller Felles), valgfri lønn og én eller
+ * flere måneder.
  * Hver måned blir en egen årlig oppgave med hele måneden som frist.
  */
 export function YearlyTaskFields({ form, members, disabled }: Props) {
   const photoOf = useMemberPhotoLookup(members[0]?.household_id);
+  // Årsoppgaver er mest vedlikehold, så bare voksne (og Felles) kan ha ansvaret.
   const assigneeOptions = [
     { value: SHARED, label: 'Felles', icon: 'people-outline' as const },
-    ...members.map((m) => ({
+    ...members.filter((m) => m.role === 'adult').map((m) => ({
       value: m.id,
       label: m.display_name,
       left: <Avatar avatar={m.avatar} photo={photoOf(m)} size={20} />,

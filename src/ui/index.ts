@@ -45,6 +45,7 @@ export { tabIcon } from './tabIcon';
 export { TaskRow } from './TaskRow';
 export { Text } from './Text';
 export { TextField } from './TextField';
+export { NoticeToast } from './NoticeToast';
 export { Toast } from './Toast';
 export { UndoToast } from './UndoToast';
 export { waitingText } from './waitingText';

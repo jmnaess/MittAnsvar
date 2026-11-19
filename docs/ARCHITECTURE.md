@@ -64,8 +64,9 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
   (app)/onboarding.tsx            # velg: opprett (husstand → barn) eller bli med (kode, navn, avatar); forslag senere
   (app)/(tabs)/index.tsx          # «I dag»: øverst «Til godkjenning», nederst «Ledige jobber»
-  (app)/(tabs)/tasks.tsx          # alle oppgaver (finn og endre); voksne sveiper for «Slett» med «Angre»
-  (app)/(tabs)/year.tsx           # Årshjul: 12 måneder med maler og brytere, egne årlige oppgaver, «+»
+  (app)/(tabs)/tasks.tsx          # «Oppgaver»: segmentene Hverdag (finn og endre, sveip for «Slett») og Årshjul
+                                  #   (jan–des + «Med jevne mellomrom», maler med brytere, egne oppgaver, «+»)
+  (app)/year.tsx                  # gammel rute: sender til /tasks?view=year
   (app)/year-task/new.tsx         # «Ny årlig oppgave»: én eller flere måneder
   (app)/(tabs)/household.tsx      # medlemmer med saldo og «Egen enhet», legg til barn, inviter voksen
   (app)/(tabs)/settings.tsx       # husstandsnavn, tone, konto

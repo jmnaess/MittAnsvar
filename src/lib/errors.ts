@@ -64,6 +64,7 @@ const KNOWN: Record<string, string> = {
   subscription_required: 'Prøveperioden er over. Husstanden trenger abonnement for å gjøre endringer.',
   recurrence_not_found: 'Fant ingen dato som passer gjentakelsen. Prøv et annet valg.',
   task_not_found: 'Fant ikke oppgaven. Den kan være slettet.',
+  task_not_due: 'Denne oppgaven er allerede gjort.',
   invalid_member: 'Du kan ikke krysse av for denne oppgaven.',
   // Angring
   completion_not_found: 'Avkrysningen finnes ikke lenger.',

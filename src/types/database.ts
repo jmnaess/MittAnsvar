@@ -37,6 +37,38 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"household_displays": {
+                  Row: {
+                    "auth_user_id": string,"created_at": string,"created_by": string | null,"household_id": string,"id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth_user_id": string,"created_at"?: string,"created_by"?: string | null,"household_id": string,"id"?: string
+                  }
+                  Update: {
+                    "auth_user_id"?: string,"created_at"?: string,"created_by"?: string | null,"household_id"?: string,"id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "household_displays_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "member_balances"
+      referencedColumns: ["member_id"]
+    },{
+      foreignKeyName: "household_displays_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "household_displays_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"households": {
                   Row: {
                     "created_at": string,"feedback_tone": Database["public"]['Enums']["feedback_tone"],"has_air_heat_pump": boolean | null,"has_balanced_ventilation": boolean | null,"has_cabin": boolean | null,"has_car": boolean | null,"has_fireplace": boolean | null,"has_garden": boolean | null,"has_hydronic_heating": boolean | null,"has_private_well": boolean | null,"housing_type": Database["public"]['Enums']["housing_type"],"id": string,"name": string,"sewage_type": Database["public"]['Enums']["sewage_type"] | null,"timezone": string,"trial_ends_at": string,"type": Database["public"]['Enums']["household_type"]
@@ -125,14 +157,14 @@ isOneToOne: false
                   ]
                 },"link_tokens": {
                   Row: {
-                    "code_hash": string,"created_at": string,"created_by": string,"expires_at": string,"household_id": string,"id": string,"member_id": string,"used_at": string | null
+                    "code_hash": string,"created_at": string,"created_by": string,"expires_at": string,"household_id": string,"id": string,"member_id": string | null,"used_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "code_hash": string,"created_at"?: string,"created_by": string,"expires_at": string,"household_id": string,"id"?: string,"member_id": string,"used_at"?: string | null
+                    "code_hash": string,"created_at"?: string,"created_by": string,"expires_at": string,"household_id": string,"id"?: string,"member_id"?: string | null,"used_at"?: string | null
                   }
                   Update: {
-                    "code_hash"?: string,"created_at"?: string,"created_by"?: string,"expires_at"?: string,"household_id"?: string,"id"?: string,"member_id"?: string,"used_at"?: string | null
+                    "code_hash"?: string,"created_at"?: string,"created_by"?: string,"expires_at"?: string,"household_id"?: string,"id"?: string,"member_id"?: string | null,"used_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -505,6 +537,11 @@ isOneToOne: false
               "completion_id": string,"feedback_text": string,"next_due_on": string,"reward_nok": number,"status": Database["public"]['Enums']["completion_status"]
             }[]
                            },
+"create_display_link_token":
+{ Args: { "p_household_id": string }; Returns: {
+              "code": string,"expires_at": string
+            }[]
+                           },
 "create_household":
 { Args: { "p_avatar": string,"p_display_name": string,"p_housing_type": Database["public"]['Enums']["housing_type"],"p_name": string,"p_type": Database["public"]['Enums']["household_type"] }; Returns: string
                            },
@@ -520,6 +557,9 @@ isOneToOne: false
                            },
 "delete_my_account_data":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"get_family_board":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "get_upcoming_occurrences":
 { Args: { "p_from": string,"p_household_id": string,"p_to": string }; Returns: {
@@ -561,6 +601,9 @@ isOneToOne: false
                            },
 "undo_postpone":
 { Args: { "p_task_id": string }; Returns: undefined
+                           },
+"unlink_display":
+{ Args: { "p_display_id": string }; Returns: undefined
                            },
 "unlink_member_device":
 { Args: { "p_member_id": string }; Returns: undefined

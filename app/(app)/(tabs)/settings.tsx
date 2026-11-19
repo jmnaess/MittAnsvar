@@ -102,17 +102,22 @@ function HouseholdSection({ household }: { household: Household }) {
   );
 }
 
-/** «Hjemmet»: hjemprofilen. Bare voksne ser raden (barn kan lese profilen, men ikke endre den). */
+/** «Hjemmet»: hjemprofilen og forslag til hverdagen. Bare voksne ser radene (barn kan lese profilen, men ikke endre den). */
 function HomeSection({ household }: { household: Household }) {
   const me = useMyMember(household.id);
   if (me?.role !== 'adult') return null;
 
   return (
-    <Section title="Hjemmet" description="Svar på noen spørsmål om boligen, så foreslår vi vedlikehold.">
+    <Section title="Hjemmet" description="Forslag til vedlikehold ut fra boligen, og til faste oppgaver i hverdagen.">
       <ListRow
         title="Om hjemmet"
         meta={hasAnyAnswer(household) ? 'Endre svar og se nye forslag' : 'Ikke svart ennå'}
         onPress={() => router.push('/home-profile')}
+      />
+      <ListRow
+        title="Forslag til hverdagen"
+        meta="Faste oppgaver, og forslag til barna etter alder"
+        onPress={() => router.push('/routines')}
       />
     </Section>
   );

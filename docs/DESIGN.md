@@ -225,6 +225,14 @@ felt som «Oppgaver». Alle valg er `ChoiceChips`/`MultiChoiceChips` som bryter 
 ikonet `people-outline`. «Kategori»: kategoriens ikon fra `features/tasks/categories.ts`, samme som i
 gruppeoverskriftene. Gjentakelse, ukedager og måneder: samme brikke uten ikon.
 
+### «Forslag til hverdagen»
+
+`features/templates/components/RoutineSuggestionsFlow.tsx`, i oppstarten (husstand → barn → hverdagen →
+hjemmet) og som modal fra Innstillinger → «Hjemmet». Seksjonen «Felles» («Forslag til deg» for enslige,
+uten forklaring), så én `Section` per barn med «Leah, 9 år» og avatar 32 til høyre. Hver rad er en
+`CheckRow` med gjentakelsen og eventuell lønn som meta («Hver lørdag · 20 kr»). Noen få rader er avhuket
+fra start. Barn uten fødselsår får en `Hint` om å legge det inn. «Legg til (n)», og «Hopp over» eller «Ikke nå».
+
 ## Avatarer
 
 Nøklene i `members.avatar` er uendret (`features/household/avatars.ts`). Tegningene ligger i

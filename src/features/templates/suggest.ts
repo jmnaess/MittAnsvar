@@ -9,7 +9,7 @@ import type { TaskTemplate } from './types';
 export type SuggestionHousehold = Pick<Household, 'type'> & HomeProfile;
 
 /** Riktig husstandstype og boligtype (null = alle), og betingelsene på hjemprofilen (requires). */
-function fitsHousehold(t: TaskTemplate, household: SuggestionHousehold): boolean {
+export function fitsHousehold(t: TaskTemplate, household: SuggestionHousehold): boolean {
   return (
     (t.household_types === null || t.household_types.includes(household.type)) &&
     (t.housing_types === null || t.housing_types.includes(household.housing_type)) &&

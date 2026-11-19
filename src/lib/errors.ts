@@ -68,6 +68,7 @@ const KNOWN: Record<string, string> = {
   task_not_found: 'Fant ikke oppgaven. Den kan være slettet.',
   task_not_due: 'Denne oppgaven er allerede gjort.',
   invalid_member: 'Du kan ikke krysse av for denne oppgaven.',
+  invalid_assignment: 'Et av barna finnes ikke lenger. Last inn på nytt og prøv igjen.',
   // Angring
   completion_not_found: 'Avkrysningen finnes ikke lenger.',
   undo_not_allowed: 'Bare den siste avkrysningen kan angres.',

@@ -259,7 +259,7 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 13 | *Gjort i steg 8:* lokale påminnelser (`get_upcoming_occurrences`, daglig oppsummering, månedsoppgaver) | Varsel kommer på forfallsdagen |
 | 14 | *Gjort i steg 6:* invitere voksen nr. 2 (`invites`, kode på 8 tegn) | To voksne deler husstand |
 | 15 | *Gjort:* familieskjerm i stedet for kiosk-modus og PIN (se §3) | Hele husstanden ser og krysser av dagens oppgaver på ett nettbrett |
-| 16 | Flere maler (daglige og ukentlige rutiner, `audience`, `min_age`), forslag i oppstarten etter type, bolig og rolle (tidligere steg 10). QR-kobling er gjort i steg 10a | Nye husstander får relevante forslag |
+| 16 | *Gjort:* 25 rutinemaler (daglige, ukentlige og månedlige) med `audience`, `min_age`, `max_age`, `suggested_by_default` og forslag til lønn. «Forslag til hverdagen» i oppstarten (etter barna) og under Innstillinger: felles forslag etter husstandstype, og forslag per barn etter alder, tildelt barnet. Se [DATABASE.md §4](DATABASE.md#4-maler-for-årshjulet-og-tilbakemeldingstekster). Gjenstår: rutiner for bil og kjæledyr (krever hjemprofilen) | Nye husstander får relevante forslag |
 | 17 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
 | 18 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
 | 19 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |

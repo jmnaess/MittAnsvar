@@ -99,6 +99,10 @@ export default function AppLayout() {
           options={{ headerShown: true, title: 'Hjemmet', presentation: 'modal' }}
         />
         <Stack.Screen
+          name="routines"
+          options={{ headerShown: true, title: 'Forslag til hverdagen', presentation: 'modal' }}
+        />
+        <Stack.Screen
           name="task/new"
           options={{ headerShown: true, title: 'Ny oppgave', presentation: 'modal' }}
         />

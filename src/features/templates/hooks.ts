@@ -17,3 +17,13 @@ export function useActivateTemplates(householdId: string) {
     onSuccess,
   });
 }
+
+/** «Forslag til hverdagen»: maler med ansvarlig per mal (barnemaler til et barn, ellers felles). */
+export function useActivateRoutines(householdId: string) {
+  const onSuccess = useInvalidateTasks(householdId);
+  return useMutation({
+    mutationFn: ({ templateIds, memberIds }: { templateIds: string[]; memberIds: (string | null)[] }) =>
+      activateTemplates(householdId, templateIds, memberIds),
+    onSuccess,
+  });
+}

@@ -151,7 +151,7 @@ Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader
 | created_at | timestamptz not null default now() | |
 | archived_at | timestamptz null | «slettede» oppgaver arkiveres, slik at historikken beholdes |
 
-Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik** `(household_id, template_id) where archived_at is null and template_id is not null`. Den sørger for at samme mal bare kan være aktiv én gang per husstand. Arkiverte oppgaver teller ikke, så en deaktivert mal kan aktiveres igjen som en ny oppgave.
+Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik** `(household_id, template_id, assigned_member_id) nulls not distinct where archived_at is null and template_id is not null` (`tasks_household_template_member_key`, steg 16). Samme barnemal kan dermed være aktiv én gang per barn. Andre maler er bare aktive én gang per husstand, uansett hvem oppgaven er tildelt: det sjekker `activate_templates`. Arkiverte oppgaver teller ikke, så en deaktivert mal kan aktiveres igjen som en ny oppgave.
 
 **Trigger `tasks_set_defaults`** (before insert/update): ved insert settes `anchor_on` = i dag i husstandens tidssone, `created_by` = innlogget medlem og `next_due_on` = `private.first_due(oppgaven)`. Endres gjentakelseskolonnene (også `once_on` og periodekolonnene), settes `anchor_on` til i dag og fristen beregnes på nytt. Klienten har ikke kolonnerettighet til `next_due_on`, `anchor_on` eller `created_by` (kolonnerettigheter sjekker bare kolonnene i selve spørringen, så triggeren kan sette dem).
 
@@ -416,8 +416,12 @@ Begge er globale tabeller uten `household_id`. Innholdet legges inn via migrasjo
 | source_url | text null | f.eks. DSB for røykvarsler. Tom til lenkene er sjekket |
 | sort_order | smallint not null default 0 | rekkefølge innen måneden |
 | is_active | boolean not null default true | maler slettes ikke, de deaktiveres |
+| audience | audience not null default `any` | steg 16. `child` = foreslås per barn og tildeles barnet. `any`/`adult` = felles |
+| min_age / max_age | smallint null | steg 16, bare barnemaler. Alder = året nå − fødselsår. null = ingen grense. `min_age <= max_age` |
+| suggested_by_default | boolean not null default true | steg 16: avhuket fra start i «Forslag til hverdagen» |
+| reward_nok | integer null (1–10000) | steg 16, bare barnemaler: forslag til lønn, kopieres når et barn får oppgaven |
 
-Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_by_default`. Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `recurrence_unit = 'year'`.
+Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `recurrence_unit = 'year'`. Check-constraints: alder og lønn bare når `audience = 'child'` (`task_templates_child_only`), og gyldige aldre (`task_templates_age_valid`).
 
 **Startsett:** 25 maler, 22 i `*_task_templates.sql` og 3 i `*_adjust_task_templates.sql`. Den siste justerer også tre forklaringer, og finner malene på slug. 24 er månedsoppgaver, og røykvarslerne har fast dato 1. desember. Justeringer endrer bare malene. Oppgaver som allerede er aktivert, er kopier og beholder den gamle teksten. Sikkerhetstekstene er generelle og henviser til fagfolk. De må gjennomgås manuelt før lansering, og malene skal utvides til 40–60.
 
@@ -428,7 +432,8 @@ Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_b
 - **Sesongmaler** (`*_seasonal_tasks.sql`): `lawn-mow` og `weed-beds`. Det gir 48 aktive maler. Se §2 Sesong.
 - **Årshjulet** viser maler som passer husstanden, og i tillegg maler husstanden allerede har aktive (`yearWheelTemplates`). En aktiv oppgave forsvinner dermed ikke når et svar endres. En oppgave fra en deaktivert mal vises som egen.
 
-**Aktivering:** RPC `activate_templates(p_household_id, p_template_ids uuid[]) returns int` **kopierer** malene til nye `tasks`-rader med `template_id` satt og returnerer antall nye oppgaver.
+**Aktivering:** RPC `activate_templates(p_household_id, p_template_ids uuid[], p_member_ids uuid[] default null) returns int` **kopierer** malene til nye `tasks`-rader med `template_id` satt og returnerer antall nye oppgaver.
+- `p_member_ids` (steg 16) har samme lengde som `p_template_ids` og sier hvem hver oppgave tildeles. null = felles, og uten listen blir alle felles som før. En barnemal må tildeles et barn i husstanden, og andre maler må være felles. Ellers `invalid_assignment` (22023). `reward_nok` kopieres bare når et barn får oppgaven.
 - Periodekolonnene kopieres også.
 - Maler som allerede er aktive, hoppes over (`on conflict do nothing` på den unike indeksen). Samme RPC brukes for én bryter og for «Velg anbefalte».
 - Den kjører som `security invoker`. RLS på `tasks` (voksen og `household_has_access`) og triggeren (`anchor_on` = i dag, `first_due`) gjelder dermed som for andre oppgaver.
@@ -440,7 +445,12 @@ Utsatt til steg 16 (forslag i oppstarten): `audience`, `min_age` og `suggested_b
   årshjulet, bare i forslagene fra hjemprofilen. Med periode står de i periodens første måned. Oppgavene havner i Oppgaver.
 - **Deaktivering** = arkivere oppgaven (`archived_at`).
 
-Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, boligtype og hjemprofilen (`requires`, se `templates/requires.ts`), og grupperes i tolv måneder med denne måneden først. Barnas alder kommer i steg 16.
+Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, boligtype og hjemprofilen (`requires`, se `templates/requires.ts`), og grupperes i tolv måneder med denne måneden først.
+
+**Rutinemaler (steg 16, `*_routine_template_columns.sql` og `*_routine_templates.sql`):** 25 maler for «Forslag til hverdagen». En rutine er fast kalender hver dag, uke eller måned uten periode (`isRoutineTemplate` i `templates/routines.ts`), så den vises aldri i årshjulet eller i forslagene fra hjemprofilen. Ingen rutiner bruker `requires`, fordi «hverdagen» kommer før hjemprofilen i oppstarten (bil og kjæledyr venter derfor).
+- 15 barnemaler (`{family}`) i aldersgruppene 3–5, 6–8, 9–12 og 13+. Et barn med fødselsår får 5–8 forslag, 2–3 avhuket. Én mal har ingen aldersgrense, og den er den eneste et barn uten fødselsår får. For slike barn er den avhuket (det gjør appen). Lønn bare på ekstra jobber.
+- 6 felles maler for alle husstander (3 avhuket) og 4 for par og enslige (ingen avhuket).
+- Forslagene regnes ut i `templates/routines.ts`: felles maler på mal-id, barnemaler per barn på mal + barn. Det som er aktivt, er ikke med.
 
 ### `feedback_messages`
 | Kolonne | Type | Merknad |
@@ -553,7 +563,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `set_my_avatar_mode(p_mode)` | medlem (brukes av barn) | figur eller bilde på egen `members`-rad. Bildet legges inn og fjernes bare av voksne. Feil: `not_authenticated`, `member_not_found`, `no_photo` (`photo` uten bilde) |
 | `my_photo_folders_to_delete() returns text[]` | innlogget (kalles av Edge `delete-account`) | bildemappene som forsvinner med kontoen, etter samme regler som `delete_my_account_data`: siste voksne gir alle mapper i husstanden, ellers egen mappe. Barn/uten medlemskap: ingen. Se §6 |
 | `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
-| `activate_templates(p_household_id, p_template_ids) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid) |
+| `activate_templates(p_household_id, p_template_ids, p_member_ids default null) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, med valgfri ansvarlig per mal (barnemaler til et barn, ellers felles), hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid), `invalid_assignment` (feil eller manglende barn, ulik lengde) |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `approve_completions(p_completion_ids)` / `reject_completion(p_completion_id)` | voksen, `household_has_access` | godkjenning av lønn (se §3). Feil: `not_adult` (barn, annen husstand, ukjent id), `subscription_required`, `not_pending` (bare avvisning) |
 | `set_completion_status(p_completion_id, p_status)` | voksen, `household_has_access` | endre godkjenning i ettertid, godkjent ↔ ikke godkjent (se §3). Feil: `not_adult`, `subscription_required`, `status_not_changeable`, `reward_already_paid` |

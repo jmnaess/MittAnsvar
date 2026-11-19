@@ -10,6 +10,7 @@ import { JoinHouseholdForm } from '../../src/features/household/components/JoinH
 import { MemberRow } from '../../src/features/household/components/MemberRow';
 import { emptyHomeProfile } from '../../src/features/household/homeProfile';
 import { HomeProfileFlow } from '../../src/features/templates/components/HomeProfileFlow';
+import { RoutineSuggestionsFlow } from '../../src/features/templates/components/RoutineSuggestionsFlow';
 import {
   householdKeys,
   useAcceptInvite,
@@ -25,8 +26,8 @@ import { toNorwegianMessage } from '../../src/lib/errors';
 
 // Oppstart for en innlogget bruker uten husstand. Tre visninger på samme skjerm:
 //   choose: velg «Opprett husstand» eller «Bli med i en husstand»
-//   create: opprett husstand, deretter barn (bare «Familie med barn») og om hjemmet
-//           (hjemprofil med forslag til årshjulet). Begge kan hoppes over.
+//   create: opprett husstand, deretter barn (bare «Familie med barn»), hverdagen (rutiner, barna
+//           etter alder) og om hjemmet (hjemprofil med forslag til årshjulet). Alt kan hoppes over.
 //   join:   skriv inn kode fra en annen voksen, navn og avatar
 // Når vi er ferdige, henter vi husstanden på nytt. Da bytter app/(app)/_layout.tsx til fanene.
 type Mode = 'choose' | 'create' | 'join';
@@ -84,10 +85,10 @@ function AccountFooter() {
   );
 }
 
-// Opprett husstand → barn (bare familie) → om hjemmet. Barn og hjemmet kan hoppes over.
+// Opprett husstand → barn (bare familie) → hverdagen → om hjemmet. Alt etter husstanden kan hoppes over.
 type CreateStep =
   | { kind: 'household' }
-  | { kind: 'children' | 'home'; householdId: string; input: CreateHouseholdInput };
+  | { kind: 'children' | 'routines' | 'home'; householdId: string; input: CreateHouseholdInput };
 
 function CreateFlow({ onBack }: { onBack: () => void }) {
   const queryClient = useQueryClient();
@@ -108,7 +109,7 @@ function CreateFlow({ onBack }: { onBack: () => void }) {
   function handleCreate(input: CreateHouseholdInput) {
     createHousehold.mutate(input, {
       onSuccess: (householdId) =>
-        setStep({ kind: input.type === 'family' ? 'children' : 'home', householdId, input }),
+        setStep({ kind: input.type === 'family' ? 'children' : 'routines', householdId, input }),
     });
   }
 
@@ -117,6 +118,17 @@ function CreateFlow({ onBack }: { onBack: () => void }) {
       <ChildrenStep
         householdId={step.householdId}
         finishing={finishing}
+        onDone={() => setStep({ ...step, kind: 'routines' })}
+      />
+    );
+  }
+
+  if (step.kind === 'routines') {
+    return (
+      <RoutineSuggestionsFlow
+        householdId={step.householdId}
+        household={{ type: step.input.type, ...emptyHomeProfile(step.input.housingType) }}
+        variant="onboarding"
         onDone={() => setStep({ ...step, kind: 'home' })}
       />
     );

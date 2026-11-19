@@ -101,8 +101,10 @@ select tests.login_as('00000000-0000-0000-0000-00000000a001');
 
 -- 25 i startsettet (22 + 3 fra *_adjust_task_templates.sql). Hjemprofilen (*_home_profile_templates.sql)
 -- deaktiverer 2 og legger til 23 (21 årsmaler og 2 intervallmaler). Sesongoppgavene
--- (*_seasonal_tasks.sql) legger til 2: 25 − 2 + 23 + 2 = 48 aktive.
-select is((select count(*)::int from public.task_templates where slug not like 'test-%'), 48,
+-- (*_seasonal_tasks.sql) legger til 2: 25 − 2 + 23 + 2 = 48 aktive. Rutinemalene (steg 16) telles
+-- i routine_templates.test.sql.
+select is((select count(*)::int from public.task_templates
+           where slug not like 'test-%' and slug not like 'routine-%'), 48,
   '48 aktive maler (startsettet, hjemprofilen og sesongmalene)');
 select is((select count(*)::int from public.task_templates where slug = 'test-inactive'), 0,
   'inaktive maler vises ikke');

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState, type ComponentRef } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarStack, Button, makeStyles, Message, pageWidth, spacing, Text, useTheme } from '../../src/ui';
@@ -36,6 +36,8 @@ export default function OnboardingScreen() {
   const styles = useStyles();
   const [mode, setMode] = useState<Mode>('choose');
   const back = () => setMode('choose');
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const scrollToTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -43,9 +45,9 @@ export default function OnboardingScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           {mode === 'choose' && <ChooseStep onChoose={setMode} />}
-          {mode === 'create' && <CreateFlow onBack={back} />}
+          {mode === 'create' && <CreateFlow onBack={back} onScrollToTop={scrollToTop} />}
           {mode === 'join' && <JoinStep onBack={back} />}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -90,7 +92,9 @@ type CreateStep =
   | { kind: 'household' }
   | { kind: 'children' | 'routines' | 'home'; householdId: string; input: CreateHouseholdInput };
 
-function CreateFlow({ onBack }: { onBack: () => void }) {
+type CreateFlowProps = { onBack: () => void; onScrollToTop: () => void };
+
+function CreateFlow({ onBack, onScrollToTop }: CreateFlowProps) {
   const queryClient = useQueryClient();
   const createHousehold = useCreateHousehold();
   const [step, setStep] = useState<CreateStep>({ kind: 'household' });
@@ -118,6 +122,7 @@ function CreateFlow({ onBack }: { onBack: () => void }) {
       <ChildrenStep
         householdId={step.householdId}
         finishing={finishing}
+        onAdded={onScrollToTop}
         onDone={() => setStep({ ...step, kind: 'routines' })}
       />
     );
@@ -190,10 +195,17 @@ function JoinStep({ onBack }: { onBack: () => void }) {
   );
 }
 
-type ChildrenStepProps = { householdId: string; finishing: boolean; onDone: () => void };
+type ChildrenStepProps = {
+  householdId: string;
+  finishing: boolean;
+  /** Etter hvert barn: rull til toppen, så barnet synes i listen. */
+  onAdded: () => void;
+  onDone: () => void;
+};
 
-function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
+function ChildrenStep({ householdId, finishing, onAdded, onDone }: ChildrenStepProps) {
   const styles = useStyles();
+  const { colors } = useTheme();
   const { data: members } = useMembers(householdId);
   const addChild = useAddChild(householdId);
   // Ny key etter hvert barn gir et tomt skjema til neste.
@@ -202,7 +214,12 @@ function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
   const children = members?.filter((m) => m.role === 'child') ?? [];
 
   function handleAdd(child: ChildInput) {
-    addChild.mutate(child, { onSuccess: () => setFormKey((k) => k + 1) });
+    addChild.mutate(child, {
+      onSuccess: () => {
+        setFormKey((k) => k + 1);
+        onAdded();
+      },
+    });
   }
 
   return (
@@ -218,12 +235,18 @@ function ChildrenStep({ householdId, finishing, onDone }: ChildrenStepProps) {
           {children.map((child) => (
             <MemberRow key={child.id} member={child} />
           ))}
+          <Text variant="meta" color={colors.textMuted}>
+            Har du flere barn? Legg dem til under.
+          </Text>
         </View>
       )}
 
+      {children.length > 0 && (
+        <Text variant="sectionTitle" accessibilityRole="header">Legg til et barn til</Text>
+      )}
       <ChildForm
         key={formKey}
-        submitLabel="Legg til barn"
+        submitLabel={children.length > 0 ? 'Legg til' : 'Legg til barn'}
         busy={addChild.isPending || finishing}
         onSubmit={handleAdd}
       />

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
-import { minTouch, radius } from './theme';
+import { minTouch } from './theme';
 import { useTheme } from './ThemeProvider';
 
 type Props = {
@@ -11,11 +11,11 @@ type Props = {
   count: number;
   open: boolean;
   onPress: () => void;
-  /** Til venstre: IconBadge for en kategori, Avatar for en person. */
+  /** Til venstre: IconBadge (34) for en kategori, Avatar (34) for en person. */
   left?: ReactNode;
 };
 
-/** Overskrift på en gruppe som kan foldes ut og inn: ikon, navn, antall og pil. */
+/** Overskrift øverst i et GroupCard, kan foldes ut og inn: ikon, navn, antall og pil (ned = åpen). */
 export function GroupHeader({ title, count, open, onPress, left }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -30,10 +30,10 @@ export function GroupHeader({ title, count, open, onPress, left }: Props) {
     >
       {left}
       <View style={styles.text}>
-        <Text variant="sectionTitle" numberOfLines={1} style={styles.title}>{title}</Text>
-        <Text variant="metaStrong" color={colors.textMuted}>{count}</Text>
+        <Text variant="groupTitle" numberOfLines={1} style={styles.title}>{title}</Text>
+        <Text variant="count" color={colors.textMuted}>{count}</Text>
       </View>
-      <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
+      <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={18} color={colors.textMuted} />
     </Pressable>
   );
 }
@@ -43,13 +43,13 @@ const useStyles = makeStyles(({ colors }) =>
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      minHeight: minTouch + 8,
-      paddingHorizontal: 6,
-      borderRadius: radius.row,
+      gap: 10,
+      minHeight: minTouch + 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
     },
     pressed: { backgroundColor: colors.surfaceMuted },
-    text: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+    text: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 6 },
     title: { flexShrink: 1 },
   }),
 );

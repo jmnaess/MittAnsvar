@@ -30,6 +30,11 @@ export const lightColors = {
   jobBg: '#E3F3F1',
   jobAmount: '#0E4F4F',
   jobSub: '#33504D',
+  /** Segmentert kontroll: bakgrunnen og det valgte segmentet. */
+  segmentBg: '#F2ECE2',
+  segmentSelected: '#FFFFFF',
+  /** Lys teal flate bak kategoriikoner. */
+  iconTint: '#E3F3F1',
   /** Feilmeldinger. Samme røde som «Forfalt». */
   danger: '#A3271A',
   /** Mørk bakgrunn bak modaler. */
@@ -73,6 +78,9 @@ export const darkColors: ThemeColors = {
   jobBg: '#173230',
   jobAmount: '#93DCD5',
   jobSub: '#B8D4CF',
+  segmentBg: '#231D17',
+  segmentSelected: '#3A3128',
+  iconTint: '#173230',
   danger: '#FF9585',
   backdrop: 'rgba(0,0,0,0.6)',
   /** I mørkt løftes banneret lysere enn flaten under. */
@@ -103,6 +111,14 @@ export const radius = {
   row: 16,
   button: 22,
   chip: 12,
+  /** Gruppekortene i «Oppgaver». */
+  group: 16,
+  /** Søkefeltet. */
+  search: 12,
+  /** Segmentert kontroll (ytre). Segmentene inni har segment - 3. */
+  segment: 11,
+  /** Små filterbrikker. */
+  filterChip: 14,
   round: 999,
 } as const;
 
@@ -147,18 +163,32 @@ export const fonts = {
 /** Tekstskalaen. Brukes av <Text variant="…"> i src/ui/Text.tsx. */
 export const typography = {
   pageTitle: { fontFamily: fonts.heading, fontSize: 38, lineHeight: 44 },
+  /** Tittel øverst på faner med egen topp, som «Oppgaver». */
+  screenTitle: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 34 },
+  /** Gruppeoverskrift i et kort. */
+  groupTitle: { fontFamily: fonts.heading, fontSize: 17, lineHeight: 22 },
   sectionTitle: { fontFamily: fonts.heading, fontSize: 20, lineHeight: 26 },
   personName: { fontFamily: fonts.heading, fontSize: 19, lineHeight: 24 },
   jobAmount: { fontFamily: fonts.heading, fontSize: 22, lineHeight: 28 },
   date: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20 },
   rowTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 21 },
+  /** Kompakte rader i gruppekort. */
+  rowTitleSmall: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20 },
   rowTitleLarge: { fontFamily: fonts.bold, fontSize: 19, lineHeight: 25 },
   jobTitle: { fontFamily: fonts.extrabold, fontSize: 15, lineHeight: 20 },
   body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
   bodyStrong: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22 },
   meta: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19 },
   metaStrong: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 19 },
+  /** Undertittel på kompakte rader. */
+  metaSmall: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16 },
   label: { fontFamily: fonts.bold, fontSize: 13, lineHeight: 17 },
+  /** Antall i gruppeoverskrifter. */
+  count: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 17 },
+  /** Segmentert kontroll. */
+  segment: { fontFamily: fonts.extrabold, fontSize: 14, lineHeight: 19 },
+  /** Søkefelt (kompakt). */
+  search: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19 },
   /** Hjelpetekst under skjemafelt. */
   hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
   /** Store koder (koble til enhet). */

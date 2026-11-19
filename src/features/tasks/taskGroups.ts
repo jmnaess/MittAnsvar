@@ -111,25 +111,18 @@ export function groupKeysFor(task: Pick<Task, 'category' | 'assigned_member_id' 
   return [categoryKey(toCategory(task.category)), person];
 }
 
-export type TaskListItem<T, M> =
-  | { type: 'header'; key: string; group: TaskGroup<T, M>; open: boolean }
-  | { type: 'task'; key: string; task: T; group: TaskGroup<T, M> };
+export type OpenGroup<T, M> = { key: string; group: TaskGroup<T, M>; open: boolean };
 
 /**
- * Den flate listen til FlatList: en overskrift per gruppe, og oppgavene i de åpne gruppene.
+ * Gruppene til listen, hver med om den er åpen. Hver gruppe vises som ett kort.
  * allOpen: alle grupper vises åpne (mens man søker), uten å endre hvilke som er lagret som åpne.
  */
-export function toListItems<T extends GroupTask, M>(
+export function withOpenState<T, M>(
   groups: TaskGroup<T, M>[],
   openKeys: ReadonlySet<string>,
   allOpen = false,
-): TaskListItem<T, M>[] {
-  return groups.flatMap((group) => {
-    const open = allOpen || openKeys.has(group.key);
-    const header: TaskListItem<T, M> = { type: 'header', key: group.key, group, open };
-    if (!open) return [header];
-    return [header, ...group.tasks.map((task) => ({ type: 'task' as const, key: task.id, task, group }))];
-  });
+): OpenGroup<T, M>[] {
+  return groups.map((group) => ({ key: group.key, group, open: allOpen || openKeys.has(group.key) }));
 }
 
 /** Siste dag oppgaven kan gjøres uten å være forfalt. Samme regel som private.due_by. */
@@ -141,10 +134,18 @@ function dueBy(task: DueTask): string | null {
 type DueTask = Parameters<typeof describeRecurrence>[0] &
   Pick<Task, 'next_due_on' | 'postponed_to'>;
 
+/** Fristen er passert. Jobber og fullførte engangsoppgaver har ingen frist. */
+export function isTaskOverdue(task: DueTask, today: string): boolean {
+  if (isJob(task)) return false;
+  const due = dueBy(task);
+  return due !== null && due < today;
+}
+
 /**
  * Undertittelen på raden: gjentakelse og neste frist.
- * «Hver uke · neste tor. 21. nov.», «Hver uke · Forfalt». Engangsoppgaver: bare datoen,
- * «Forfalt» eller «Ferdig». Jobber har ingen frist. Månedsoppgaver: «… · neste oktober 2027».
+ * «Hver uke · neste tor. 21. nov.». Engangsoppgaver: bare datoen, eller «Ferdig».
+ * Jobber har ingen frist. Månedsoppgaver: «… · neste oktober 2027».
+ * Forfalt: bare gjentakelsen (engangs: tom). «Forfalt» vises som merkelapp (isTaskOverdue).
  */
 export function describeTaskSchedule(task: DueTask, today: string): string {
   const recurrence = describeRecurrence(task);
@@ -152,7 +153,7 @@ export function describeTaskSchedule(task: DueTask, today: string): string {
   const once = task.recurrence_type === 'once';
   const due = dueBy(task);
   if (!task.next_due_on || !due) return once ? 'Ferdig' : recurrence;
-  if (due < today) return once ? 'Forfalt' : `${recurrence} · Forfalt`;
+  if (due < today) return once ? '' : recurrence;
   const date =
     isMonthTask(task) && !isPostponed(task) ? formatMonthYear(task.next_due_on) : formatDate(task.next_due_on);
   return once ? date : `${recurrence} · neste ${date}`;

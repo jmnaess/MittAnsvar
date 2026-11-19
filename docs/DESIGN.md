@@ -60,6 +60,8 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 | moneyBg / moneyText | `#FFF1C2` / `#6E4D00` | `#3D3112` / `#F4C95D` | lønn |
 | overdueBg / overdueText | `#FDE4E1` / `#A3271A` | `#43201A` / `#FFA294` | forfalt |
 | jobBg / jobAmount / jobSub | `#E3F3F1` / `#0E4F4F` / `#33504D` | `#173230` / `#93DCD5` / `#B8D4CF` | ledige jobber |
+| segmentBg / segmentSelected | `#F2ECE2` / `#FFFFFF` | `#231D17` / `#3A3128` | segmentert kontroll og valgt segment |
+| iconTint | `#E3F3F1` | `#173230` | flaten bak kategoriikoner i «Oppgaver» |
 | danger | `#A3271A` | `#FF9585` | feilmeldinger, «Slett»-knapper |
 | backdrop | `rgba(43,33,24,0.4)` | `rgba(0,0,0,0.6)` | bak modaler |
 | toastBg / toastText / toastMuted / toastAction | `#2B2118` / `#FFFFFF` / `#D9CFC4` / `#F2B705` | `#463B30` / `#FFF8EE` / `#D6C9B8` / `#F7C843` | banneret med «Angre» (i mørkt lysere enn flaten) |
@@ -133,16 +135,22 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | Variant | Font | Størrelse | Bruk |
 |---|---|---|---|
 | pageTitle | Fredoka | 38 | sidetittel («I dag») |
+| screenTitle | Fredoka | 28 | tittel på faner med egen topp («Oppgaver») |
 | sectionTitle | Fredoka | 20 | seksjonstittel |
+| groupTitle | Fredoka | 17 | gruppeoverskrift i et gruppekort |
 | personName | Fredoka | 19 | navn på personkort |
 | jobAmount | Fredoka | 22 | beløp på jobbkort |
 | date | Nunito 700 | 15 | datoen over «I dag» |
 | rowTitle | Nunito 700 | 16 | radtittel |
+| rowTitleSmall / metaSmall | Nunito 700 / 400 | 15 / 12 | kompakte rader i gruppekort |
 | jobTitle | Nunito 800 | 15 | tittel på jobbkort |
 | body / bodyStrong | Nunito 400 / 700 | 16 | brødtekst, knapper |
 | meta / metaStrong | Nunito 400 / 600 | 14 | metatekst |
 | label | Nunito 700 | 13 | små etiketter, merkelapper, feltetiketter |
 | hint | Nunito 400 | 13 | hjelpetekst under skjemafelt |
+| count | Nunito 400 | 13 | antall i gruppeoverskrifter |
+| segment | Nunito 800 | 14 | segmentert kontroll |
+| search | Nunito 400 | 14 | søkefeltet |
 | code | Fredoka | 32 | koder (koble til enhet) |
 | tab / tabSelected | Nunito 700 / 800 | 12 | fanetekst |
 
@@ -159,10 +167,10 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `CheckRow` | velg i en liste (forslag fra hjemprofilen): sjekkboks, tittel, metalinje. Avkrysset = valgt, ingen gjennomstreking |
 | `Chip` | merkelapp: `money`, `overdue`, `neutral` |
 | `Button` | `primary` (pille), `secondary` (kant), `text`, `danger` (slett). `small` i rader og bannere |
-| `IconButton` | rund ikonknapp, 40 eller 48 |
-| `IconBadge` | ikon i en rund flate (32/36/44), bare visning: kategori i «Oppgaver», og «Felles» der en person ellers har avatar |
+| `IconButton` | rund ikonknapp, 38, 40 eller 48 (hitSlop opp til 48) |
+| `IconBadge` | ikon i en flate (32/34/36/44), `shape` `round` eller `square` (radius 10), bare visning: kategori i «Oppgaver», og «Felles» der en person ellers har avatar |
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
-| `AvatarStack` | overlappende avatarer (−10 px) |
+| `AvatarStack` | overlappende avatarer (−10 px fra 32 og opp, ca. 30 % av størrelsen under) |
 | `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle. Opptil seks: én rad, ringen (maks 56 px) regnes ut fra antall og skjermbredde (`familyStripLayout.ts`). Sju eller flere: raden kan sveipes og falmer mot høyre. Navn: «Leah», «John M.», uten «…» |
 | `ApprovalBanner` | gult banner: hvem som venter, antall og sum, knappen «Se» |
 | `JobCard` / `JobGrid` | ledige jobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
@@ -170,10 +178,13 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
 | `ListRow` | rad i lister (Oppgaver, Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil |
 | `Section` | seksjon på en side: tittel, forklaring og innhold |
-| `GroupHeader` | overskrift på en gruppe som foldes ut og inn: ikon/avatar, navn, antall, pil opp/ned (`accessibilityState.expanded`) |
+| `GroupCard` | hvitt kort for én gruppe (radius 16, skygge, overflow hidden): overskrift øverst, rader med 1 px `border` mellom |
+| `GroupHeader` | overskrift i et `GroupCard`, foldes ut og inn: ikon/avatar (34), navn, antall, pil ned (åpen) / høyre (lukket) (`accessibilityState.expanded`) |
+| `SegmentedControl` | segmentert kontroll i full bredde («Kategori \| Person»). Valgt segment er en løftet flate med skygge |
+| `FilterChips` | små filterbrikker på én rad som rulles sidelengs, aldri linjeskift. Valgfri avatar foran. Valgt = fylt primary |
 | `Message` / `Hint` | feil, bekreftelse eller nøytral tekst / hjelpetekst under et felt |
 | `TextField` | tekstfelt med etikett. `code` gir stor, sentrert tekst |
-| `SearchField` | søkefelt: `TextField` med forstørrelsesglass og «Tøm søket» når det har tekst |
+| `SearchField` | kompakt søkefelt (radius 12, tynn kant, tekst 14): `TextField` med forstørrelsesglass og «Tøm søket» når det har tekst |
 | `DateField` | datovelger med etikett. iOS: kompakt velger i raden, Android: knapp som åpner kalenderen. `minimumDate` stopper datoer bakover |
 | `ChoiceChip`, `ChoiceChips`, `MultiChoiceChips` | valgknapper (ett eller flere valg). Valgt = fylt primary |
 | `Switch` | bryter i primary, med valgfri etikett |
@@ -187,13 +198,19 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 
 ### «Oppgaver»
 
-Søkefelt, «Kategori | Person» og personfilter («Alle» + hver person) øverst. Gruppene (`GroupHeader`)
-er lukket til de åpnes; enheten husker hvilke som er åpne (`features/tasks/openGroups.ts`,
-`secureStorage`). Gruppen en oppgave havner i, åpnes når den lages eller endres. Under søk er alle
-grupper med treff åpne. Kategoriene og ikonene står i `features/tasks/categories.ts`.
-Raden (`features/tasks/components/TaskRow.tsx`): avatar(er) til venstre (`IconBadge` for felles),
-undertittel «Hver torsdag · neste tor. 21. nov.» (engangs: bare datoen; forfalt: «Forfalt»),
-lønn som `Chip tone="money"`. I Person-visningen står kategorien først i undertittelen.
+Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`) og en rund + (`IconButton` 38). + åpner
+«Hva vil du lage?»; med en person valgt i filteret går den rett til `/task/new` med personen forhåndsvalgt.
+Under: `SearchField`, `SegmentedControl` («Kategori | Person») og `FilterChips` («Alle» + hver person med
+avatar på 20 px). Hver gruppe er ett `GroupCard` med 10 px mellom kortene. Ikonet i overskriften:
+kategori = `IconBadge shape="square"` i `iconTint`/`primary`, person = avatar 34, «Felles» og «Ledige jobber»
+= nøytral rund `IconBadge`. Gruppene er lukket til de åpnes; enheten husker hvilke som er åpne
+(`features/tasks/openGroups.ts`, `secureStorage`). Gruppen en oppgave havner i, åpnes når den lages eller
+endres. Under søk er alle grupper med treff åpne. Kategoriene og ikonene står i `features/tasks/categories.ts`.
+Raden (`features/tasks/components/TaskRow.tsx`) er kompakt, uten ikon til venstre og uten pil: tittel og
+undertittel «Hver torsdag · neste tor. 21. nov.» (engangs: bare datoen). Til høyre: «Forfalt» som
+`Chip tone="overdue"` (aldri i undertittelen), lønn som `Chip tone="money"`, og avatarene (24 px, overlappende)
+til de tildelte. Felles oppgaver og jobber uten barn får et lite nøytralt personer-ikon. I Person-visningen
+står kategorien først i undertittelen. Innholdet ligger i `pageWidth`.
 
 Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.

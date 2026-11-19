@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { TextField } from './TextField';
-import { minTouch } from './theme';
+import { makeStyles } from './makeStyles';
+import { minTouch, radius, typography } from './theme';
 import { useTheme } from './ThemeProvider';
 
 type Props = {
@@ -10,11 +11,12 @@ type Props = {
   placeholder?: string;
 };
 
-const ICON_SPACE = 42;
+const ICON_SPACE = 36;
 
-/** Søkefelt: TextField med forstørrelsesglass, og en knapp som tømmer feltet når det har tekst. */
+/** Kompakt søkefelt: TextField med forstørrelsesglass, og en knapp som tømmer feltet når det har tekst. */
 export function SearchField({ value, onChangeText, placeholder = 'Søk' }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View>
       <TextField
@@ -29,7 +31,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Søk' }: Props
         style={styles.input}
       />
       <View pointerEvents="none" style={styles.icon}>
-        <Ionicons name="search" size={20} color={colors.textMuted} />
+        <Ionicons name="search" size={18} color={colors.textMuted} />
       </View>
       {value !== '' && (
         <Pressable
@@ -38,16 +40,26 @@ export function SearchField({ value, onChangeText, placeholder = 'Søk' }: Props
           accessibilityLabel="Tøm søket"
           style={styles.clear}
         >
-          <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+          <Ionicons name="close-circle" size={18} color={colors.textMuted} />
         </Pressable>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  input: { paddingLeft: ICON_SPACE, paddingRight: minTouch },
-  icon: { position: 'absolute', left: 14, top: 0, bottom: 0, justifyContent: 'center' },
+const useStyles = makeStyles(({ colors }) => StyleSheet.create({
+  input: {
+    minHeight: 40,
+    paddingVertical: 8,
+    paddingLeft: ICON_SPACE,
+    paddingRight: minTouch,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.search,
+    fontFamily: typography.search.fontFamily,
+    fontSize: typography.search.fontSize,
+  },
+  icon: { position: 'absolute', left: 12, top: 0, bottom: 0, justifyContent: 'center' },
   clear: {
     position: 'absolute',
     right: 0,
@@ -57,4 +69,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

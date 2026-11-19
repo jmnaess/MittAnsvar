@@ -10,7 +10,8 @@ import {
   matchesSearch,
   SHARED_GROUP_KEY,
   sortByTitle,
-  toListItems,
+  isTaskOverdue,
+  withOpenState,
 } from '../taskGroups';
 import type { Task } from '../types';
 
@@ -157,25 +158,22 @@ describe('groupKeysFor', () => {
   });
 });
 
-describe('toListItems', () => {
+describe('withOpenState', () => {
   const groups = groupByCategory([
     task({ title: 'A', category: 'kitchen' }),
     task({ title: 'B', category: 'car' }),
   ]);
 
-  it('lukkede grupper viser bare overskriften', () => {
-    const items = toListItems(groups, new Set());
-    expect(items.map((i) => i.type)).toEqual(['header', 'header']);
-    expect(items.every((i) => i.type !== 'header' || !i.open)).toBe(true);
-  });
-
-  it('åpne grupper viser oppgavene', () => {
-    const items = toListItems(groups, new Set(['category:car']));
-    expect(items.map((i) => i.key)).toEqual(['category:kitchen', 'category:car', 'B']);
+  it('lukket til de åpnes', () => {
+    const list = withOpenState(groups, new Set(['category:car']));
+    expect(list.map((g) => [g.key, g.open])).toEqual([
+      ['category:kitchen', false],
+      ['category:car', true],
+    ]);
   });
 
   it('allOpen (søk) åpner alle', () => {
-    expect(toListItems(groups, new Set(), true)).toHaveLength(4);
+    expect(withOpenState(groups, new Set(), true).every((g) => g.open)).toBe(true);
   });
 });
 
@@ -188,14 +186,14 @@ describe('describeTaskSchedule', () => {
     expect(describeTaskSchedule(task({ next_due_on: TODAY }), TODAY)).toBe('Hver torsdag · neste tor. 19. nov.');
   });
 
-  it('forfalt', () => {
-    expect(describeTaskSchedule(task({ next_due_on: '2026-11-12' }), TODAY)).toBe('Hver torsdag · Forfalt');
+  it('forfalt: bare gjentakelsen, Forfalt er en merkelapp', () => {
+    expect(describeTaskSchedule(task({ next_due_on: '2026-11-12' }), TODAY)).toBe('Hver torsdag');
   });
 
-  it('engangsoppgave: bare datoen, Forfalt eller Ferdig', () => {
+  it('engangsoppgave: bare datoen, tom når forfalt, eller Ferdig', () => {
     const once = { recurrence_type: 'once' as const, recurrence_unit: null, weekdays: null };
     expect(describeTaskSchedule(task({ ...once, next_due_on: '2026-11-20' }), TODAY)).toBe('fre. 20. nov.');
-    expect(describeTaskSchedule(task({ ...once, next_due_on: '2026-11-18' }), TODAY)).toBe('Forfalt');
+    expect(describeTaskSchedule(task({ ...once, next_due_on: '2026-11-18' }), TODAY)).toBe('');
     expect(describeTaskSchedule(task({ ...once, next_due_on: null }), TODAY)).toBe('Ferdig');
   });
 
@@ -205,11 +203,30 @@ describe('describeTaskSchedule', () => {
       'I november hvert år · neste november 2026',
     );
     expect(describeTaskSchedule(task({ ...month, next_due_on: '2026-10-01' }), TODAY)).toBe(
-      'I november hvert år · Forfalt',
+      'I november hvert år',
     );
   });
 
   it('jobb: bare gjentakelsen', () => {
     expect(describeTaskSchedule(task({ recurrence_type: 'job', next_due_on: null }), TODAY)).toBe('Ledig jobb');
+  });
+});
+
+describe('isTaskOverdue', () => {
+  it('fristen er passert', () => {
+    expect(isTaskOverdue(task({ next_due_on: '2026-11-12' }), TODAY)).toBe(true);
+    expect(isTaskOverdue(task({ next_due_on: TODAY }), TODAY)).toBe(false);
+  });
+
+  it('månedsoppgave: forfalt først etter månedsslutt', () => {
+    const month = { recurrence_unit: 'year' as const, weekdays: null, month: 11, month_day: null };
+    expect(isTaskOverdue(task({ ...month, next_due_on: '2026-11-01' }), TODAY)).toBe(false);
+    expect(isTaskOverdue(task({ ...month, next_due_on: '2026-10-01' }), TODAY)).toBe(true);
+  });
+
+  it('jobber og fullførte engangsoppgaver er aldri forfalt', () => {
+    expect(isTaskOverdue(task({ recurrence_type: 'job', next_due_on: '2026-11-01' }), TODAY)).toBe(false);
+    const once = { recurrence_type: 'once' as const, recurrence_unit: null, weekdays: null };
+    expect(isTaskOverdue(task({ ...once, next_due_on: null }), TODAY)).toBe(false);
   });
 });

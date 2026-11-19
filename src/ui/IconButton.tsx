@@ -8,12 +8,12 @@ type Props = {
   /** Leses opp av skjermleser. Påkrevd, siden knappen bare har et ikon. */
   accessibilityLabel: string;
   onPress: () => void;
-  size?: 40 | 48;
+  size?: 38 | 40 | 48;
   variant?: 'primary' | 'surface';
   disabled?: boolean;
 };
 
-/** Rund ikonknapp. 40 px får ekstra trykkflate (hitSlop) opp til 48. */
+/** Rund ikonknapp. 38 og 40 px får ekstra trykkflate (hitSlop) opp til 48. */
 export function IconButton({ icon, accessibilityLabel, onPress, size = 48, variant = 'primary', disabled }: Props) {
   const { colors, shadow } = useTheme();
   const primary = variant === 'primary';
@@ -21,7 +21,7 @@ export function IconButton({ icon, accessibilityLabel, onPress, size = 48, varia
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      hitSlop={size < 48 ? 4 : 0}
+      hitSlop={size < 48 ? (48 - size) / 2 : 0}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}

@@ -1,19 +1,23 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Avatar,
-  Button,
-  ChoiceChips,
   EmptyState,
+  FilterChips,
+  GroupCard,
   GroupHeader,
   IconBadge,
+  IconButton,
   makeStyles,
   Message,
   pageWidth,
   SearchField,
+  SegmentedControl,
   spacing,
   SwipeToDelete,
+  Text,
   UndoToast,
   useTheme,
 } from '../../../src/ui';
@@ -35,9 +39,9 @@ import {
   type GroupMode,
   groupByCategory,
   groupByPerson,
+  type OpenGroup,
   type TaskGroup,
-  type TaskListItem,
-  toListItems,
+  withOpenState,
 } from '../../../src/features/tasks/taskGroups';
 import type { Task } from '../../../src/features/tasks/types';
 import { toIsoDate } from '../../../src/lib/dates';
@@ -49,14 +53,15 @@ const MODE_OPTIONS: { value: GroupMode; label: string }[] = [
   { value: 'person', label: 'Person' },
 ];
 
-// ChoiceChips trenger en verdi for «Alle». null kan ikke brukes som nøkkel.
+// FilterChips trenger en verdi for «Alle». null kan ikke brukes som nøkkel.
 const ALL = 'all';
 
 type Group = TaskGroup<Task, Member>;
-type Item = TaskListItem<Task, Member>;
+type Item = OpenGroup<Task, Member>;
 
 /**
  * Alle aktive oppgaver, gruppert etter kategori eller person, med søk og personfilter.
+ * Hver gruppe er ett kort med overskriften øverst og oppgavene inni når den er åpen.
  * Gruppene er lukket til de åpnes, og enheten husker hvilke som er åpne (openGroups.ts).
  * Mens man søker, er alle grupper med treff åpne.
  * Voksne kan dra en rad mot venstre og trykke «Slett». Oppgaven arkiveres med en gang, uten
@@ -64,6 +69,7 @@ type Item = TaskListItem<Task, Member>;
  */
 export default function TasksScreen() {
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const { data: tasks, error, isPending, refetch } = useTasks(household!.id);
@@ -86,7 +92,7 @@ export default function TasksScreen() {
   const searching = query.trim() !== '';
   const filtered = filterTasks(tasks ?? [], { query, personId }, members);
   const groups: Group[] = mode === 'category' ? groupByCategory(filtered) : groupByPerson(filtered, members);
-  const items = toListItems(groups, openKeys, searching);
+  const items = withOpenState(groups, openKeys, searching);
 
   function remove(task: Task) {
     setActionError(null);
@@ -120,19 +126,31 @@ export default function TasksScreen() {
       ? describeJobMembers(task.job_member_ids, members)
       : (members.find((m) => m.id === task.assigned_member_id)?.display_name ?? 'Felles');
 
+  /** Pluss øverst: med en person valgt i filteret rett til skjemaet med personen forhåndsvalgt. */
+  function create() {
+    if (personId) router.push({ pathname: '/task/new', params: { memberId: personId } });
+    else setCreating(true);
+  }
+
   function renderItem({ item }: { item: Item }) {
-    if (item.type === 'header') {
-      return (
-        <GroupHeaderFor
-          group={item.group}
-          open={item.open}
-          // Under søk er alle åpne. Da lagres ikke noe ved trykk.
-          onPress={() => !searching && toggleGroup(item.group.key)}
-          photoOf={photoOf}
-        />
-      );
-    }
-    const task = item.task;
+    return (
+      <GroupCard
+        header={
+          <GroupHeaderFor
+            group={item.group}
+            open={item.open}
+            // Under søk er alle åpne. Da lagres ikke noe ved trykk.
+            onPress={() => !searching && toggleGroup(item.group.key)}
+            photoOf={photoOf}
+          />
+        }
+      >
+        {item.open && item.group.tasks.map(renderTask)}
+      </GroupCard>
+    );
+  }
+
+  function renderTask(task: Task) {
     const row = (
       <TaskRow
         task={task}
@@ -146,13 +164,17 @@ export default function TasksScreen() {
         }
       />
     );
-    return isAdult ? <SwipeToDelete onDelete={() => remove(task)}>{row}</SwipeToDelete> : row;
+    return isAdult ? (
+      <SwipeToDelete key={task.id} onDelete={() => remove(task)}>{row}</SwipeToDelete>
+    ) : (
+      <View key={task.id}>{row}</View>
+    );
   }
 
   const hasTasks = (tasks?.length ?? 0) > 0;
 
   return (
-    <View style={styles.flex}>
+    <View style={[styles.flex, { paddingTop: insets.top }]}>
       <FlatList
         contentContainerStyle={styles.container}
         data={items}
@@ -163,17 +185,24 @@ export default function TasksScreen() {
         {...pullToRefresh}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Button title="Ny oppgave" onPress={() => setCreating(true)} />
+            <View style={styles.top}>
+              <Text variant="screenTitle" accessibilityRole="header" style={styles.title}>Oppgaver</Text>
+              <IconButton icon="add" size={38} accessibilityLabel="Ny oppgave" onPress={create} />
+            </View>
             {(error || actionError) && <Message>{actionError ?? toNorwegianMessage(error)}</Message>}
             {hasTasks && (
               <>
-                <SearchField value={query} onChangeText={setQuery} placeholder="Søk i oppgavene" />
-                <ChoiceChips options={MODE_OPTIONS} value={mode} onChange={setMode} />
+                <SearchField value={query} onChangeText={setQuery} placeholder="Søk i oppgaver" />
+                <SegmentedControl options={MODE_OPTIONS} value={mode} onChange={setMode} />
                 {members.length > 1 && (
-                  <ChoiceChips
+                  <FilterChips
                     options={[
                       { value: ALL, label: 'Alle' },
-                      ...members.map((m) => ({ value: m.id, label: m.display_name })),
+                      ...members.map((m) => ({
+                        value: m.id,
+                        label: m.display_name,
+                        left: <Avatar avatar={m.avatar} photo={photoOf(m)} size={20} />,
+                      })),
                     ]}
                     value={personId ?? ALL}
                     onChange={(id) => setPersonId(id === ALL ? null : id)}
@@ -187,7 +216,7 @@ export default function TasksScreen() {
           isPending ? undefined : hasTasks ? (
             <EmptyState title="Ingen treff" text="Prøv et annet søk, eller velg Alle." />
           ) : (
-            <EmptyState title="Ingen oppgaver ennå" text="Trykk «Ny oppgave» for å lage den første." />
+            <EmptyState title="Ingen oppgaver ennå" text="Trykk + for å lage den første." />
           )
         }
         renderItem={renderItem}
@@ -218,9 +247,9 @@ type GroupHeaderProps = {
   photoOf: ReturnType<typeof useMemberPhotoLookup>;
 };
 
-/** Overskriften med riktig ikon: kategoriikon, personens avatar, «Felles» eller «Ledige jobber». */
+/** Overskriften med riktig ikon: kategoriikon i firkant, personens avatar, eller nøytral rund for «Felles» og «Ledige jobber». */
 function GroupHeaderFor({ group, open, onPress, photoOf }: GroupHeaderProps) {
-  const { colors, sharedColors } = useTheme();
+  const { colors } = useTheme();
   const count = group.tasks.length;
   switch (group.kind) {
     case 'category':
@@ -230,7 +259,15 @@ function GroupHeaderFor({ group, open, onPress, photoOf }: GroupHeaderProps) {
           count={count}
           open={open}
           onPress={onPress}
-          left={<IconBadge icon={group.category.icon} />}
+          left={
+            <IconBadge
+              icon={group.category.icon}
+              size={34}
+              shape="square"
+              background={colors.iconTint}
+              color={colors.primary}
+            />
+          }
         />
       );
     case 'member':
@@ -240,7 +277,7 @@ function GroupHeaderFor({ group, open, onPress, photoOf }: GroupHeaderProps) {
           count={count}
           open={open}
           onPress={onPress}
-          left={<Avatar avatar={group.member.avatar} photo={photoOf(group.member)} size={36} />}
+          left={<Avatar avatar={group.member.avatar} photo={photoOf(group.member)} size={34} />}
         />
       );
     case 'shared':
@@ -250,7 +287,7 @@ function GroupHeaderFor({ group, open, onPress, photoOf }: GroupHeaderProps) {
           count={count}
           open={open}
           onPress={onPress}
-          left={<IconBadge icon="people" background={sharedColors.tint} color={sharedColors.ink} />}
+          left={<IconBadge icon="people" size={34} background={colors.surfaceMuted} color={colors.textMuted} />}
         />
       );
     case 'jobs':
@@ -260,7 +297,7 @@ function GroupHeaderFor({ group, open, onPress, photoOf }: GroupHeaderProps) {
           count={count}
           open={open}
           onPress={onPress}
-          left={<IconBadge icon="briefcase-outline" background={colors.jobBg} color={colors.jobAmount} />}
+          left={<IconBadge icon="briefcase-outline" size={34} background={colors.surfaceMuted} color={colors.textMuted} />}
         />
       );
   }
@@ -276,7 +313,9 @@ const useStyles = makeStyles(({ colors }) =>
     flex: { flex: 1, backgroundColor: colors.background },
     // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
     container: { ...pageWidth, padding: spacing.page, paddingBottom: 120 },
-    header: { gap: 12, marginBottom: spacing.section },
+    header: { gap: 12, marginBottom: spacing.row + 4 },
+    top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8 },
+    title: { flex: 1 },
     separator: { height: spacing.row },
   }),
 );

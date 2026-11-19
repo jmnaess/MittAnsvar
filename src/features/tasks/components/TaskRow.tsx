@@ -2,17 +2,17 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { type AvatarPhotoSource, AvatarStack, Chip, makeStyles, Text, useTheme } from '../../../ui';
 import { toCategory } from '../categories';
-import { formatKroner } from '../reward';
-import { describeTaskSchedule, isTaskOverdue } from '../taskGroups';
+import { bundleReward, bundleSchedule } from '../taskGroups';
 import type { Task } from '../types';
 
 export type RowPerson = { avatar: string; photo?: AvatarPhotoSource };
 
 type Props = {
-  task: Task;
-  /** Den ansvarlige, eller barna som kan ta jobben. Tom = felles. */
+  /** Én oppgave, eller flere like oppgaver for ulike personer (sammenslått i Kategori-visningen). */
+  tasks: Task[];
+  /** De ansvarlige, eller barna som kan ta jobben. Tom = felles. */
   people: RowPerson[];
-  /** «Leah», «Felles» eller «Alle barna». Leses opp, siden avatarene er skjult for skjermlesere. */
+  /** «Leah», «Leah og Ola», «Felles» eller «Alle barna». Leses opp, siden avatarene er skjult for skjermlesere. */
   assigneeName: string;
   /** Enhetens dato, for «neste …» og «Forfalt». */
   today: string;
@@ -24,22 +24,22 @@ type Props = {
 /**
  * Én kompakt rad i et gruppekort i «Oppgaver»: tittel og gjentakelse med neste frist til venstre.
  * Til høyre: «Forfalt», lønn og avatarene til de tildelte (felles/ingen: et personer-ikon).
+ * Flere oppgaver: nærmeste frist, «Forfalt» hvis én er forfalt, og lønnsspenn («10–20 kr»).
  */
-export function TaskRow({ task, people, assigneeName, today, showCategory, onPress }: Props) {
+export function TaskRow({ tasks, people, assigneeName, today, showCategory, onPress }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const meta = [showCategory && toCategory(task.category).label, describeTaskSchedule(task, today)]
-    .filter(Boolean)
-    .join(' · ');
-  const reward = task.reward_nok ? formatKroner(task.reward_nok) : null;
-  const overdue = isTaskOverdue(task, today);
+  const task = tasks[0];
+  const { schedule, overdue } = bundleSchedule(tasks, today);
+  const meta = [showCategory && toCategory(task.category).label, schedule].filter(Boolean).join(' · ');
+  const reward = bundleReward(tasks);
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={[task.title, assigneeName, meta, overdue && 'forfalt', reward].filter(Boolean).join(', ')}
-      accessibilityHint="Endre oppgaven"
+      accessibilityHint={tasks.length > 1 ? 'Velg hvem sin oppgave du vil endre' : 'Endre oppgaven'}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.text}>

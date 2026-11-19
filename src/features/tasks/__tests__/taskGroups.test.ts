@@ -1,6 +1,12 @@
 import type { Member } from '../../household/types';
 import {
+  bundleReward,
+  bundleSchedule,
+  bundleTasks,
   describeTaskSchedule,
+  joinNames,
+  sameTaskKey,
+  singleBundles,
   filterTasks,
   groupByCategory,
   groupByPerson,
@@ -35,6 +41,8 @@ const task = (overrides: Partial<Task>) =>
     season_end_month: null,
     next_due_on: TODAY,
     postponed_to: null,
+    template_id: null,
+    reward_nok: null,
     ...overrides,
   }) as Task;
 
@@ -228,5 +236,98 @@ describe('isTaskOverdue', () => {
     expect(isTaskOverdue(task({ recurrence_type: 'job', next_due_on: '2026-11-01' }), TODAY)).toBe(false);
     const once = { recurrence_type: 'once' as const, recurrence_unit: null, weekdays: null };
     expect(isTaskOverdue(task({ ...once, next_due_on: null }), TODAY)).toBe(false);
+  });
+});
+
+describe('sameTaskKey', () => {
+  it('felles og jobber slås aldri sammen', () => {
+    expect(sameTaskKey(task({ assigned_member_id: null }))).toBeNull();
+    expect(sameTaskKey(task({ recurrence_type: 'job', assigned_member_id: null }))).toBeNull();
+  });
+
+  it('samme mal er lik, uansett tittel', () => {
+    const a = task({ title: 'Re opp senga', template_id: 'm1', assigned_member_id: 'leah' });
+    const b = task({ title: 'Re opp sengen', template_id: 'm1', assigned_member_id: 'ola' });
+    expect(sameTaskKey(a)).toBe(sameTaskKey(b));
+  });
+
+  it('uten mal: tittel uten forskjell på store og små bokstaver, kategori og gjentakelse', () => {
+    const a = task({ title: 'Re opp senga', assigned_member_id: 'leah' });
+    expect(sameTaskKey(task({ title: ' re opp Senga', assigned_member_id: 'ola' }))).toBe(sameTaskKey(a));
+    expect(sameTaskKey(task({ title: 'Re opp senga', assigned_member_id: 'ola', category: 'kitchen' }))).not.toBe(
+      sameTaskKey(a),
+    );
+    expect(sameTaskKey(task({ title: 'Re opp senga', assigned_member_id: 'ola', weekdays: [1] }))).not.toBe(
+      sameTaskKey(a),
+    );
+  });
+
+  it('frist og lønn teller ikke, men engangsoppgaver må ha samme dato', () => {
+    const a = task({ assigned_member_id: 'leah', next_due_on: '2026-11-19', reward_nok: 10 });
+    expect(sameTaskKey(task({ assigned_member_id: 'ola', next_due_on: '2026-11-26', reward_nok: 20 }))).toBe(
+      sameTaskKey(a),
+    );
+    const once = (date: string) =>
+      task({ assigned_member_id: 'ola', recurrence_type: 'once', recurrence_unit: null, next_due_on: date });
+    expect(sameTaskKey(once('2026-11-19'))).toBe(sameTaskKey({ ...once('2026-11-19'), assigned_member_id: 'leah' }));
+    expect(sameTaskKey(once('2026-11-19'))).not.toBe(sameTaskKey(once('2026-11-20')));
+  });
+});
+
+describe('bundleTasks', () => {
+  const t = (id: string, title: string, assigned: string | null) =>
+    ({ ...task({ title, assigned_member_id: assigned }), id }) as Task;
+
+  it('like oppgaver blir én rad, med personene i medlemsrekkefølge', () => {
+    const tasks = [t('1', 'Re opp senga', 'ola'), t('2', 'Re opp senga', 'leah'), t('3', 'Tannpuss', 'ola')];
+    const bundles = bundleTasks(tasks, members);
+    expect(bundles.map((b) => b.tasks.map((x) => x.id))).toEqual([['2', '1'], ['3']]);
+  });
+
+  it('felles slås ikke sammen, og ikke to like for samme person', () => {
+    const tasks = [t('1', 'Støvsuge', null), t('2', 'Støvsuge', null), t('3', 'Lese', 'leah'), t('4', 'Lese', 'leah')];
+    expect(bundleTasks(tasks, members).map((b) => b.tasks.length)).toEqual([1, 1, 1, 1]);
+  });
+
+  it('nøkkelen er den første oppgavens id, så den er unik i gruppen', () => {
+    const tasks = [t('a', 'Lese', 'leah'), t('b', 'Lese', 'leah'), t('c', 'Lese', 'ola')];
+    expect(bundleTasks(tasks, members).map((b) => b.key)).toEqual(['a', 'b']);
+  });
+
+  it('singleBundles: én rad per oppgave', () => {
+    expect(singleBundles([t('1', 'A', 'leah'), t('2', 'A', 'ola')]).map((b) => b.key)).toEqual(['1', '2']);
+  });
+});
+
+describe('bundleReward', () => {
+  it('ingen, lik eller spenn', () => {
+    expect(bundleReward([task({}), task({ reward_nok: 0 })])).toBeNull();
+    expect(bundleReward([task({ reward_nok: 10 }), task({ reward_nok: 10 })])).toBe('10 kr');
+    expect(bundleReward([task({ reward_nok: 20 }), task({ reward_nok: 10 }), task({})])).toBe('10–20 kr');
+  });
+});
+
+describe('bundleSchedule', () => {
+  it('nærmeste frist, og forfalt hvis én er forfalt', () => {
+    const later = task({ next_due_on: '2026-12-03' });
+    const sooner = task({ next_due_on: '2026-11-26' });
+    expect(bundleSchedule([later, sooner], TODAY)).toEqual({
+      schedule: 'Hver torsdag · neste tor. 26. nov.',
+      overdue: false,
+    });
+    expect(bundleSchedule([later, task({ next_due_on: '2026-11-12' })], TODAY).overdue).toBe(true);
+  });
+
+  it('én oppgave: det samme som describeTaskSchedule', () => {
+    const one = task({ next_due_on: '2026-11-26' });
+    expect(bundleSchedule([one], TODAY).schedule).toBe(describeTaskSchedule(one, TODAY));
+  });
+});
+
+describe('joinNames', () => {
+  it('én, to og flere', () => {
+    expect(joinNames(['Leah'])).toBe('Leah');
+    expect(joinNames(['Leah', 'Ola'])).toBe('Leah og Ola');
+    expect(joinNames(['Leah', 'Ola', 'Mor'])).toBe('Leah, Ola og Mor');
   });
 });

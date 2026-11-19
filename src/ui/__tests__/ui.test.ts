@@ -1,5 +1,6 @@
 import { contrastRatio } from '../contrast';
 import { familyStripLayout, RING_MAX, SCROLL_RING, shortName } from '../familyStripLayout';
+import { avatarStackLayout } from '../avatarStackLayout';
 import { jobColumns } from '../jobGrid';
 import { parsePreference, resolveScheme } from '../appearance';
 import { darkColors, lightColors, themes, type Theme } from '../theme';
@@ -12,6 +13,14 @@ describe('waitingText', () => {
     expect(waitingText(['Leah', 'Jesper'])).toBe('Leah og Jesper venter');
     expect(waitingText(['Leah', 'Jesper', 'Iver'])).toBe('Leah, Jesper og Iver venter');
     expect(waitingText(['Leah', 'Jesper', 'Iver', 'Ada'])).toBe('Leah, Jesper og 2 til venter');
+  });
+});
+
+describe('avatarStackLayout', () => {
+  it('viser opptil max, resten blir «+N»', () => {
+    expect(avatarStackLayout(2, 3)).toEqual({ shown: 2, extra: 0 });
+    expect(avatarStackLayout(3, 3)).toEqual({ shown: 3, extra: 0 });
+    expect(avatarStackLayout(4, 3)).toEqual({ shown: 3, extra: 1 });
   });
 });
 

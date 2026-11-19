@@ -171,7 +171,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `IconButton` | rund ikonknapp, 38, 40 eller 48 (hitSlop opp til 48) |
 | `IconBadge` | ikon i en flate (32/34/36/44), `shape` `round` eller `square` (radius 10), bare visning: kategori i «Oppgaver», og «Felles» der en person ellers har avatar |
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
-| `AvatarStack` | overlappende avatarer (−10 px fra 32 og opp, ca. 30 % av størrelsen under) |
+| `AvatarStack` | overlappende avatarer (−10 px fra 32 og opp, ca. 30 % av størrelsen under). Flere enn `max`: en rund «+N» i `surfaceMuted` til slutt |
 | `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle. Opptil seks: én rad, ringen (maks 56 px) regnes ut fra antall og skjermbredde (`familyStripLayout.ts`). Sju eller flere: raden kan sveipes og falmer mot høyre. Navn: «Leah», «John M.», uten «…» |
 | `ApprovalBanner` | gult banner: hvem som venter, antall og sum, knappen «Se» |
 | `JobCard` / `JobGrid` | ledige jobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
@@ -213,6 +213,11 @@ undertittel «Hver torsdag · neste tor. 21. nov.» (engangs: bare datoen). Til 
 `Chip tone="overdue"` (aldri i undertittelen), lønn som `Chip tone="money"`, og avatarene (24 px, overlappende)
 til de tildelte. Felles oppgaver og jobber uten barn får et lite nøytralt personer-ikon. I Person-visningen
 står kategorien først i undertittelen. Innholdet ligger i `pageWidth`.
+I Kategori-visningen er like oppgaver for flere personer én rad med alle avatarene (`bundleTasks` i
+`features/tasks/taskGroups.ts`: samme mal, eller samme tittel, kategori og gjentakelse). Raden viser nærmeste
+frist, «Forfalt» hvis én er forfalt, og lønnsspenn («10–20 kr»). Trykk åpner «Hvem sin oppgave vil du endre?»
+(`MemberPickerModal`), sveip-slett sletter alle i raden, og «Angre» henter alle tilbake. Antallet i
+overskriften teller rader. Bare visningen: hver person har fortsatt sin egen oppgave.
 
 Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.

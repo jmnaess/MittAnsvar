@@ -23,16 +23,19 @@ type Props<M extends PickableMember> = {
   meId?: string;
   /** Teksten på bekreft-knappen når preselectedId er satt. Standard «Kryss av». */
   confirmLabel?: string;
+  /** Overskriften. Standard «Hvem gjorde «tittel»?». */
+  title?: string;
   onPick: (member: M) => void;
   onClose: () => void;
 };
 
 /**
  * «Hvem gjorde det?» Ved langt trykk, ledige jobber og oppgaver med lønn i «I dag», og når en
- * voksen flytter en utført oppgave til en annen person.
+ * voksen flytter en utført oppgave til en annen person. Med egen title også «Hvem sin oppgave?»
+ * på sammenslåtte rader i «Oppgaver».
  */
 export function MemberPickerModal<M extends PickableMember>({
-  taskTitle, members, preselectedId, meId, confirmLabel = 'Kryss av', onPick, onClose,
+  taskTitle, members, preselectedId, meId, confirmLabel = 'Kryss av', title, onPick, onClose,
 }: Props<M>) {
   const { colors, personColor } = useTheme();
   const styles = useStyles();
@@ -45,7 +48,7 @@ export function MemberPickerModal<M extends PickableMember>({
   const selected = members.find((m) => m.id === selectedId);
 
   return (
-    <Sheet visible={taskTitle !== null} title={`Hvem gjorde «${taskTitle}»?`} onClose={onClose}>
+    <Sheet visible={taskTitle !== null} title={title ?? `Hvem gjorde «${taskTitle}»?`} onClose={onClose}>
       {members.map((member) => {
         const isSelected = confirm && member.id === selectedId;
         const color = personColor(member.avatar);

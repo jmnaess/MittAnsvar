@@ -28,6 +28,7 @@ import {
   useMyMember,
 } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
+import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
 import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
 import { TaskRow } from '../../../src/features/tasks/components/TaskRow';
 import { useArchiveTask, useRestoreTask, useTasks } from '../../../src/features/tasks/hooks';
@@ -35,11 +36,15 @@ import { describeJobMembers, jobMembers } from '../../../src/features/tasks/job'
 import { toggleGroup, useOpenGroups } from '../../../src/features/tasks/openGroups';
 import { isJob } from '../../../src/features/tasks/recurrence';
 import {
+  bundleTasks,
   filterTasks,
   type GroupMode,
   groupByCategory,
   groupByPerson,
+  joinNames,
   type OpenGroup,
+  singleBundles,
+  type TaskBundle,
   type TaskGroup,
   withOpenState,
 } from '../../../src/features/tasks/taskGroups';
@@ -58,6 +63,7 @@ const ALL = 'all';
 
 type Group = TaskGroup<Task, Member>;
 type Item = OpenGroup<Task, Member>;
+type Bundle = TaskBundle<Task>;
 
 /**
  * Alle aktive oppgaver, gruppert etter kategori eller person, med søk og personfilter.
@@ -66,6 +72,8 @@ type Item = OpenGroup<Task, Member>;
  * Mens man søker, er alle grupper med treff åpne.
  * Voksne kan dra en rad mot venstre og trykke «Slett». Oppgaven arkiveres med en gang, uten
  * bekreftelse, og banneret viser «Angre» i noen sekunder.
+ * I Kategori-visningen er like oppgaver for flere personer én rad (bundleTasks). Trykk spør hvem
+ * sin oppgave som skal endres, og sveip-slett sletter alle i raden. Person-visningen: én rad per oppgave.
  */
 export default function TasksScreen() {
   const styles = useStyles();
@@ -83,7 +91,10 @@ export default function TasksScreen() {
   const [mode, setMode] = useState<GroupMode>('category');
   const [personId, setPersonId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [deleted, setDeleted] = useState<Task | null>(null);
+  // Oppgavene i raden som ble slettet (flere når raden var sammenslått).
+  const [deleted, setDeleted] = useState<Task[] | null>(null);
+  // Sammenslått rad som ble trykket: velg hvem sin oppgave som skal endres.
+  const [picking, setPicking] = useState<Task[] | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   // «Ny oppgave»: velg «Oppgave» eller «Ledig jobb».
   const [creating, setCreating] = useState(false);
@@ -94,37 +105,58 @@ export default function TasksScreen() {
   const groups: Group[] = mode === 'category' ? groupByCategory(filtered) : groupByPerson(filtered, members);
   const items = withOpenState(groups, openKeys, searching);
 
-  function remove(task: Task) {
+  /** Sletter alle oppgavene i raden. Banneret kan angre alle. */
+  async function remove(rowTasks: Task[]) {
     setActionError(null);
-    archive.mutate(task.id, {
-      onSuccess: () => setDeleted(task),
-      onError: (e) => setActionError(toNorwegianMessage(e)),
-    });
+    try {
+      await Promise.all(rowTasks.map((t) => archive.mutateAsync(t.id)));
+      setDeleted(rowTasks);
+    } catch (e) {
+      setActionError(toNorwegianMessage(e));
+    }
   }
 
-  function undoRemove() {
+  async function undoRemove() {
     if (!deleted) return;
-    restore.mutate(deleted.id, {
-      onSuccess: () => setDeleted(null),
-      onError: (e) => {
-        setDeleted(null);
-        setActionError(toNorwegianMessage(e));
-      },
-    });
+    try {
+      await Promise.all(deleted.map((t) => restore.mutateAsync(t.id)));
+    } catch (e) {
+      setActionError(toNorwegianMessage(e));
+    }
+    setDeleted(null);
   }
 
-  /** Avatarene på raden: barna som kan ta jobben, den ansvarlige, eller ingen (felles). */
-  function peopleOf(task: Task) {
-    const list = isJob(task)
-      ? jobMembers(task.job_member_ids, members)
-      : members.filter((m) => m.id === task.assigned_member_id);
+  /** Radene i en gruppe: like oppgaver slås sammen bare i Kategori-visningen. */
+  const rowsOf = (group: Group): Bundle[] =>
+    group.kind === 'category' ? bundleTasks(group.tasks, members) : singleBundles(group.tasks);
+
+  /** De ansvarlige, i medlemslistens rekkefølge (bundleTasks sorterer). */
+  const assigneesOf = (rowTasks: Task[]) =>
+    rowTasks
+      .map((t) => members.find((m) => m.id === t.assigned_member_id))
+      .filter((m): m is Member => m !== undefined);
+
+  /** Avatarene på raden: barna som kan ta jobben, de ansvarlige, eller ingen (felles). */
+  function peopleOf(rowTasks: Task[]) {
+    const list = isJob(rowTasks[0]) ? jobMembers(rowTasks[0].job_member_ids, members) : assigneesOf(rowTasks);
     return list.map((m) => ({ avatar: m.avatar, photo: photoOf(m) }));
   }
 
-  const nameOf = (task: Task) =>
-    isJob(task)
-      ? describeJobMembers(task.job_member_ids, members)
-      : (members.find((m) => m.id === task.assigned_member_id)?.display_name ?? 'Felles');
+  function nameOf(rowTasks: Task[]) {
+    if (isJob(rowTasks[0])) return describeJobMembers(rowTasks[0].job_member_ids, members);
+    const names = assigneesOf(rowTasks).map((m) => m.display_name);
+    return names.length > 0 ? joinNames(names) : 'Felles';
+  }
+
+  // Jobber endres i jobbskjemaet, alt annet i oppgaveskjemaet.
+  const edit = (task: Task) =>
+    router.push({ pathname: isJob(task) ? '/job/[id]' : '/task/[id]', params: { id: task.id } });
+
+  function pickOwner(member: Member) {
+    const task = picking?.find((t) => t.assigned_member_id === member.id);
+    setPicking(null);
+    if (task) edit(task);
+  }
 
   /** Pluss øverst: med en person valgt i filteret rett til skjemaet med personen forhåndsvalgt. */
   function create() {
@@ -133,11 +165,13 @@ export default function TasksScreen() {
   }
 
   function renderItem({ item }: { item: Item }) {
+    const rows = rowsOf(item.group);
     return (
       <GroupCard
         header={
           <GroupHeaderFor
             group={item.group}
+            count={rows.length}
             open={item.open}
             // Under søk er alle åpne. Da lagres ikke noe ved trykk.
             onPress={() => !searching && toggleGroup(item.group.key)}
@@ -145,29 +179,27 @@ export default function TasksScreen() {
           />
         }
       >
-        {item.open && item.group.tasks.map(renderTask)}
+        {item.open && rows.map(renderRow)}
       </GroupCard>
     );
   }
 
-  function renderTask(task: Task) {
+  function renderRow(bundle: Bundle) {
+    const rowTasks = bundle.tasks;
     const row = (
       <TaskRow
-        task={task}
-        people={peopleOf(task)}
-        assigneeName={nameOf(task)}
+        tasks={rowTasks}
+        people={peopleOf(rowTasks)}
+        assigneeName={nameOf(rowTasks)}
         today={today}
         showCategory={mode === 'person'}
-        // Jobber endres i jobbskjemaet, alt annet i oppgaveskjemaet.
-        onPress={() =>
-          router.push({ pathname: isJob(task) ? '/job/[id]' : '/task/[id]', params: { id: task.id } })
-        }
+        onPress={() => (rowTasks.length > 1 ? setPicking(rowTasks) : edit(rowTasks[0]))}
       />
     );
     return isAdult ? (
-      <SwipeToDelete key={task.id} onDelete={() => remove(task)}>{row}</SwipeToDelete>
+      <SwipeToDelete key={bundle.key} onDelete={() => remove(rowTasks)}>{row}</SwipeToDelete>
     ) : (
-      <View key={task.id}>{row}</View>
+      <View key={bundle.key}>{row}</View>
     );
   }
 
@@ -227,10 +259,17 @@ export default function TasksScreen() {
         taskLabel="Oppgave"
         taskHref="/task/new"
       />
+      <MemberPickerModal
+        taskTitle={picking?.[0].title ?? null}
+        title="Hvem sin oppgave vil du endre?"
+        members={picking ? assigneesOf(picking) : []}
+        onPick={pickOwner}
+        onClose={() => setPicking(null)}
+      />
       {deleted && (
         <UndoToast
-          resetKey={deleted.id}
-          message={`Slettet: ${deleted.title}`}
+          resetKey={deleted[0].id}
+          message={`Slettet: ${deleted[0].title}${deleted.length > 1 ? ` (${deleted.length})` : ''}`}
           undoing={restore.isPending}
           onUndo={undoRemove}
           onHide={() => setDeleted(null)}
@@ -242,15 +281,16 @@ export default function TasksScreen() {
 
 type GroupHeaderProps = {
   group: Group;
+  /** Antall rader i gruppen (sammenslåtte oppgaver teller som én). */
+  count: number;
   open: boolean;
   onPress: () => void;
   photoOf: ReturnType<typeof useMemberPhotoLookup>;
 };
 
 /** Overskriften med riktig ikon: kategoriikon i firkant, personens avatar, eller nøytral rund for «Felles» og «Ledige jobber». */
-function GroupHeaderFor({ group, open, onPress, photoOf }: GroupHeaderProps) {
+function GroupHeaderFor({ group, count, open, onPress, photoOf }: GroupHeaderProps) {
   const { colors } = useTheme();
-  const count = group.tasks.length;
   switch (group.kind) {
     case 'category':
       return (

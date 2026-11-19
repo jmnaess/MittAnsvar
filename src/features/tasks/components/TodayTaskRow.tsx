@@ -22,13 +22,13 @@ type Props = {
   /** Utført. */
   onPress: () => void;
   /**
-   * Satt (bare voksne): sirkelen krysser av, og trykk på resten av raden åpner valgene
-   * (TaskRowMenu). Utelatt: hele raden krysser av.
+   * Satt (bare voksne): sirkelen krysser av, og trykk på resten av raden gjør dette
+   * («Hvem gjorde …?»). Utelatt: hele raden krysser av.
    */
-  onOpen?: () => void;
-  /** Utelatt = langt trykk gjør ingenting (barnets enhet). */
+  onRowPress?: () => void;
+  /** Utelatt = langt trykk gjør ingenting (barnets enhet). Voksne: åpner valgene (TaskRowMenu). */
   onLongPress?: () => void;
-  /** Hva langt trykk gjør, for skjermlesere. Standard: velg hvem som gjorde det. */
+  /** Hva trykk og langt trykk gjør, for skjermlesere. Standard: velg hvem som gjorde det. */
   longPressHint?: string;
 };
 
@@ -48,12 +48,12 @@ function metaText(task: RowTask, assigneeName?: string): string {
 }
 
 /**
- * Én oppgave i «I dag». Trykk = utført, langt trykk = velg hvem som gjorde det.
- * Med onOpen: sirkelen = utført, raden = valg.
+ * Én oppgave i «I dag». Trykk = utført, langt trykk = onLongPress.
+ * Med onRowPress: sirkelen = utført, raden = onRowPress.
  * Mens avkrysningen pågår, vises raden som utført.
  */
 export function TodayTaskRow({
-  task, assigneeName, checkColor, muted, large, busy, onPress, onOpen, onLongPress,
+  task, assigneeName, checkColor, muted, large, busy, onPress, onRowPress, onLongPress,
   longPressHint = DEFAULT_HINT,
 }: Props) {
   const label = `${task.title}${task.is_overdue ? ', forfalt' : ''}`;
@@ -67,11 +67,11 @@ export function TodayTaskRow({
       checkColor={checkColor}
       muted={muted}
       large={large}
-      onPress={onOpen ?? onPress}
-      onCheckPress={onOpen ? onPress : undefined}
-      checkAccessibilityLabel={onOpen ? `Marker ${task.title} som utført` : undefined}
+      onPress={onRowPress ?? onPress}
+      onCheckPress={onRowPress ? onPress : undefined}
+      checkAccessibilityLabel={onRowPress ? `Marker ${task.title} som utført` : undefined}
       onLongPress={onLongPress}
-      accessibilityLabel={onOpen ? `${label}. Åpne valg` : `${label}. Marker som utført`}
+      accessibilityLabel={onRowPress ? label : `${label}. Marker som utført`}
       accessibilityHint={onLongPress ? longPressHint : undefined}
       right={
         hasChips ? (

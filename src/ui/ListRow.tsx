@@ -18,6 +18,7 @@ type Props = {
   badge?: ReactNode;
   /** Utelatt = bare visning, uten pil. */
   onPress?: () => void;
+  onLongPress?: () => void;
   /** Raden ligger i et hvitt kort: bruk surfaceMuted som bakgrunn. */
   muted?: boolean;
   accessibilityLabel?: string;
@@ -26,7 +27,7 @@ type Props = {
 
 /** Én rad i en liste (Oppgaver, Årshjul, Husstand, historikk): hvit, avrundet, pil når den kan trykkes. */
 export function ListRow({
-  title, meta, left, right, badge, onPress, muted, accessibilityLabel, accessibilityHint,
+  title, meta, left, right, badge, onPress, onLongPress, muted, accessibilityLabel, accessibilityHint,
 }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -34,6 +35,7 @@ export function ListRow({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={accessibilityLabel}

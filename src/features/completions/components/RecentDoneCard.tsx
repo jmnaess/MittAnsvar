@@ -8,7 +8,7 @@ type Props = {
   days: RecentDay[];
   /** Fyllfarge på sjekkboksen: personens ring-farge. */
   checkColor: string;
-  /** Satt for voksne: hva trykk på raden gjør. undefined for en rad = den kan ikke trykkes. */
+  /** Satt for voksne: hva trykk og langt trykk på raden gjør. undefined for en rad = den kan ikke trykkes. */
   rowPress?: (completion: RecentCompletion) => (() => void) | undefined;
 };
 
@@ -35,6 +35,7 @@ export function RecentDoneCard({ days, checkColor, rowPress }: Props) {
               muted
               checkColor={checkColor}
               onPress={rowPress?.(c)}
+              onLongPress={rowPress?.(c)}
               accessibilityLabel={`${c.title}, utført ${day.title.toLowerCase()}`}
               right={
                 c.reward_nok !== null ? (

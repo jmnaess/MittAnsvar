@@ -7,7 +7,9 @@ import { canUndo, DONE_PREVIEW, doneByText, moreDoneA11yLabel, moreDoneText, vis
 export type AdultDoneActions = {
   /** Trykk på sirkelen: «Merke som ikke gjort?». */
   onRemove: (completion: TodayCompletion) => void;
-  /** Trykk på raden: åpner valgene (se TaskRowMenu). */
+  /** Trykk på raden: «Endre hvem som gjorde det», eller valgene hvis ingen andre kan velges. */
+  onPress: (completion: TodayCompletion) => void;
+  /** Langt trykk på raden: åpner valgene (se TaskRowMenu). */
   onOpen: (completion: TodayCompletion) => void;
 };
 
@@ -77,11 +79,12 @@ export function DoneList({
               done
               checkColor={checkColor}
               disabled={busyId === c.id}
-              onPress={() => adult.onOpen(c)}
+              onPress={() => adult.onPress(c)}
+              onLongPress={() => adult.onOpen(c)}
               onCheckPress={() => adult.onRemove(c)}
               checkAccessibilityLabel={`Merk ${c.title} som ikke gjort`}
               accessibilityLabel={label}
-              accessibilityHint="Trykk for å åpne valg"
+              accessibilityHint="Trykk for å endre hvem som gjorde det. Hold inne for valg"
               right={right}
             />
           );

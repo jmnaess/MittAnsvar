@@ -95,8 +95,10 @@ type PostponedToast = { taskId: string; message: string };
  * voksne, én seksjon per person i personens farge, «Felles», «Ledige jobber», «Denne måneden»
  * (årshjulet) og «Kommende» for hele husstanden: 8 uker, uten hyppige oppgaver, med navn på
  * raden og «Neste måned» nederst.
- * Voksne legger ut jobber med «+» og endrer dem med langt trykk. Trykk på en oppgaverad åpner
- * valgene for voksne (TaskRowMenu, rowActions.ts), og sirkelen krysser av.
+ * Voksne legger ut jobber med «+» og endrer dem med langt trykk. For voksne gir trykk på en
+ * oppgaverad «Hvem gjorde …?» (utført: «Endre hvem som gjorde det»), langt trykk åpner valgene
+ * (TaskRowMenu, rowActions.ts), og sirkelen krysser av. Rader uten noe å velge (senere i
+ * «Kommende», «Gjort siste 3 dager») åpner valgene også ved trykk.
  *
  * Personvisning (én person valgt): personens kort, personens oppgaver «Denne måneden»,
  * «Kommende» (8 uker, sirkelen krysser av den nærmeste forekomsten tidlig, «Neste måned»
@@ -237,10 +239,20 @@ export default function TodayScreen() {
   const closeMenu = () => setMenuOpen(false);
 
   const isActiveTask = (taskId: string) => activeTasks.some((t) => t.id === taskId);
+  const canPickDoer = members.length > 1;
+  const canReassign = (c: TodayCompletion) =>
+    reassignCandidates(c, members).some((m) => m.id !== c.completed_by_member_id);
+
+  // Trykk på en rad (voksne): «Hvem gjorde …?» når det går, ellers valgene.
+  const pressOpenRow = (task: TodayTask) =>
+    canPickDoer ? pickDoer(task) : openMenu({ kind: 'open', task });
+  const pressUpcomingRow = (task: Task, checkable: boolean) =>
+    checkable && canPickDoer ? pickDoer(task) : openMenu({ kind: 'upcoming', task, checkable });
+  const pressDoneRow = (completion: TodayCompletion) =>
+    canReassign(completion) ? setReassigning(completion) : openMenu({ kind: 'done', completion });
 
   function menuActions(row: RowMenu | null): RowAction[] {
     if (!row) return [];
-    const canPickDoer = members.length > 1;
     switch (row.kind) {
       case 'open':
         return rowActions({ kind: 'open', canPickDoer });
@@ -249,9 +261,7 @@ export default function TodayScreen() {
       case 'done':
         return rowActions({
           kind: 'done',
-          canReassign: reassignCandidates(row.completion, members).some(
-            (m) => m.id !== row.completion.completed_by_member_id,
-          ),
+          canReassign: canReassign(row.completion),
           canEdit: isActiveTask(row.completion.task_id),
         });
       case 'recent':
@@ -363,8 +373,9 @@ export default function TodayScreen() {
         muted={muted}
         busy={busyId === task.id}
         onPress={() => handlePress(task)}
-        onOpen={isAdult ? () => openMenu({ kind: 'open', task }) : undefined}
-        onLongPress={() => pickDoer(task)}
+        onRowPress={isAdult ? () => pressOpenRow(task) : undefined}
+        onLongPress={isAdult ? () => openMenu({ kind: 'open', task }) : () => pickDoer(task)}
+        longPressHint={isAdult ? 'Trykk for å velge hvem som gjorde det. Hold inne for valg' : undefined}
       />
     ));
     return (
@@ -382,6 +393,7 @@ export default function TodayScreen() {
           onUndo={undoDone}
           adultActions={{
             onRemove: confirmRemove,
+            onPress: pressDoneRow,
             onOpen: (completion) => openMenu({ kind: 'done', completion }),
           }}
           expanded={expandedKeys.has(section.key)}
@@ -479,7 +491,8 @@ export default function TodayScreen() {
               checkColor={colors.primary}
               loading={upcomingPending}
               emptyText="Ingenting planlagt de neste ukene."
-              onOpen={
+              onRowPress={isAdult ? pressUpcomingRow : undefined}
+              onLongPress={
                 isAdult
                   ? (task, checkable) => openMenu({ kind: 'upcoming', task, checkable })
                   : undefined
@@ -509,7 +522,8 @@ export default function TodayScreen() {
                 checkColor={personColor(focused.avatar).ring}
                 loading={upcomingPending}
                 emptyText="Ingenting planlagt de neste ukene."
-                onOpen={
+                onRowPress={isAdult ? pressUpcomingRow : undefined}
+                onLongPress={
                   isAdult
                     ? (task, checkable) => openMenu({ kind: 'upcoming', task, checkable })
                     : undefined

@@ -13,11 +13,16 @@ type Props<T extends UpcomingTask> = {
    * sier om oppgaven er til et barn.
    */
   showReward: boolean | ((task: T) => boolean);
-  /** Satt for voksne: trykk på raden åpner valgene. checkable som i upcoming.ts. Barn kan bare se. */
-  onOpen?: (task: T, checkable: boolean) => void;
+  /**
+   * Satt for voksne: trykk på raden («Hvem gjorde …?» eller valgene). checkable som i upcoming.ts.
+   * Barn kan bare se.
+   */
+  onRowPress?: (task: T, checkable: boolean) => void;
+  /** Satt for voksne: langt trykk på raden åpner valgene. */
+  onLongPress?: (task: T, checkable: boolean) => void;
   /**
    * Satt: rader som kan krysses av tidlig (checkable, se canCompleteEarly) får sirkel.
-   * Med onOpen krysser sirkelen av og raden åpner valgene. Uten krysser hele raden av, som i «I dag».
+   * Med onRowPress krysser sirkelen av og raden gjør onRowPress. Uten krysser hele raden av, som i «I dag».
    */
   onComplete?: (task: T) => void;
   /** Oppgaven som krysses av nå: sirkelen vises fylt, og raden kan ikke trykkes. */
@@ -35,10 +40,10 @@ type Props<T extends UpcomingTask> = {
  * «Kommende» i personvisningen og i «Alle»: hyppige oppgaver én gang («Hver dag · neste tor.
  * 19. nov.»), deretter én gruppe per uke med dato på hver rad, og til slutt «Neste måned» med
  * årshjulets månedsoppgaver. Den nærmeste forekomsten av en oppgave kan krysses av tidlig
- * (onComplete). Voksne åpner valgene med trykk på raden (onOpen). nameOf legger til hvem.
+ * (onComplete). Voksne: trykk på raden (onRowPress), langt trykk gir valgene (onLongPress). nameOf legger til hvem.
  */
 export function UpcomingCard<T extends UpcomingTask = Task>({
-  upcoming, showReward, onOpen, onComplete, busyId, checkColor, loading, emptyText, nameOf,
+  upcoming, showReward, onRowPress, onLongPress, onComplete, busyId, checkColor, loading, emptyText, nameOf,
 }: Props<T>) {
   const { colors } = useTheme();
   const { repeating, groups, nextMonth } = upcoming;
@@ -51,7 +56,9 @@ export function UpcomingCard<T extends UpcomingTask = Task>({
   // En vanlig funksjon, ikke en komponent: da monteres ikke radene på nytt ved hver render.
   function renderRow(key: string, task: T, dateText: string, checkable: boolean) {
     const meta = withName(task, dateText);
-    const open = onOpen ? () => onOpen(task, checkable) : undefined;
+    const open = onRowPress ? () => onRowPress(task, checkable) : undefined;
+    const longPress = onLongPress ? () => onLongPress(task, checkable) : undefined;
+    const hint = longPress ? 'Hold inne for valg' : undefined;
     if (!checkable || !onComplete) {
       return (
         <ListRow
@@ -61,7 +68,9 @@ export function UpcomingCard<T extends UpcomingTask = Task>({
           meta={meta}
           right={reward(task)}
           onPress={open}
+          onLongPress={longPress}
           accessibilityLabel={open ? `${task.title}, ${meta}. Åpne valg` : undefined}
+          accessibilityHint={hint}
         />
       );
     }
@@ -79,10 +88,10 @@ export function UpcomingCard<T extends UpcomingTask = Task>({
         checkColor={checkColor}
         onPress={open ?? complete}
         onCheckPress={open ? complete : undefined}
+        onLongPress={longPress}
         checkAccessibilityLabel={open ? `Marker ${task.title} som utført nå` : undefined}
-        accessibilityLabel={
-          open ? `${task.title}, ${meta}. Åpne valg` : `${task.title}, ${meta}. Marker som utført nå`
-        }
+        accessibilityLabel={open ? `${task.title}, ${meta}` : `${task.title}, ${meta}. Marker som utført nå`}
+        accessibilityHint={open ? 'Trykk for å velge hvem som gjorde det. Hold inne for valg' : hint}
       />
     );
   }

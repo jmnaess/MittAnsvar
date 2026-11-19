@@ -1,4 +1,5 @@
-// Menyen voksne får ved trykk på en oppgaverad i «I dag» og personvisningen.
+// Menyen voksne får ved langt trykk på en oppgaverad i «I dag» og personvisningen (trykk på
+// rader uten annen handling åpner den også).
 // Her bestemmes hvilke valg en rad får. Selve menyen er components/TaskRowMenu.tsx.
 
 import type { Task } from './types';

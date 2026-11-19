@@ -160,6 +160,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `Chip` | merkelapp: `money`, `overdue`, `neutral` |
 | `Button` | `primary` (pille), `secondary` (kant), `text`, `danger` (slett). `small` i rader og bannere |
 | `IconButton` | rund ikonknapp, 40 eller 48 |
+| `IconBadge` | ikon i en rund flate (32/36/44), bare visning: kategori i «Oppgaver», og «Felles» der en person ellers har avatar |
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
 | `AvatarStack` | overlappende avatarer (−10 px) |
 | `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle. Opptil seks: én rad, ringen (maks 56 px) regnes ut fra antall og skjermbredde (`familyStripLayout.ts`). Sju eller flere: raden kan sveipes og falmer mot høyre. Navn: «Leah», «John M.», uten «…» |
@@ -169,8 +170,10 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
 | `ListRow` | rad i lister (Oppgaver, Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil |
 | `Section` | seksjon på en side: tittel, forklaring og innhold |
+| `GroupHeader` | overskrift på en gruppe som foldes ut og inn: ikon/avatar, navn, antall, pil opp/ned (`accessibilityState.expanded`) |
 | `Message` / `Hint` | feil, bekreftelse eller nøytral tekst / hjelpetekst under et felt |
 | `TextField` | tekstfelt med etikett. `code` gir stor, sentrert tekst |
+| `SearchField` | søkefelt: `TextField` med forstørrelsesglass og «Tøm søket» når det har tekst |
 | `DateField` | datovelger med etikett. iOS: kompakt velger i raden, Android: knapp som åpner kalenderen. `minimumDate` stopper datoer bakover |
 | `ChoiceChip`, `ChoiceChips`, `MultiChoiceChips` | valgknapper (ett eller flere valg). Valgt = fylt primary |
 | `Switch` | bryter i primary, med valgfri etikett |
@@ -181,6 +184,16 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `tabIcon` | Ionicons-ikon til fanene, fylt når valgt |
 | `tabScreenOptions(colors)`, `modalScreenOptions(colors)`, `navigationTheme(scheme, colors)` | utseendet på fanelinjen, headerne og navigasjonen (`tabOptions.tsx`) |
 | `ThemeProvider`, `useTheme`, `useAppearance`, `makeStyles` | temaet som vises, valget under «Utseende», temaavhengige stiler |
+
+### «Oppgaver»
+
+Søkefelt, «Kategori | Person» og personfilter («Alle» + hver person) øverst. Gruppene (`GroupHeader`)
+er lukket til de åpnes; enheten husker hvilke som er åpne (`features/tasks/openGroups.ts`,
+`secureStorage`). Gruppen en oppgave havner i, åpnes når den lages eller endres. Under søk er alle
+grupper med treff åpne. Kategoriene og ikonene står i `features/tasks/categories.ts`.
+Raden (`features/tasks/components/TaskRow.tsx`): avatar(er) til venstre (`IconBadge` for felles),
+undertittel «Hver torsdag · neste tor. 21. nov.» (engangs: bare datoen; forfalt: «Forfalt»),
+lønn som `Chip tone="money"`. I Person-visningen står kategorien først i undertittelen.
 
 Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.

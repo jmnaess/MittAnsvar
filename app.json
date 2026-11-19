@@ -9,10 +9,17 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "requireFullScreen": true,
       "bundleIdentifier": "no.mittansvar.app",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "android": {
@@ -38,7 +45,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "MittAnsvar bruker kameraet til å skanne QR-koden som kobler et barns enhet til husstanden, og til å ta profilbilder.",
+          "cameraPermission": "MittAnsvar bruker kameraet til å skanne QR-koden som kobler et barns enhet eller en familieskjerm til husstanden, og til å ta profilbilder.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -49,7 +56,7 @@
         "expo-image-picker",
         {
           "photosPermission": "MittAnsvar bruker bildene dine når du velger et profilbilde.",
-          "cameraPermission": "MittAnsvar bruker kameraet til å skanne QR-koden som kobler et barns enhet til husstanden, og til å ta profilbilder.",
+          "cameraPermission": "MittAnsvar bruker kameraet til å skanne QR-koden som kobler et barns enhet eller en familieskjerm til husstanden, og til å ta profilbilder.",
           "microphonePermission": false
         }
       ],

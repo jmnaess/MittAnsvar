@@ -13,7 +13,7 @@ import { Avatar, type AvatarPhotoSource } from './Avatar';
 import { familyStripLayout, RING_EXTRA, shortName } from './familyStripLayout';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
-import { spacing } from './theme';
+import { contentMaxWidth, spacing } from './theme';
 import { useTheme } from './ThemeProvider';
 
 export type FamilyStripPerson = { id: string; name: string; avatar: string; photo?: AvatarPhotoSource };
@@ -36,7 +36,8 @@ const FADE_WIDTH = 48;
  */
 export function FamilyStrip({ people, selectedId, onSelect }: Props) {
   const { width } = useWindowDimensions();
-  const layout = familyStripLayout(people.length, width - 2 * spacing.page);
+  // Innholdet er aldri bredere enn contentMaxWidth, også på iPad i liggende format.
+  const layout = familyStripLayout(people.length, Math.min(width, contentMaxWidth) - 2 * spacing.page);
   const [atEnd, setAtEnd] = useState(false);
   const styles = useStyles();
 

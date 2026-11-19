@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet } from 'react-native';
+import { Modal, type ModalProps, Pressable, StyleSheet } from 'react-native';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
 import { pageWidth, radius, spacing } from './theme';
@@ -13,11 +13,26 @@ type Props = {
   children: ReactNode;
 };
 
+/** Uten denne vrir iOS en åpen Modal til stående, også når iPaden står liggende. */
+const ALL_ORIENTATIONS: ModalProps['supportedOrientations'] = [
+  'portrait',
+  'portrait-upside-down',
+  'landscape',
+  'landscape-left',
+  'landscape-right',
+];
+
 /** Boks midt på skjermen over en mørk bakgrunn. Til korte valg og bekreftelser. */
 export function Sheet({ visible, title, onClose, children }: Props) {
   const styles = useStyles();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose ?? (() => {})}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      supportedOrientations={ALL_ORIENTATIONS}
+      onRequestClose={onClose ?? (() => {})}
+    >
       <Pressable
         style={styles.backdrop}
         onPress={onClose}

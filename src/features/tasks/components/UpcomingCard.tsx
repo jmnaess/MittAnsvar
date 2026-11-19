@@ -8,8 +8,11 @@ import { formatUpcomingDate, type MemberUpcoming } from '../upcoming';
 
 type Props = {
   upcoming: MemberUpcoming;
-  /** Personen er et barn: vis lønn. Voksne får aldri lønn. */
-  showReward: boolean;
+  /**
+   * Vis lønn: true når personen er et barn (voksne får aldri lønn). I «Alle» en funksjon som
+   * sier om oppgaven er til et barn.
+   */
+  showReward: boolean | ((task: Task) => boolean);
   /** Satt for voksne: trykk på raden åpner valgene. checkable som i upcoming.ts. Barn kan bare se. */
   onOpen?: (task: Task, checkable: boolean) => void;
   /**
@@ -43,7 +46,7 @@ export function UpcomingCard({
   const withName = (task: Task, meta: string) => (nameOf ? `${meta} · ${nameOf(task)}` : meta);
 
   const reward = (task: Task) =>
-    showReward && task.reward_nok ? <Chip label={formatKroner(task.reward_nok)} tone="money" /> : undefined;
+    (typeof showReward === 'function' ? showReward(task) : showReward) && task.reward_nok ? <Chip label={formatKroner(task.reward_nok)} tone="money" /> : undefined;
 
   // En vanlig funksjon, ikke en komponent: da monteres ikke radene på nytt ved hver render.
   function renderRow(key: string, task: Task, dateText: string, checkable: boolean) {

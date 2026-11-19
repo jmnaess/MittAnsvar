@@ -466,7 +466,7 @@ export default function TodayScreen() {
           {!focused && !isPending && (
             <UpcomingCard
               upcoming={upcoming}
-              showReward={false}
+              showReward={(task) => members.find((m) => m.id === task.assigned_member_id)?.role === 'child'}
               nameOf={(task) => nameOf(task.assigned_member_id) ?? 'Felles'}
               onComplete={handlePress}
               busyId={busyId}

@@ -73,7 +73,7 @@ const KNOWN: Record<string, string> = {
   not_today: 'Bare det som er gjort i dag, kan endres her.',
   // Utsett til
   not_postponable: 'Denne oppgaven kan ikke utsettes. Last inn på nytt og prøv igjen.',
-  invalid_date: 'Velg en dato fra i morgen og inntil ett år fram.',
+  invalid_date: 'Velg en senere dato, innen ett år fra i dag.',
   undo_postpone_expired: 'Oppgaven er endret siden, så utsettelsen kan ikke angres.',
   // Utbetaling og godkjenning
   amount_exceeds_balance: 'Beløpet kan ikke være større enn det som er godkjent.',

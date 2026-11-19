@@ -133,7 +133,7 @@ Hver `feature` eier sine egne API-kall og hooks. Skjermene i `app/` setter bare 
 
 ---
 
-**Radene i «I dag» og personvisningen (voksne).** Sirkelen krysser av. Trykk på raden åpner alltid samme meny (`TaskRowMenu`), og `rowActions.ts` bestemmer valgene: åpen oppgave gir Utsett til … / Velg hvem som gjorde det / Endre oppgave / Avbryt, «Kommende» gir Velg hvem som gjorde det (hvis den kan krysses av tidlig) / Endre oppgave / Avbryt, utført i dag gir Ikke gjort / Endre hvem som gjorde det / Endre oppgave / Avbryt, og «Gjort siste 3 dager» gir Endre oppgave / Avbryt. Valg som ikke gir mening skjules: «Velg hvem» når husstanden har én person, «Endre hvem» når det ikke finnes andre å flytte til, og «Endre oppgave» når oppgaven ikke lenger er aktiv. Barnets enhet og familieskjermen har ingen meny.
+**Radene i «I dag» og personvisningen (voksne).** Sirkelen krysser av. Trykk på raden åpner alltid samme meny (`TaskRowMenu`), og `rowActions.ts` bestemmer valgene: åpen oppgave gir Utsett til … / Velg hvem som gjorde det / Endre oppgave / Avbryt, «Kommende» gir Utsett til … / Velg hvem som gjorde det (begge bare for nærmeste forekomst, som kan krysses av tidlig) / Endre oppgave / Avbryt, utført i dag gir Ikke gjort / Endre hvem som gjorde det / Endre oppgave / Avbryt, og «Gjort siste 3 dager» gir Endre oppgave / Avbryt. Valg som ikke gir mening skjules: «Velg hvem» når husstanden har én person, «Endre hvem» når det ikke finnes andre å flytte til, og «Endre oppgave» når oppgaven ikke lenger er aktiv. Barnets enhet og familieskjermen har ingen meny.
 
 ## 3. Barneprofiler, QR-kobling og felles visning
 

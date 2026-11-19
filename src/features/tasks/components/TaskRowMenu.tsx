@@ -22,6 +22,8 @@ type Props = {
   actions: RowAction[];
   /** I dag, 'YYYY-MM-DD'. */
   today: string;
+  /** «Utsett til» regnes fra denne datoen: i dag, eller fristen for en kommende forekomst. */
+  postponeFrom: string;
   onPostpone: (to: string) => void;
   onPickDoer: () => void;
   onRemove: () => void;
@@ -32,22 +34,23 @@ type Props = {
 
 /**
  * Voksen trykker på en oppgaverad i «I dag» eller personvisningen (sirkelen krysser av).
- * Først valgene, og ved «Utsett til …» I morgen, Til helga og Velg dato.
+ * Først valgene, og ved «Utsett til …» neste dag, Til helga og Velg dato.
  */
 export function TaskRowMenu({
-  visible, title, actions, today, onPostpone, onPickDoer, onRemove, onReassign, onEdit, onClose,
+  visible, title, actions, today, postponeFrom, onPostpone, onPickDoer, onRemove, onReassign, onEdit, onClose,
 }: Props) {
   const [step, setStep] = useState<'menu' | 'postpone'>('menu');
-  const { tomorrow, weekend } = postponeChoices(today);
-  const [date, setDate] = useState(tomorrow);
+  const { nextDay, weekend } = postponeChoices(postponeFrom);
+  const nextDayLabel = postponeFrom === today ? 'I morgen' : 'En dag senere';
+  const [date, setDate] = useState(nextDay);
 
   // Menyen åpnes: start på valgene igjen.
   useEffect(() => {
     if (visible) {
       setStep('menu');
-      setDate(tomorrow);
+      setDate(nextDay);
     }
-  }, [visible, tomorrow]);
+  }, [visible, nextDay]);
 
   const handlers: Record<RowAction, () => void> = {
     postpone: () => setStep('postpone'),
@@ -71,11 +74,11 @@ export function TaskRowMenu({
         ))
       ) : (
         <>
-          <Button variant="secondary" title={`I morgen (${formatDate(tomorrow)})`} onPress={() => onPostpone(tomorrow)} />
-          {weekend !== tomorrow && (
+          <Button variant="secondary" title={`${nextDayLabel} (${formatDate(nextDay)})`} onPress={() => onPostpone(nextDay)} />
+          {weekend !== nextDay && (
             <Button variant="secondary" title={`Til helga (${formatDate(weekend)})`} onPress={() => onPostpone(weekend)} />
           )}
-          <DateField label="Velg dato" value={date} minimumDate={tomorrow} onChange={setDate} />
+          <DateField label="Velg dato" value={date} minimumDate={nextDay} onChange={setDate} />
           <Button title={`Utsett til ${formatDate(date)}`} onPress={() => onPostpone(date)} />
           <Button variant="text" title="Tilbake" onPress={() => setStep('menu')} />
         </>

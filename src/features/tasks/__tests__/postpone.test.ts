@@ -25,12 +25,12 @@ describe('weekendDate («Til helga»)', () => {
 });
 
 describe('postponeChoices', () => {
-  it('i morgen og til helga', () => {
-    expect(postponeChoices('2026-11-18')).toEqual({ tomorrow: '2026-11-19', weekend: '2026-11-21' });
+  it('neste dag og til helga', () => {
+    expect(postponeChoices('2026-11-18')).toEqual({ nextDay: '2026-11-19', weekend: '2026-11-21' });
   });
 
-  it('fredag: i morgen og til helga er samme lørdag', () => {
-    expect(postponeChoices('2026-11-20')).toEqual({ tomorrow: '2026-11-21', weekend: '2026-11-21' });
+  it('fredag: neste dag og til helga er samme lørdag', () => {
+    expect(postponeChoices('2026-11-20')).toEqual({ nextDay: '2026-11-21', weekend: '2026-11-21' });
   });
 });
 

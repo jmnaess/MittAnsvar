@@ -1,4 +1,4 @@
-// «Utsett til» i «I dag». Datoene regnes her, men databasen sjekker dem (postpone_task).
+// «Utsett til» i «I dag» og «Kommende». Datoene regnes her, men databasen sjekker dem (postpone_task).
 // Se docs/DATABASE.md §2 (Utsettelse).
 
 import { addDays } from '../../lib/dates';
@@ -22,9 +22,12 @@ export function weekendDate(today: string): string {
   return addDays(today, 6 - weekday);
 }
 
-/** De faste valgene i «Utsett til». «Velg dato» starter på i morgen. */
-export function postponeChoices(today: string) {
-  return { tomorrow: addDays(today, 1), weekend: weekendDate(today) };
+/**
+ * De faste valgene i «Utsett til», regnet fra from: i dag, eller fristen for en kommende
+ * forekomst. Begge er etter from. «Velg dato» starter på nextDay.
+ */
+export function postponeChoices(from: string) {
+  return { nextDay: addDays(from, 1), weekend: weekendDate(from) };
 }
 
 /**

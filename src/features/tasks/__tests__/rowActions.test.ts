@@ -18,20 +18,21 @@ describe('rowActions: åpen oppgave i dag', () => {
 });
 
 describe('rowActions: «Kommende»', () => {
-  it('kan krysses av tidlig', () => {
+  it('nærmeste forekomst: alle valgene', () => {
     expect(labels({ kind: 'upcoming', checkable: true, canPickDoer: true })).toEqual([
+      'Utsett til …',
       'Velg hvem som gjorde det',
       'Endre oppgave',
       'Avbryt',
     ]);
   });
 
-  it('kan ikke krysses av tidlig: bare endre', () => {
+  it('senere forekomst eller daglig oppgave: bare endre', () => {
     expect(rowActions({ kind: 'upcoming', checkable: false, canPickDoer: true })).toEqual(['edit', 'cancel']);
   });
 
   it('én person i husstanden: ingen å velge', () => {
-    expect(rowActions({ kind: 'upcoming', checkable: true, canPickDoer: false })).toEqual(['edit', 'cancel']);
+    expect(rowActions({ kind: 'upcoming', checkable: true, canPickDoer: false })).toEqual(['postpone', 'edit', 'cancel']);
   });
 });
 

@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(47);
+select plan(59);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i de andre testfilene)
@@ -215,10 +215,38 @@ select throws_ok(format($$update public.tasks set postponed_to = null, postponed
 -- ===========================================================================
 select throws_ok(format($$select public.postpone_task(%L, %L)$$, tests.tid('Ledig jobb'), (select today + 1 from tests.d)),
   'P0001', 'not_postponable', 'jobber kan ikke utsettes');
-select throws_ok(format($$select public.postpone_task(%L, %L)$$, tests.tid('Fram i tid'), (select today + 5 from tests.d)),
-  'P0001', 'not_postponable', 'en oppgave som ikke er i «I dag» ennå, kan ikke utsettes');
 select throws_ok(format($$select public.postpone_task(%L, %L)$$, tests.tid('Ukentlig samme dag'), (select today from tests.d)),
-  'P0001', 'not_postponable', 'allerede utsatt (fram i tid) kan ikke utsettes igjen fra «I dag»');
+  'P0001', 'invalid_date', 'kan ikke utsette til i dag, heller ikke en oppgave fram i tid');
+
+-- ===========================================================================
+-- 8. Nærmeste kommende forekomst («Kommende»)
+-- ===========================================================================
+select lives_ok(format($$select public.postpone_task(%L, %L)$$,
+  tests.tid('Fram i tid'), (select today + 5 from tests.d)), 'kommende engangsoppgave kan utsettes');
+select is((tests.task('Fram i tid')).once_on::text || ' ' || tests.due('Fram i tid')::text,
+  (select (today + 5)::text || ' ' || (today + 5)::text from tests.d), 'kommende engangs: datoen er flyttet');
+select throws_ok(format($$select public.postpone_task(%L, %L)$$, tests.tid('Fram i tid'), (select today + 5 from tests.d)),
+  'P0001', 'invalid_date', 'kan ikke utsette til samme dag som fristen');
+select throws_ok(format($$select public.postpone_task(%L, %L)$$, tests.tid('Fram i tid'), (select today + 4 from tests.d)),
+  'P0001', 'invalid_date', 'kan ikke flytte en kommende oppgave til før fristen');
+select lives_ok(format($$select public.undo_postpone(%L)$$, tests.tid('Fram i tid')), 'kommende utsettelse kan angres');
+select is(tests.due('Fram i tid'), (select today + 3 from tests.d), 'angret: fristen er tilbake');
+
+-- Allerede utsatt: kan utsettes igjen, og «Angre» går ett steg tilbake.
+select is(public.postpone_task(tests.tid('Ukentlig samme dag'), (select today + 8 from tests.d)),
+  (select today + 7 from tests.d), 'utsatt oppgave kan utsettes igjen');
+select lives_ok(format($$select public.undo_postpone(%L)$$, tests.tid('Ukentlig samme dag')), 'andre utsettelse angres');
+select is(tests.due('Ukentlig samme dag'), (select today + 7 from tests.d), 'angre går ett steg tilbake');
+
+-- Gjentakende med frist i morgen: mønsteret fortsetter etter den nye datoen.
+insert into public.tasks (household_id, title, recurrence_type, recurrence_unit, recurrence_every, weekdays)
+select 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'I morgen', 'calendar', 'week', 1, array[(dow % 7 + 1)::smallint] from tests.d;
+select lives_ok(format($$select public.postpone_task(%L, %L)$$,
+  tests.tid('I morgen'), (select today + 3 from tests.d)), 'kommende gjentakende oppgave kan utsettes');
+select is(tests.upcoming('I morgen', (select today + 1 from tests.d), (select today + 9 from tests.d)),
+  (select array[today + 3, today + 8] from tests.d), 'kommende: utsatt dato, så det vanlige mønsteret');
+select lives_ok(format($$select public.undo_postpone(%L)$$, tests.tid('I morgen')), 'og angres');
+select is(tests.due('I morgen'), (select today + 1 from tests.d), 'fristen er i morgen igjen');
 select tests.logout();
 
 -- Ny oppgave med frist i dag for dato- og tilgangssjekkene.

@@ -9,7 +9,7 @@ export type RowAction = 'postpone' | 'pickDoer' | 'remove' | 'reassign' | 'edit'
 export type RowFacts =
   /** Åpen oppgave i dag. canPickDoer: husstanden har flere enn én person. */
   | { kind: 'open'; canPickDoer: boolean }
-  /** «Kommende». checkable: nærmeste forekomst, som kan krysses av tidlig. */
+  /** «Kommende». checkable: nærmeste forekomst, som kan krysses av tidlig og utsettes. */
   | { kind: 'upcoming'; checkable: boolean; canPickDoer: boolean }
   /** Utført i dag. canReassign: det finnes en annen å flytte til. canEdit: oppgaven er aktiv. */
   | { kind: 'done'; canReassign: boolean; canEdit: boolean }
@@ -32,7 +32,7 @@ export function rowActions(row: RowFacts): RowAction[] {
       case 'open':
         return ['postpone', row.canPickDoer && 'pickDoer', 'edit'];
       case 'upcoming':
-        return [row.checkable && row.canPickDoer && 'pickDoer', 'edit'];
+        return [row.checkable && 'postpone', row.checkable && row.canPickDoer && 'pickDoer', 'edit'];
       case 'done':
         return ['remove', row.canReassign && 'reassign', row.canEdit && 'edit'];
       case 'recent':

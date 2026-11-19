@@ -532,6 +532,7 @@ export default function TodayScreen() {
         title={menuTask?.title ?? menuCompletion?.title ?? ''}
         actions={menuActions(menu)}
         today={today}
+        postponeFrom={menu?.kind === 'upcoming' ? (menu.task.next_due_on ?? today) : today}
         onClose={closeMenu}
         onPostpone={(to) => menuTask && postponeTo(menuTask, to)}
         onPickDoer={() => {

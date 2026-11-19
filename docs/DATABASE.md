@@ -261,7 +261,7 @@ Hjelpefunksjoner (alle i `private`):
 - `local_today(tz, at)` og `household_today(hid)`.
 
 ### Utsettelse («Utsett til»)
-En voksen trykker på raden til en åpen oppgave i «I dag» (sirkelen krysser av) og velger I morgen, Til helga eller en dato. Bare denne forekomsten flyttes.
+En voksen trykker på raden til en åpen oppgave i «I dag», eller på nærmeste forekomst i «Kommende» (sirkelen krysser av), og velger neste dag, Til helga eller en dato. Bare denne forekomsten flyttes. I «Kommende» gjelder samme regel som for tidlig avkrysning (`canCompleteEarly`), så daglige oppgaver er ikke med.
 
 - **Modell: én åpen forekomst om gangen.** `postpone_task` flytter `next_due_on` til den nye datoen og husker den gamle i `postponed_from`. Gjentakelseskolonnene røres ikke. Engangsoppgaver får også ny `once_on`, så skjemaet viser riktig dato.
 - **Mønsteret fortsetter:** `compute_next_due` tar `max(frist, utført)` for kalender og regner fra utført for intervall. En søndagsoppgave utsatt til onsdag får neste frist søndagen etter.
@@ -271,6 +271,7 @@ En voksen trykker på raden til en åpen oppgave i «I dag» (sirkelen krysser a
 - **Månedsoppgaver:** en utsatt månedsoppgave er en fast dato (`due_by` = `next_due_on`, `today_tasks.is_month_task` = false, «Neste frist» viser dagen). Neste gang er det samme måned neste år.
 - **Redigering:** endres gjentakelsen eller `once_on` på vanlig måte, nullstiller triggeren `postponed_*`.
 - **«I dag»** viser den ikke før den nye datoen. **Påminnelser** og andre som bruker `get_upcoming_occurrences` får den utsatte datoen og så det vanlige mønsteret, uten endring i funksjonen. Appen planlegger påminnelsene på nytt fordi mutasjonen invaliderer `['tasks', householdId]`. **Årshjulet** grupperer på `month` fra gjentakelsen, så oppgaven står i samme måned.
+- **Fram i tid:** ny dato må være etter både i dag og fristen. En oppgave som allerede er utsatt, kan utsettes igjen, og «Angre» går da ett steg tilbake. Trykker en voksen «Ikke gjort» på dagens avkrysning etter å ha utsatt neste forekomst, går fristen tilbake til i dag og utsettelsen gjelder ikke lenger.
 - Jobber kan ikke utsettes.
 - «Til helga» regnes i `src/features/tasks/postpone.ts`: førstkommende lørdag, søndag hvis det er lørdag, neste lørdag hvis det er søndag. På fredag er det samme dag som «I morgen», og bare «I morgen» vises.
 
@@ -556,7 +557,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `approve_completions(p_completion_ids)` / `reject_completion(p_completion_id)` | voksen, `household_has_access` | godkjenning av lønn (se §3). Feil: `not_adult` (barn, annen husstand, ukjent id), `subscription_required`, `not_pending` (bare avvisning) |
 | `set_completion_status(p_completion_id, p_status)` | voksen, `household_has_access` | endre godkjenning i ettertid, godkjent ↔ ikke godkjent (se §3). Feil: `not_adult`, `subscription_required`, `status_not_changeable`, `reward_already_paid` |
 | `remove_completion(p_completion_id)` / `reassign_completion(p_completion_id, p_member_id)` | voksen, `household_has_access` | rette dagens avkrysninger i «I dag» hele dagen: «Ikke gjort» og «Endre hvem som gjorde det» (se §3). Feil: `not_adult`, `subscription_required`, `completion_not_found`, `not_today`, `reward_already_paid`, `invalid_member` |
-| `postpone_task(p_task_id, p_to) returns date` | voksen, `household_has_access` | «Utsett til» (se §2 Utsettelse). Låser oppgaven. Returnerer fristen før. Bare oppgaver i «I dag» (`next_due_on <= i dag`), ikke jobber eller utførte engangsoppgaver. `p_to` må være etter i dag og høyst 366 dager fram. Feil: `not_adult` (barn, annen husstand, ukjent eller arkivert), `subscription_required`, `not_postponable`, `invalid_date` |
+| `postpone_task(p_task_id, p_to) returns date` | voksen, `household_has_access` | «Utsett til» (se §2 Utsettelse). Låser oppgaven. Returnerer fristen før. Alle oppgaver med åpen frist, også kommende og allerede utsatte, men ikke jobber eller utførte engangsoppgaver. `p_to` må være etter både i dag og fristen, og høyst 366 dager fram. Feil: `not_adult` (barn, annen husstand, ukjent eller arkivert), `subscription_required`, `not_postponable`, `invalid_date` |
 | `undo_postpone(p_task_id)` | voksen, `household_has_access` | «Angre»: fristen før kommer tilbake, også forfalt. For engangsoppgaver settes `once_on` først og fristen i en egen spørring, ellers ville triggeren flyttet en passert dato til i dag. Bare mens oppgaven fortsatt er utsatt. Feil: `not_adult`, `subscription_required`, `undo_postpone_expired` (krysset av eller redigert siden) |
 | `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Fra steg 10b er grensen godkjent saldo (ventende og avviste teller ikke). Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
@@ -620,6 +621,7 @@ Minimum før lansering:
     - Forfalt oppgave kan utsettes. Angre gir forfalt frist tilbake, også for engangsoppgaver, og kan ikke gjøres to ganger.
     - Krysset av etter utsettelse: kan ikke angres. Angres avkrysningen, er den utsatt igjen.
     - Engangs: `once_on` flyttes. Månedsoppgave: `due_by` = ny dato.
+    - Kommende forekomst kan utsettes og angres, men ikke til fristen eller før. Utsatt oppgave kan utsettes igjen, og angre går ett steg tilbake.
     - Endret gjentakelse nullstiller. Klienten kan ikke skrive `postponed_*`.
     - Jobb, oppgave fram i tid, i dag, over ett år, barn, annen husstand og utløpt prøvetid avvises.
 

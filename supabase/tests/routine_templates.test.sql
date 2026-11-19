@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(26);
+select plan(27);
 
 create schema tests;
 grant usage on schema tests to anon, authenticated;
@@ -200,6 +200,12 @@ select throws_ok(
       array['99999999-0000-0000-0000-000000000003']::uuid[])$$,
   '42501', null, 'anon kan ikke aktivere maler');
 select tests.logout();
+
+-- 20261123090000_rename_trash_template.sql
+select is(
+  (select title || ' / ' || description from public.task_templates where slug = 'routine-kid-trash'),
+  'Tømme søppel på kjøkken og bad / Knyt igjen posene på kjøkkenet og badet, bær dem ut og sett i nye poser.',
+  'søppelmalen har ny tittel og beskrivelse');
 
 select * from finish();
 rollback;

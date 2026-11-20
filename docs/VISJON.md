@@ -24,7 +24,7 @@ spør: hvilken søyle støtter den?
 
 **Noe gjør vi fordi vi bor her, noe er ekstrajobber.**
 
-- Faste oppgaver (Hverdag og Årshjul) er husstandens felles ansvar. De kan ha lønn, men trenger det ikke.
+- Faste oppgaver (Hverdag og Årshjul) er husstandens felles ansvar. Hverdagsoppgaver kan ha lønn, men trenger det ikke. Årshjul-oppgaver har ikke lønn.
 - Ekstrajobber er det som er utenom det faste. Barna kan ta dem, og de har ofte lønn.
 - Lønnsmodellen er den samme som før: vanlige oppgaver kan fortsatt ha lønn (ARCHITECTURE.md §10).
 

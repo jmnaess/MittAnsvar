@@ -14,6 +14,14 @@ export function parseReward(text: string): number | null | undefined {
   return n >= 1 && n <= MAX_REWARD_NOK ? n : undefined;
 }
 
+/**
+ * Lønnen som lagres på en oppgave. Årshjul-oppgaver har aldri lønn, uansett hvem som har ansvaret,
+ * så beløpet (også et ugyldig et) teller ikke da. Ellers som parseReward.
+ */
+export function taskReward(text: string, { yearly }: { yearly: boolean }): number | null | undefined {
+  return yearly ? null : parseReward(text);
+}
+
 /** 10 → «10 kr». */
 export function formatKroner(amount: number): string {
   return `${amount} kr`;

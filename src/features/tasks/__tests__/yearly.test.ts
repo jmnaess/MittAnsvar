@@ -1,6 +1,6 @@
 import { toYearlyInputs } from '../yearly';
 
-const values = { title: ' Vaske vinduer ', assigneeId: null, reward: '', months: [9, 4], category: 'maintenance' as const };
+const values = { title: ' Vaske vinduer ', assigneeId: null, months: [9, 4], category: 'maintenance' as const };
 
 describe('toYearlyInputs', () => {
   it('lager én årlig månedsoppgave per måned, sortert', () => {
@@ -18,15 +18,14 @@ describe('toYearlyInputs', () => {
     });
   });
 
-  it('tar med ansvarlig og lønn på alle', () => {
-    const inputs = toYearlyInputs({ ...values, assigneeId: 'leah', reward: '20' })!;
-    expect(inputs.every((i) => i.assigned_member_id === 'leah' && i.reward_nok === 20)).toBe(true);
+  it('tar med ansvarlig på alle, og aldri lønn', () => {
+    const inputs = toYearlyInputs({ ...values, assigneeId: 'john' })!;
+    expect(inputs.every((i) => i.assigned_member_id === 'john' && i.reward_nok === null)).toBe(true);
   });
 
-  it('er ugyldig uten tittel, uten måned eller med ugyldig lønn', () => {
+  it('er ugyldig uten tittel eller uten måned', () => {
     expect(toYearlyInputs({ ...values, title: '  ' })).toBeNull();
     expect(toYearlyInputs({ ...values, months: [] })).toBeNull();
-    expect(toYearlyInputs({ ...values, reward: '0' })).toBeNull();
   });
 
   it('lager bare én oppgave per måned, selv om samme måned kommer to ganger', () => {

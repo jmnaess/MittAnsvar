@@ -8,6 +8,8 @@ import {
   nextAssignees,
   SHARED,
   toTaskInputs,
+  YEARLY_ADULTS_HINT,
+  yearlyAdultsHint,
 } from '../assignees';
 
 const member = (id: string, role: 'adult' | 'child') => ({ id, role }) as Member;
@@ -116,5 +118,22 @@ describe('årsoppgaver er for voksne', () => {
 
   it('ikke årlig: utvalget er uendret', () => {
     expect(allowedAssignees(['leah', 'ola'], members, { yearly: false, keepId: null })).toEqual(['leah', 'ola']);
+  });
+});
+
+describe('yearlyAdultsHint', () => {
+  it('vanlig tekst når ingen barn har oppgaven fra før', () => {
+    expect(yearlyAdultsHint(members, null)).toBe(YEARLY_ADULTS_HINT);
+    expect(yearlyAdultsHint(members, 'mor')).toBe(YEARLY_ADULTS_HINT);
+  });
+
+  it('nevner barnet som har oppgaven fra før, siden det fortsatt kan velges', () => {
+    const named = [
+      { id: 'mor', role: 'adult' as const, display_name: 'Mor' },
+      { id: 'leah', role: 'child' as const, display_name: 'Leah' },
+    ];
+    expect(yearlyAdultsHint(named, 'leah')).toBe(
+      'Årsoppgaver er for voksne. Leah har denne fra før, men andre barn kan ikke velges.',
+    );
   });
 });

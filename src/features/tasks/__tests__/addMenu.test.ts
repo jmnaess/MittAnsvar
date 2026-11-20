@@ -10,17 +10,16 @@ describe('todayAddMenu («I dag»)', () => {
     expect(todayAddMenu({ isAdult: false, memberId: 'm1' })).toEqual([]);
   });
 
-  it('voksne får tre valg i fast rekkefølge, uten «Oppgave i dag»', () => {
+  it('voksne får to valg: Ny oppgave og Ekstrajobb (ikke Årshjul-oppgave)', () => {
     const items = todayAddMenu({ isAdult: true });
-    expect(items.map((i) => i.label)).toEqual(['Ny oppgave', 'Ekstrajobb', 'Årshjul-oppgave']);
-    expect(items.map((i) => pathOf(i.href))).toEqual(['/task/new', '/job/new', '/year-task/new']);
+    expect(items.map((i) => i.label)).toEqual(['Ny oppgave', 'Ekstrajobb']);
+    expect(items.map((i) => pathOf(i.href))).toEqual(['/task/new', '/job/new']);
   });
 
   it('valgt person følger bare med til «Ny oppgave»', () => {
-    const [task, job, year] = todayAddMenu({ isAdult: true, memberId: 'm1' });
+    const [task, job] = todayAddMenu({ isAdult: true, memberId: 'm1' });
     expect(paramsOf(task.href)).toEqual({ memberId: 'm1' });
     expect(paramsOf(job.href)).toEqual({});
-    expect(paramsOf(year.href)).toEqual({});
   });
 
   it('uten valgt person og aldri from=tasks', () => {

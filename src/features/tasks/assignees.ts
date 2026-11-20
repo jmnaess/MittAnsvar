@@ -61,6 +61,17 @@ export function toTaskInputs(
 export const YEARLY_ADULTS_HINT = 'Årsoppgaver er for voksne, så barna kan ikke velges her.';
 
 /**
+ * Hintet når en eksisterende årsoppgave endres. Har et barn den fra før (keepId), vises det barnet
+ * fortsatt, så teksten sier det i stedet for at ingen barn kan velges.
+ */
+export function yearlyAdultsHint(members: Pick<Member, 'id' | 'role' | 'display_name'>[], keepId: string | null): string {
+  const kept = members.find((m) => m.id === keepId && m.role === 'child');
+  return kept
+    ? `Årsoppgaver er for voksne. ${kept.display_name} har denne fra før, men andre barn kan ikke velges.`
+    : YEARLY_ADULTS_HINT;
+}
+
+/**
  * Kan personen ha en årsoppgave (Årshjul)? Voksne og «Felles». keepId er den som allerede har en
  * eksisterende årsoppgave. Den vises fortsatt som valgt, også om det er et barn.
  */

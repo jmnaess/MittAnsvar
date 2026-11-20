@@ -4,10 +4,10 @@ import { toIsoDate } from '../../../lib/dates';
 import { Avatar, ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
-import { allAdults, allowedAssignees, nextAssignees, SHARED, toTaskInputs, YEARLY_ADULTS_HINT } from '../assignees';
+import { allAdults, allowedAssignees, nextAssignees, SHARED, toTaskInputs, yearlyAdultsHint } from '../assignees';
 import { type CategoryKey, toCategory } from '../categories';
 import { defaultRecurrenceForm, fromRecurrence, sameWhen, toRecurrence } from '../recurrence';
-import { MAX_REWARD_NOK, parseReward } from '../reward';
+import { MAX_REWARD_NOK, taskReward } from '../reward';
 import { taskSection } from '../section';
 import type { TaskInput } from '../types';
 import { CategoryPicker } from './CategoryPicker';
@@ -48,7 +48,6 @@ export function useTaskForm(
   const [category, setCategory] = useState<CategoryKey>(() => toCategory(initial?.category).key);
 
   const trimmedTitle = title.trim();
-  const rewardNok = parseReward(reward);
   let schedule = toRecurrence(recurrenceForm, today);
   // «Når?» er ikke endret: behold datoen som er lagret. Ellers ville en engangsoppgave fra i går
   // fått ny frist (og en utført blitt åpnet igjen) bare fordi tittelen ble endret.
@@ -61,6 +60,8 @@ export function useTaskForm(
   const yearly = schedule !== null && taskSection(schedule) === 'year';
   const keepId = initial && taskSection(initial) === 'year' ? initial.assigned_member_id : null;
   const chosen = allowedAssignees(assignees, members, { yearly, keepId });
+  // Årshjul-oppgaver har aldri lønn (feltet er skjult), uansett ansvarlig.
+  const rewardNok = taskReward(reward, { yearly });
 
   const values: TaskInput[] | null =
     trimmedTitle.length > 0 && schedule && rewardNok !== undefined
@@ -124,16 +125,18 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
   ];
 
   // Voksne får aldri lønn, så feltet skjules når alle valgte er voksne. Er noen barn, vises
-  // det, og beløpet fjernes på de voksnes oppgaver (toTaskInputs).
+  // det, og beløpet fjernes på de voksnes oppgaver (toTaskInputs). Årshjul-oppgaver har aldri
+  // lønn, så der er feltet alltid skjult (også for et barn som har en årsoppgave fra før).
   const onlyAdults = allAdults(form.assignees, members);
-  const showReward = canSetReward && !onlyAdults;
+  const showReward = canSetReward && !onlyAdults && !form.yearly;
 
-  // Tøm beløpet når bare voksne er valgt, så det ikke lagres i det skjulte.
+  // Tøm beløpet når feltet er skjult, så det ikke lagres i det skjulte.
   // Effekt i stedet for i onChange, så det også gjelder gamle oppgaver og medlemmer som lastes sent.
   const { reward, setReward } = form;
+  const hideReward = onlyAdults || form.yearly;
   useEffect(() => {
-    if (onlyAdults && reward !== '') setReward('');
-  }, [onlyAdults, reward, setReward]);
+    if (hideReward && reward !== '') setReward('');
+  }, [hideReward, reward, setReward]);
 
   return (
     <View style={styles.form}>
@@ -166,7 +169,7 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
               ? `Lager ${form.assignees.length} oppgaver, én til hver. De krysses av hver for seg.`
               : 'Velg én eller flere. Felles betyr at hvem som helst kan gjøre den.'}
           </Hint>
-          {childrenHidden && <Hint>{YEARLY_ADULTS_HINT}</Hint>}
+          {childrenHidden && <Hint>{yearlyAdultsHint(members, form.keepId)}</Hint>}
         </>
       ) : (
         <>
@@ -178,7 +181,7 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
             disabled={disabled}
           />
           <Hint>Felles betyr at hvem som helst kan gjøre den.</Hint>
-          {childrenHidden && <Hint>{YEARLY_ADULTS_HINT}</Hint>}
+          {childrenHidden && <Hint>{yearlyAdultsHint(members, form.keepId)}</Hint>}
         </>
       )}
       <CategoryPicker value={form.category} onChange={form.setCategory} disabled={disabled} />

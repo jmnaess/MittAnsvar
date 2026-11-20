@@ -1,5 +1,5 @@
 // Hva plussen nede til høyre gjør. Bare voksne lager oppgaver, så barn får ingen pluss.
-//   «I dag»:     en meny med Ny oppgave, Ekstrajobb og Årshjul-oppgave (todayAddMenu).
+//   «I dag»:     en meny med Ny oppgave og Ekstrajobb (todayAddMenu). Årshjul-oppgaver lages i «Oppgaver».
 //   «Oppgaver»: en knapp med tekst uten meny, etter segmentet (tasksAddButton).
 
 import type { Href } from 'expo-router';
@@ -7,7 +7,7 @@ import type { ChipIconName } from '../../ui';
 import type { TaskSection } from './section';
 import { FROM_TASKS } from './tasksSegment';
 
-export type AddMenuKey = 'task' | 'job' | 'year';
+export type AddMenuKey = 'task' | 'job';
 
 export type AddMenuItem = {
   key: AddMenuKey;
@@ -30,7 +30,6 @@ export function todayAddMenu({ isAdult, memberId }: { isAdult: boolean; memberId
       href: { pathname: '/task/new', params: memberId ? { memberId } : {} },
     },
     { key: 'job', label: 'Ekstrajobb', icon: 'cash-outline', href: '/job/new' },
-    { key: 'year', label: 'Årshjul-oppgave', icon: 'calendar-outline', href: '/year-task/new' },
   ];
 }
 

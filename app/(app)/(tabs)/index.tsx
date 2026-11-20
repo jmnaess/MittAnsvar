@@ -46,7 +46,7 @@ import {
 import { newTaskForLabel } from '../../../src/features/tasks/assignees';
 import { describeJobMembers } from '../../../src/features/tasks/job';
 import { formatKroner } from '../../../src/features/tasks/reward';
-import { editHref, rowActions, type RowAction } from '../../../src/features/tasks/rowActions';
+import { editHref, rowActions, rowPress, type RowAction } from '../../../src/features/tasks/rowActions';
 import type { Task, TodayTask } from '../../../src/features/tasks/types';
 import { UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatDate, formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
@@ -97,8 +97,9 @@ type PostponedToast = { taskId: string; message: string };
  * raden og «Neste måned» nederst.
  * Voksne legger ut jobber med «+» og endrer dem med langt trykk. For voksne gir trykk på en
  * oppgaverad «Hvem gjorde …?» (utført: «Endre hvem som gjorde det»), langt trykk åpner valgene
- * (TaskRowMenu, rowActions.ts), og sirkelen krysser av. Rader uten noe å velge (senere i
- * «Kommende», «Gjort siste 3 dager») åpner valgene også ved trykk.
+ * (TaskRowMenu, rowActions.ts), og sirkelen krysser av. Menyen har ikke «hvem»-valgene når
+ * trykket gir dem. Rader uten noe å velge (én person, senere i «Kommende», «Gjort siste 3
+ * dager») åpner valgene også ved trykk.
  *
  * Personvisning (én person valgt): personens kort, personens oppgaver «Denne måneden»,
  * «Kommende» (8 uker, sirkelen krysser av den nærmeste forekomsten tidlig, «Neste måned»
@@ -244,12 +245,19 @@ export default function TodayScreen() {
     reassignCandidates(c, members).some((m) => m.id !== c.completed_by_member_id);
 
   // Trykk på en rad (voksne): «Hvem gjorde …?» når det går, ellers valgene.
+  // Samme regel som menyen (rowPress i rowActions.ts), så «hvem»-valget aldri forsvinner.
   const pressOpenRow = (task: TodayTask) =>
-    canPickDoer ? pickDoer(task) : openMenu({ kind: 'open', task });
+    rowPress({ kind: 'open', canPickDoer }) === 'pickDoer'
+      ? pickDoer(task)
+      : openMenu({ kind: 'open', task });
   const pressUpcomingRow = (task: Task, checkable: boolean) =>
-    checkable && canPickDoer ? pickDoer(task) : openMenu({ kind: 'upcoming', task, checkable });
+    rowPress({ kind: 'upcoming', checkable, canPickDoer }) === 'pickDoer'
+      ? pickDoer(task)
+      : openMenu({ kind: 'upcoming', task, checkable });
   const pressDoneRow = (completion: TodayCompletion) =>
-    canReassign(completion) ? setReassigning(completion) : openMenu({ kind: 'done', completion });
+    rowPress({ kind: 'done', canReassign: canReassign(completion), canEdit: true }) === 'reassign'
+      ? setReassigning(completion)
+      : openMenu({ kind: 'done', completion });
 
   function menuActions(row: RowMenu | null): RowAction[] {
     if (!row) return [];

@@ -41,12 +41,14 @@ type Props = { items: AddFabItem[] } | { label: string; onPress: () => void };
 /** Morph-tiden. Med «Reduser bevegelse» bare en kort fade. */
 const MORPH_MS = 250;
 const FADE_MS = 150;
-/** Minste trykkflate. */
-const ROW_HEIGHT = 44;
-/** Luft rundt valgene i kortet. */
-const MENU_PADDING = 4;
+/** Like høy som knappen, så den nederste raden står på samme nivå som krysset. */
+const ROW_HEIGHT = fab.size;
+/** Luft over og til venstre for valgene. Ikke under: der står nederste rad på linje med krysset. */
+const MENU_PADDING = 8;
 /** Innrykk i hver rad (ikon og tekst). */
 const ROW_PADDING = 8;
+/** Smaleste meny, så valgene er lette å treffe. */
+const MENU_MIN_WIDTH = 240;
 
 /**
  * Flytende pluss nede til høyre, over fanelinjen. Legg den sist i skjermens rot-View.
@@ -215,7 +217,7 @@ function AddFabMenu({ items, onClose }: { items: AddFabItem[]; onClose: () => vo
                 style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceMuted }]}
               >
                 <Ionicons name={item.icon} size={22} color={colors.primary} />
-                <Text variant="body">{item.label}</Text>
+                <Text variant="rowTitle">{item.label}</Text>
               </Pressable>
             ))}
           </Animated.View>
@@ -260,22 +262,23 @@ const useStyles = makeStyles(({ colors, shadow }) =>
     backdrop: { backgroundColor: colors.backdrop },
     card: { position: 'absolute', right: spacing.page, ...shadow },
     clip: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
-    // Valgene til venstre, krysset i kolonnen til høyre (paddingRight). Ingen fast bredde: kortet
-    // blir så smalt som teksten tillater, og så lavt som valgene (minst like høyt som knappen).
+    // Valgene til venstre, krysset i kolonnen til høyre (paddingRight). Kortet er forankret nede til
+    // høyre, så det vokser oppover og mot venstre fra plussen. Minst MENU_MIN_WIDTH, ellers så bredt
+    // som teksten. Første valg øverst, siste nederst på linje med krysset (ingen luft under).
     content: {
       position: 'absolute',
       right: 0,
       bottom: 0,
-      minHeight: fab.size,
-      justifyContent: 'center',
-      padding: MENU_PADDING,
+      minWidth: MENU_MIN_WIDTH,
+      paddingTop: MENU_PADDING,
+      paddingLeft: MENU_PADDING,
       paddingRight: fab.size,
     },
     row: {
       minHeight: ROW_HEIGHT,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 12,
       paddingHorizontal: ROW_PADDING,
       // Kortets runding minus luften, så trykkmarkeringen følger hjørnene.
       borderRadius: radius.section - MENU_PADDING,

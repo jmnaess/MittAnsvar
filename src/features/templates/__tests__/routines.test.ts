@@ -108,7 +108,7 @@ describe('suggestRoutines', () => {
     ]);
   });
 
-  it('det som er aktivt, er ikke med (felles på mal, barn på mal + barn)', () => {
+  it('det som er aktivt, er lagt til og kan ikke velges (felles på mal, barn på mal + barn)', () => {
     const active = activeRoutineKeys([
       { template_id: 'bathroom', assigned_member_id: 'adult' },
       { template_id: 'bed', assigned_member_id: 'leah' },
@@ -116,7 +116,14 @@ describe('suggestRoutines', () => {
     ]);
     const s = suggestRoutines(templates, household, members, active, YEAR);
     expect(s.shared).toEqual([]);
+    expect(s.sharedAdded.map((t) => t.id)).toEqual(['bathroom']);
     expect(s.children[0].templates.map((t) => t.id)).toEqual(['table', 'any-age']);
+    expect(s.children[0].added.map((t) => t.id)).toEqual(['bed']);
+    expect(s.children[1].added).toEqual([]);
+    const keys = routineChoices(s).map((c) => c.key);
+    expect(keys).not.toContain(routineKey('bathroom', null));
+    expect(keys).not.toContain(routineKey('bed', 'leah'));
+    expect(defaultSelection(s).has(routineKey('bed', 'leah'))).toBe(false);
   });
 
   it('avhuket fra start følger suggested_by_default', () => {

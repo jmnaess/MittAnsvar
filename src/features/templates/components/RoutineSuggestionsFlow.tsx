@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Avatar, Button, CheckRow, Hint, Message, Section, spacing, Text, useTheme } from '../../../ui';
+import { Avatar, Button, CheckRow, Chip, Hint, ListRow, Message, Section, spacing, Text, useTheme } from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
 import { useMemberPhotoLookup, useMembers } from '../../household/hooks';
 import { describeRecurrence } from '../../tasks/recurrence';
@@ -31,7 +31,8 @@ type Props = {
 /**
  * «Forslag til hverdagen»: felles rutiner og rutiner per barn ut fra alderen. Noen få er avhuket
  * fra start (suggested_by_default). «Legg til» lager oppgavene via activate_templates: barnemaler
- * tildeles barnet (med lønnsforslaget), resten blir felles. Det som er lagt til, vises ikke igjen.
+ * tildeles barnet (med lønnsforslaget), resten blir felles. Det som er lagt til, vises dempet
+ * nederst i seksjonen, merket «Lagt til», og kan ikke velges igjen.
  */
 export function RoutineSuggestionsFlow({ householdId, household, variant, onDone }: Props) {
   const templates = useTemplates();
@@ -104,6 +105,19 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
     );
   };
 
+  // Allerede lagt til: dempet, uten avkrysning og uten trykk.
+  const addedRow = (t: TaskTemplate, memberId: string | null) => (
+    <View key={`added-${routineKey(t.id, memberId)}`} style={styles.added}>
+      <ListRow
+        title={t.title}
+        meta={routineMeta(t)}
+        muted
+        right={<Chip label="Lagt til" />}
+        accessibilityLabel={`${t.title}. ${routineMeta(t)}. Lagt til`}
+      />
+    </View>
+  );
+
   return (
     <>
       {isOnboarding && <Text variant="pageTitle">Hverdagen</Text>}
@@ -114,20 +128,26 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
 
       {choices.length === 0 && <Message tone="muted">Ingen nye forslag akkurat nå.</Message>}
 
-      {suggestions.shared.length > 0 && (
+      {suggestions.shared.length + suggestions.sharedAdded.length > 0 && (
         <Section {...sharedHeading(householdType)}>
-          <View style={styles.list}>{suggestions.shared.map((t) => row(t, null))}</View>
+          <View style={styles.list}>
+            {suggestions.shared.map((t) => row(t, null))}
+            {suggestions.sharedAdded.map((t) => addedRow(t, null))}
+          </View>
         </Section>
       )}
 
-      {suggestions.children.map(({ member, age, templates }) => (
+      {suggestions.children.map(({ member, age, templates, added }) => (
         <Section
           key={member.id}
           title={childHeading(member.display_name, age)}
           right={<Avatar avatar={member.avatar} photo={photoOf(member)} size={32} />}
         >
-          {templates.length > 0 && (
-            <View style={styles.list}>{templates.map((t) => row(t, member.id))}</View>
+          {templates.length + added.length > 0 && (
+            <View style={styles.list}>
+              {templates.map((t) => row(t, member.id))}
+              {added.map((t) => addedRow(t, member.id))}
+            </View>
           )}
           {age === null && (
             <Hint>{`Legg inn fødselsår under Husstand, så får ${member.display_name} forslag som passer alderen.`}</Hint>
@@ -166,5 +186,6 @@ function routineMeta(t: TaskTemplate): string {
 
 const styles = StyleSheet.create({
   list: { gap: spacing.row },
+  added: { opacity: 0.7 },
   later: { textAlign: 'center' },
 });

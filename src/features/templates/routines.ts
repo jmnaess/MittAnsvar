@@ -56,14 +56,25 @@ export function activeRoutineKeys(
   return { templates, pairs };
 }
 
-export type ChildSuggestions = { member: Member; age: number | null; templates: TaskTemplate[] };
+/** added: maler barnet allerede har, vist dempet nederst («Lagt til»). Kan ikke velges. */
+export type ChildSuggestions = {
+  member: Member;
+  age: number | null;
+  templates: TaskTemplate[];
+  added: TaskTemplate[];
+};
 
-export type RoutineSuggestions = { shared: TaskTemplate[]; children: ChildSuggestions[] };
+/** sharedAdded: felles maler husstanden allerede har, vist dempet nederst. Kan ikke velges. */
+export type RoutineSuggestions = {
+  shared: TaskTemplate[];
+  sharedAdded: TaskTemplate[];
+  children: ChildSuggestions[];
+};
 
 /**
  * Forslagene: felles maler (any/adult) som passer husstanden, og barnemaler per barn som passer
- * alderen. Det som er aktivt, er ikke med. Barn uten forslag er med (med tom liste), så skjermen
- * kan si at fødselsår gir flere forslag.
+ * alderen. Det som er aktivt, havner i sharedAdded/added i stedet, så det aldri kan velges igjen.
+ * Barn uten forslag er med (med tomme lister), så skjermen kan si at fødselsår gir flere forslag.
  */
 export function suggestRoutines(
   templates: TaskTemplate[],
@@ -73,21 +84,26 @@ export function suggestRoutines(
   year: number,
 ): RoutineSuggestions {
   const routines = templates.filter((t) => isRoutineTemplate(t) && fitsHousehold(t, household));
-  const shared = routines.filter((t) => t.audience !== 'child' && !active.templates.has(t.id));
+  const sharedAll = routines.filter((t) => t.audience !== 'child');
   const childTemplates = routines.filter((t) => t.audience === 'child');
   const children = members
     .filter((m) => m.role === 'child')
     .map((member) => {
       const age = childAge(member.birth_year, year);
+      const fitting = childTemplates.filter((t) => fitsAge(t, age));
+      const isAdded = (t: TaskTemplate) => active.pairs.has(routineKey(t.id, member.id));
       return {
         member,
         age,
-        templates: childTemplates.filter(
-          (t) => fitsAge(t, age) && !active.pairs.has(routineKey(t.id, member.id)),
-        ),
+        templates: fitting.filter((t) => !isAdded(t)),
+        added: fitting.filter(isAdded),
       };
     });
-  return { shared, children };
+  return {
+    shared: sharedAll.filter((t) => !active.templates.has(t.id)),
+    sharedAdded: sharedAll.filter((t) => active.templates.has(t.id)),
+    children,
+  };
 }
 
 /** Én rad i forslagslisten. key = routineKey. */

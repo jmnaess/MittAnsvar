@@ -7,13 +7,12 @@ import {
   defaultSelection,
   fitsAge,
   frequencyKey,
-  frequencyLevel,
-  frequencyOptions,
   isRoutineTemplate,
   recurrenceLabel,
   recurrenceOverrides,
   restoreSuggestion,
   routineChoices,
+  routineForm,
   routineFromSchedule,
   routineKey,
   routineSections,
@@ -24,6 +23,7 @@ import {
   type RoutineRecurrence,
 } from '../routines';
 import { suggestAfterProfileChange, suggestForHousehold, type SuggestionHousehold } from '../suggest';
+import { toRecurrence } from '../../tasks/recurrence';
 import type { TaskTemplate } from '../types';
 
 const template = (id: string, overrides: Partial<TaskTemplate> = {}) =>
@@ -206,116 +206,58 @@ describe('rutiner i årshjulet og hjemprofilen', () => {
   });
 });
 
-describe('frequencyLevel', () => {
-  it('plasserer malene på stigen', () => {
-    expect(frequencyLevel(template('a', { recurrence_unit: 'day', weekdays: null }))).toBe('daily');
-    expect(frequencyLevel(template('a', { weekdays: [1, 2, 3, 4, 5] }))).toBe('daily');
-    expect(frequencyLevel(template('a', { weekdays: [1, 3, 5] }))).toBe('twiceWeekly');
-    expect(frequencyLevel(template('a', { weekdays: [6] }))).toBe('weekly');
-    expect(frequencyLevel(template('a', { recurrence_every: 2, weekdays: [7] }))).toBe('biweekly');
-    expect(
-      frequencyLevel(template('a', { recurrence_unit: 'month', weekdays: null, month_day: 20 })),
-    ).toBe('monthly');
+describe('frequencyKey og recurrenceLabel', () => {
+  const interval: RoutineRecurrence = {
+    recurrence_type: 'interval',
+    recurrence_unit: 'day',
+    recurrence_every: 3,
+    weekdays: null,
+    month_day: null,
+  };
+
+  it('intervall og fast kalender med samme tall gir ulik nøkkel', () => {
+    expect(frequencyKey(interval)).not.toBe(frequencyKey({ ...interval, recurrence_type: 'calendar' }));
   });
 
-  it('intervall er ikke på stigen', () => {
+  it('tekst på brikken', () => {
+    expect(recurrenceLabel(interval)).toBe('3 dager etter sist');
     expect(
-      frequencyLevel({ recurrence_type: 'interval', recurrence_unit: 'day', recurrence_every: 3, weekdays: null, month_day: null }),
-    ).toBeNull();
+      recurrenceLabel({ recurrence_type: 'calendar', recurrence_unit: 'month', recurrence_every: 1, weekdays: null, month_day: 20 }),
+    ).toBe('Den 20. hver måned');
   });
 });
 
-describe('frequencyOptions', () => {
-  const labels = (t: TaskTemplate) => frequencyOptions(t).map((o) => o.label);
-  const monthly = template('a', { recurrence_unit: 'month', weekdays: null, month_day: 20 });
+describe('routineForm', () => {
+  const today = '2026-11-20';
+  const roundTrip = (r: RoutineRecurrence) => routineFromSchedule(toRecurrence(routineForm(r, today), today));
 
-  it('daglig mal: 2× i uka og hver uke, på lørdag', () => {
-    expect(labels(template('a', { recurrence_unit: 'day', weekdays: null }))).toEqual([
-      'Hver dag',
-      'Hver tirsdag og lørdag',
-      'Hver lørdag',
-    ]);
+  it('månedsmal (regninger): dagen fra malen, ikke dagens dato', () => {
+    const form = routineForm(template('a', { recurrence_unit: 'month', weekdays: null, month_day: 20 }), '2026-11-07');
+    expect(form).toMatchObject({ when: 'repeat', mode: 'calendar', calendarUnit: 'month', monthDay: '20' });
   });
 
-  it('hverdager (matpakke): regnes som daglig, ukene bruker malens første dag', () => {
-    expect(labels(template('a', { weekdays: [1, 2, 3, 4, 5] }))).toEqual([
-      'Hver mandag, tirsdag, onsdag, torsdag og fredag',
-      'Hver mandag og torsdag',
-      'Hver mandag',
-    ]);
+  it('ukemal: ukedagene og annenhver uke', () => {
+    expect(routineForm(template('a', { recurrence_every: 2, weekdays: [7] }), today)).toMatchObject({
+      calendarUnit: 'week',
+      weekdays: [7],
+      everyOtherWeek: true,
+    });
   });
 
-  it('flere dager i uka (oppvask): hver dag og hver uke', () => {
-    expect(labels(template('a', { weekdays: [1, 3, 5] }))).toEqual([
-      'Hver mandag, onsdag og fredag',
-      'Hver dag',
-      'Hver mandag',
-    ]);
+  it('åpnes med «Gjentas» og gir samme gjentakelse tilbake uendret', () => {
+    const cases: RoutineRecurrence[] = [
+      { recurrence_type: 'calendar', recurrence_unit: 'month', recurrence_every: 1, weekdays: null, month_day: 20 },
+      { recurrence_type: 'calendar', recurrence_unit: 'week', recurrence_every: 1, weekdays: [1, 3, 5], month_day: null },
+      { recurrence_type: 'calendar', recurrence_unit: 'week', recurrence_every: 2, weekdays: [7], month_day: null },
+      { recurrence_type: 'interval', recurrence_unit: 'day', recurrence_every: 3, weekdays: null, month_day: null },
+    ];
+    for (const r of cases) expect(roundTrip(r)).toEqual(r);
   });
 
-  it('ukentlig mal: 2× i uka og annenhver uke, aldri hver dag', () => {
-    expect(labels(template('a', { weekdays: [7] }))).toEqual([
-      'Hver søndag',
-      'Hver onsdag og søndag',
-      'Annenhver søndag',
-    ]);
-  });
-
-  it('annenhver uke (sengetøy): hver uke og hver måned', () => {
-    expect(labels(template('a', { recurrence_every: 2, weekdays: [7] }))).toEqual([
-      'Annenhver søndag',
-      'Hver søndag',
-      'Den 1. hver måned',
-    ]);
-  });
-
-  it('månedlig mal (regninger): malens dag 20, hver uke og annenhver uke, aldri hver dag', () => {
-    expect(labels(monthly)).toEqual(['Den 20. hver måned', 'Hver lørdag', 'Annenhver lørdag']);
-  });
-
-  it('standarddatoen kommer fra malen, ikke fra dagens dato', () => {
-    const day = (t: TaskTemplate) =>
-      frequencyOptions(t).find((o) => o.recurrence.recurrence_unit === 'month')?.recurrence.month_day;
-    expect(day(monthly)).toBe(20);
-    expect(day(template('a', { recurrence_unit: 'month', weekdays: null, month_day: 5 }))).toBe(5);
-    // En mal som ikke er månedlig, får den 1.
-    expect(day(template('a', { recurrence_every: 2, weekdays: [7] }))).toBe(1);
-  });
-
-  it('standard er malens egen hyppighet', () => {
-    const t = template('a', { recurrence_every: 2, weekdays: [7] });
-    expect(frequencyOptions(t)[0].key).toBe(frequencyKey(t));
-  });
-
-  it('et valg fra «Annet …» legges til sist, uten duplikat', () => {
-    const custom: RoutineRecurrence = {
-      recurrence_type: 'calendar',
-      recurrence_unit: 'month',
-      recurrence_every: 1,
-      weekdays: null,
-      month_day: 25,
-    };
-    expect(frequencyOptions(monthly, custom).map((o) => o.label)).toEqual([
-      'Den 20. hver måned',
-      'Hver lørdag',
-      'Annenhver lørdag',
-      'Den 25. hver måned',
-    ]);
-    expect(frequencyOptions(monthly, monthly)).toHaveLength(3);
-  });
-
-  it('intervall: egen nøkkel og tekst', () => {
-    const interval: RoutineRecurrence = {
-      recurrence_type: 'interval',
-      recurrence_unit: 'day',
-      recurrence_every: 3,
-      weekdays: null,
-      month_day: null,
-    };
-    expect(frequencyKey(interval)).not.toBe(
-      frequencyKey({ ...interval, recurrence_type: 'calendar' }),
-    );
-    expect(recurrenceLabel(interval)).toBe('3 dager etter sist');
+  it('hver dag åpnes som alle ukedager og blir hver dag igjen (ingen endring)', () => {
+    const daily: RoutineRecurrence = { recurrence_type: 'calendar', recurrence_unit: 'day', recurrence_every: 1, weekdays: null, month_day: null };
+    expect(routineForm(daily, today).weekdays).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(frequencyKey(roundTrip(daily)!)).toBe(frequencyKey(daily));
   });
 });
 

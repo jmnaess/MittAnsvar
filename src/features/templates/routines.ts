@@ -1,8 +1,13 @@
 // «Forslag til hverdagen» (steg 16): daglige, ukentlige og månedlige rutinemaler.
 // Ren logikk, så den kan testes uten React Native. Se docs/DATABASE.md §4.
 import type { Member } from '../household/types';
-import { describeRecurrence, isSeasonal } from '../tasks/recurrence';
-import type { Schedule } from '../tasks/recurrence';
+import {
+  describeRecurrence,
+  fromRecurrence,
+  isSeasonal,
+  type RecurrenceForm,
+  type Schedule,
+} from '../tasks/recurrence';
 import type { Task } from '../tasks/types';
 import { fitsHousehold, type SuggestionHousehold } from './suggest';
 import type { TaskTemplate } from './types';
@@ -201,8 +206,6 @@ export type RoutineRecurrence = Pick<
   'recurrence_type' | 'recurrence_unit' | 'recurrence_every' | 'weekdays' | 'month_day'
 >;
 
-export type FrequencyOption = { key: string; label: string; recurrence: RoutineRecurrence };
-
 /** Gjentakelsen til en mal eller en oppgave, bare kolonnene en rutine bruker. */
 export function routineRecurrence(r: RoutineRecurrence): RoutineRecurrence {
   return {
@@ -237,98 +240,43 @@ export function recurrenceLabel(r: RoutineRecurrence): string {
 }
 
 /**
- * Gjentakelsen fra «Annet …» (RecurrencePicker med repeatOnly). null = ikke en rutine
+ * Gjentakelsen fra «Hvor ofte?» (RecurrencePicker med repeatOnly). null = ikke en rutine
  * (engangs, årlig eller med periode), eller skjemaet er ikke gyldig ennå.
  */
 export function routineFromSchedule(s: Schedule | null): RoutineRecurrence | null {
   if (!s || (s.recurrence_type !== 'calendar' && s.recurrence_type !== 'interval')) return null;
   if (s.recurrence_unit === 'year' && s.recurrence_type === 'calendar') return null;
   if (s.season_start_month !== null) return null;
+  // Alle sju dager hver uke = hver dag, slik daglige maler er lagret. Da blir «Bruk» uten
+  // endring på en daglig mal ingen endring.
+  const everyDay =
+    s.recurrence_type === 'calendar' &&
+    s.recurrence_unit === 'week' &&
+    s.recurrence_every === 1 &&
+    s.weekdays?.length === 7;
+  if (everyDay) {
+    return { recurrence_type: 'calendar', recurrence_unit: 'day', recurrence_every: 1, weekdays: null, month_day: null };
+  }
   return routineRecurrence(s);
 }
 
-const SATURDAY = 6;
-
-/** Stigen i «Hvor ofte?», fra oftest til sjeldnest. */
-const LADDER = ['daily', 'twiceWeekly', 'weekly', 'biweekly', 'monthly'] as const;
-export type FrequencyLevel = (typeof LADDER)[number];
-
 /**
- * Trinnet på stigen: dag, eller uke med 5–7 dager = daily. Uke med 2–4 dager = twiceWeekly.
- * Uke med én dag = weekly, annenhver uke = biweekly, måned = monthly. Ellers null
- * (intervall, sjeldnere enn annenhver uke osv.).
+ * Skjemaet «Hvor ofte?» åpnes med: det som er valgt på raden, malens hyppighet som standard.
+ * Månedsdatoen kommer fra malen (regninger: den 20.), aldri fra dagens dato.
  */
-export function frequencyLevel(r: RoutineRecurrence): FrequencyLevel | null {
-  if (r.recurrence_type !== 'calendar') return null;
-  const days = r.weekdays?.length ?? 0;
-  if (r.recurrence_unit === 'day') return r.recurrence_every === 1 ? 'daily' : null;
-  if (r.recurrence_unit === 'month') return r.recurrence_every === 1 ? 'monthly' : null;
-  if (r.recurrence_unit !== 'week' || days === 0) return null;
-  if (r.recurrence_every === 2) return days === 1 ? 'biweekly' : null;
-  if (r.recurrence_every !== 1) return null;
-  if (days >= 5) return 'daily';
-  return days >= 2 ? 'twiceWeekly' : 'weekly';
-}
-
-/** Ukedagen tre dager etter: lørdag → tirsdag, søndag → onsdag. */
-function threeDaysAfter(day: number): number {
-  return ((day + 2) % 7) + 1;
-}
-
-/**
- * Gjentakelsen for et trinn. Ukene bruker malens første ukedag (lørdag hvis malen ikke har
- * ukedager), måneden malens dato (ellers den 1.). 2× i uka = dagen og dagen tre dager etter.
- */
-function levelRecurrence(level: FrequencyLevel, t: RoutineRecurrence): RoutineRecurrence {
-  const day = t.recurrence_unit === 'week' && t.weekdays?.length ? t.weekdays[0] : SATURDAY;
-  const monthDay = t.recurrence_unit === 'month' && t.month_day ? t.month_day : 1;
-  const base = { recurrence_type: 'calendar' as const, weekdays: null, month_day: null };
-  switch (level) {
-    case 'daily':
-      return { ...base, recurrence_unit: 'day', recurrence_every: 1 };
-    case 'twiceWeekly':
-      return {
-        ...base,
-        recurrence_unit: 'week',
-        recurrence_every: 1,
-        weekdays: [day, threeDaysAfter(day)].sort((a, b) => a - b),
-      };
-    case 'weekly':
-      return { ...base, recurrence_unit: 'week', recurrence_every: 1, weekdays: [day] };
-    case 'biweekly':
-      return { ...base, recurrence_unit: 'week', recurrence_every: 2, weekdays: [day] };
-    case 'monthly':
-      return { ...base, recurrence_unit: 'month', recurrence_every: 1, month_day: monthDay };
-  }
-}
-
-/** Trinnene ved siden av: ett over og ett under. Ytterst de to nærmeste. */
-function neighbourLevels(level: FrequencyLevel): FrequencyLevel[] {
-  const i = LADDER.indexOf(level);
-  const from = Math.min(Math.max(i - 1, 0), LADDER.length - 3);
-  return LADDER.slice(from, from + 3).filter((l) => l !== level);
-}
-
-/**
- * Valgene i «Hvor ofte?»: malens egen hyppighet først (standard), så trinnene ved siden av på
- * stigen Hver dag → 2× i uka → Hver uke → Annenhver uke → Hver måned. Ukentlig mal gir 2× i uka
- * og annenhver uke, månedlig mal hver uke og annenhver uke. current (et valg fra «Annet …» som
- * ikke er blant dem) legges til sist. Uten duplikater. «Annet …» legges til i skjermen.
- */
-export function frequencyOptions(t: RoutineRecurrence, current?: RoutineRecurrence): FrequencyOption[] {
-  const level = frequencyLevel(t) ?? 'weekly';
-  const candidates: RoutineRecurrence[] = [
-    routineRecurrence(t),
-    ...neighbourLevels(level).map((l) => levelRecurrence(l, t)),
-    ...(current ? [routineRecurrence(current)] : []),
-  ];
-  const seen = new Set<string>();
-  return candidates.flatMap((recurrence) => {
-    const key = frequencyKey(recurrence);
-    if (seen.has(key)) return [];
-    seen.add(key);
-    return [{ key, label: recurrenceLabel(recurrence), recurrence }];
-  });
+export function routineForm(r: RoutineRecurrence, today: string): RecurrenceForm {
+  return fromRecurrence(
+    {
+      ...routineRecurrence(r),
+      month: null,
+      job_repeats: false,
+      season_start_month: null,
+      season_end_month: null,
+      once_on: null,
+      next_due_on: null,
+    },
+    today,
+  );
 }
 
 /** En valgt rad der hyppigheten er endret fra malens. */

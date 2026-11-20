@@ -1,16 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, useWindowDimensions } from 'react-native';
-import { Button, ChoiceChips, Hint, Sheet, Text } from '../../../ui';
+import { ScrollView, StyleSheet } from 'react-native';
+import { Button, Hint, Sheet, spacing, Text } from '../../../ui';
 import { toIsoDate } from '../../../lib/dates';
 import { RecurrencePicker } from '../../tasks/components/RecurrencePicker';
-import { fromRecurrence, toRecurrence, type RecurrenceForm } from '../../tasks/recurrence';
-import {
-  frequencyKey,
-  frequencyOptions,
-  routineFromSchedule,
-  routineRecurrence,
-  type RoutineRecurrence,
-} from '../routines';
+import { toRecurrence } from '../../tasks/recurrence';
+import { routineForm, routineFromSchedule, type RoutineRecurrence } from '../routines';
 import type { TaskTemplate } from '../types';
 
 type Props = {
@@ -22,18 +16,15 @@ type Props = {
   onClose: () => void;
 };
 
-const OTHER = 'other';
-/** Andelen av skjermhøyden velgeren i «Annet …» kan bruke. Resten er tittel og knapper. */
-const PICKER_SHARE = 0.55;
-
 /**
- * «Hvor ofte?»: malens hyppighet og trinnene ved siden av (frequencyOptions), og «Annet …» sist.
- * «Annet …» viser samme gjentakelsesvelger som oppgaveskjemaet, bare med det en rutine kan ha.
+ * «Hvor ofte?»: samme gjentakelsesvelger som oppgaveskjemaet, bare med det en rutine kan ha
+ * (repeatOnly), forhåndsutfylt med det som er valgt på raden. «Bruk» og «Avbryt» står alltid
+ * nederst: velgeren ruller når arket ikke får plass (Sheet har maks 85 % av høyden).
  */
 export function FrequencySheet({ template, current, onChoose, onClose }: Props) {
   return (
     <Sheet visible={template !== null} title="Hvor ofte?" onClose={onClose}>
-      {/* key: ny rad = ny tilstand (listen, ikke «Annet …»). */}
+      {/* key: ny rad = nytt skjema. */}
       {template && current && (
         <SheetContent key={template.id} template={template} current={current} onChoose={onChoose} onClose={onClose} />
       )}
@@ -47,59 +38,29 @@ function SheetContent({
   onChoose,
   onClose,
 }: Props & { template: TaskTemplate; current: RoutineRecurrence }) {
-  const { height } = useWindowDimensions();
   const [today] = useState(() => toIsoDate(new Date()));
-  const [form, setForm] = useState<RecurrenceForm | null>(null);
-
-  if (form) {
-    const chosen = routineFromSchedule(toRecurrence(form, today));
-    return (
-      <>
-        <Text>{template.title}</Text>
-        {/* Sheet ruller ikke, og velgeren kan bli høyere enn skjermen på små telefoner. */}
-        <ScrollView style={{ maxHeight: height * PICKER_SHARE }} keyboardShouldPersistTaps="handled">
-          <RecurrencePicker value={form} onChange={setForm} today={today} repeatOnly />
-        </ScrollView>
-        <Button title="Bruk" onPress={() => chosen && onChoose(chosen)} disabled={!chosen} />
-        <Button variant="text" title="Tilbake" onPress={() => setForm(null)} />
-      </>
-    );
-  }
-
-  const options = frequencyOptions(template, current);
-  const openOther = () =>
-    setForm(
-      fromRecurrence(
-        {
-          ...routineRecurrence(current),
-          month: null,
-          job_repeats: false,
-          season_start_month: null,
-          season_end_month: null,
-          once_on: null,
-          next_due_on: null,
-        },
-        today,
-      ),
-    );
+  const [form, setForm] = useState(() => routineForm(current, today));
+  const chosen = routineFromSchedule(toRecurrence(form, today));
 
   return (
     <>
       <Text>{template.title}</Text>
-      <ChoiceChips
-        options={[
-          ...options.map((o) => ({ value: o.key, label: o.label })),
-          { value: OTHER, label: 'Annet …' },
-        ]}
-        value={frequencyKey(current)}
-        onChange={(key) => {
-          if (key === OTHER) return openOther();
-          const option = options.find((o) => o.key === key);
-          if (option) onChoose(option.recurrence);
-        }}
-      />
-      <Hint>Det første valget er forslaget. Endringen gjelder bare denne oppgaven.</Hint>
-      <Button variant="text" title="Lukk" onPress={onClose} />
+      <ScrollView
+        style={styles.picker}
+        contentContainerStyle={styles.pickerContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <RecurrencePicker value={form} onChange={setForm} today={today} repeatOnly />
+        <Hint>Endringen gjelder bare denne oppgaven.</Hint>
+      </ScrollView>
+      <Button title="Bruk" onPress={() => chosen && onChoose(chosen)} disabled={!chosen} />
+      <Button variant="text" title="Avbryt" onPress={onClose} />
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  // Krymper når arket når maks høyde, så knappene under alltid er synlige.
+  picker: { flexGrow: 0, flexShrink: 1 },
+  pickerContent: { gap: spacing.row },
+});

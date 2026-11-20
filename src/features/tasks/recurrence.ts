@@ -42,7 +42,7 @@ export function isDailyRecurrence(
   );
 }
 
-/** Ledig jobb: ingen dato, blir aldri forfalt (steg 9). */
+/** Ekstrajobb: ingen dato, blir aldri forfalt (steg 9). */
 export function isJob(r: Pick<Recurrence, 'recurrence_type'>): boolean {
   return r.recurrence_type === 'job';
 }
@@ -54,7 +54,7 @@ export function isJob(r: Pick<Recurrence, 'recurrence_type'>): boolean {
 export function formatNextDue(
   task: Recurrence & { next_due_on: string | null; postponed_to?: string | null },
 ): string {
-  if (isJob(task)) return 'Ledig jobb';
+  if (isJob(task)) return 'Ekstrajobb';
   if (!task.next_due_on) return 'Ferdig';
   const postponed = isPostponed({ next_due_on: task.next_due_on, postponed_to: task.postponed_to ?? null });
   return isMonthTask(task) && !postponed
@@ -67,7 +67,7 @@ export function formatNextDue(
 
 /** «Når?» i oppgaveskjemaet. I dag, I morgen og Velg dato er engangsoppgaver med dato. */
 export type WhenChoice = 'today' | 'tomorrow' | 'date' | 'repeat';
-/** Gjentakelse under «Gjentas». Ledige jobber har sitt eget skjema (JobForm). */
+/** Gjentakelse under «Gjentas». Ekstrajobber har sitt eget skjema (JobForm). */
 export type RecurrenceMode = 'calendar' | 'interval';
 export type CalendarUnit = 'week' | 'month' | 'year';
 export type IntervalUnit = 'day' | 'week' | 'month' | 'year';
@@ -330,7 +330,7 @@ function describeBase(r: Recurrence): string {
   const every = r.recurrence_every ?? 1;
 
   if (r.recurrence_type === 'once') return 'Én gang';
-  if (r.recurrence_type === 'job') return r.job_repeats ? 'Ledig jobb, kan gjøres flere ganger' : 'Ledig jobb';
+  if (r.recurrence_type === 'job') return r.job_repeats ? 'Ekstrajobb, kan gjøres flere ganger' : 'Ekstrajobb';
 
   if (r.recurrence_type === 'interval') {
     const [singular, plural] = UNIT_WORDS[r.recurrence_unit ?? 'day'];

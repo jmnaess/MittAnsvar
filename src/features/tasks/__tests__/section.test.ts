@@ -11,7 +11,7 @@ const r = (overrides: Partial<Fields>): Fields => ({
 });
 
 describe('taskSection', () => {
-  it('engangsoppgaver og ledige jobber er i Hverdag', () => {
+  it('engangsoppgaver og ekstrajobber er i Hverdag', () => {
     expect(taskSection(r({ recurrence_type: 'once', recurrence_unit: null }))).toBe('everyday');
     expect(taskSection(r({ recurrence_type: 'job', recurrence_unit: null }))).toBe('everyday');
   });

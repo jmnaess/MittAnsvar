@@ -180,7 +180,7 @@ describe('describeTaskSchedule', () => {
   });
 
   it('jobb: bare gjentakelsen', () => {
-    expect(describeTaskSchedule(task({ recurrence_type: 'job', next_due_on: null }), TODAY)).toBe('Ledig jobb');
+    expect(describeTaskSchedule(task({ recurrence_type: 'job', next_due_on: null }), TODAY)).toBe('Ekstrajobb');
   });
 });
 

@@ -9,7 +9,7 @@ export const MINE_KEY = 'mine';
  * «I dag» på barnets egen enhet (steg 10a): bare det barnet kan krysse av.
  *
  * - «Mine oppgaver i dag»: oppgaver til barnet og felles oppgaver, også månedsoppgaver.
- * - «Ledige jobber»: jobber for alle barna eller for dette barnet.
+ * - «Ekstrajobber»: jobber for alle barna eller for dette barnet.
  *
  * Samme regel som i complete_task i databasen, så barnet aldri ser en oppgave det ikke får lov
  * til å krysse av. Tomme seksjoner vises ikke.
@@ -40,7 +40,7 @@ export function childTodaySections(
       data: mine,
       done: done.filter((c) => c.completed_by_member_id === meId),
     },
-    { key: JOBS_KEY, title: 'Ledige jobber', member: null, data: jobs, done: [] },
+    { key: JOBS_KEY, title: 'Ekstrajobber', member: null, data: jobs, done: [] },
   ];
   return sections.filter((s) => s.data.length > 0 || s.done.length > 0);
 }

@@ -21,7 +21,7 @@ type Initial = Omit<TaskInput, 'category'> & { category: string; next_due_on: st
 
 /**
  * Tilstanden i oppgaveskjemaet. Skilt fra feltene, så modalen kan ha Lagre i headeren.
- * Ledige jobber har eget skjema (JobForm).
+ * Ekstrajobber har eget skjema (JobForm).
  *
  * Ny oppgave: flere kan velges, og values har én oppgave per valgt person (eller én for
  * «Felles»). Endre oppgave: bare én person, den oppgaven gjelder, og value er den ene.

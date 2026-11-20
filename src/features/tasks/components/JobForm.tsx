@@ -41,7 +41,7 @@ export type JobFormState = ReturnType<typeof useJobForm>;
 type Props = { form: JobFormState; members: Member[]; disabled?: boolean };
 
 /**
- * Det korte skjemaet for ledige jobber: hva, lønn, for hvem og om den kan gjøres flere ganger.
+ * Det korte skjemaet for ekstrajobber: hva, lønn, for hvem og om den kan gjøres flere ganger.
  * Det fulle oppgaveskjemaet (TaskForm) kan også lage jobber.
  */
 export function JobFields({ form, members, disabled }: Props) {
@@ -82,7 +82,7 @@ export function JobFields({ form, members, disabled }: Props) {
       />
       <Hint>
         {form.repeats
-          ? 'Blir liggende under «Ledige jobber» etter at den er gjort.'
+          ? 'Blir liggende under «Ekstrajobber» etter at den er gjort.'
           : 'Forsvinner når et barn har gjort den.'}
       </Hint>
     </View>

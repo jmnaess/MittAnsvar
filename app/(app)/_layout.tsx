@@ -86,11 +86,11 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="job/new"
-          options={{ headerShown: true, title: 'Ny ledig jobb', presentation: 'modal' }}
+          options={{ headerShown: true, title: 'Ny ekstrajobb', presentation: 'modal' }}
         />
         <Stack.Screen
           name="job/[id]"
-          options={{ headerShown: true, title: 'Endre jobb', presentation: 'modal' }}
+          options={{ headerShown: true, title: 'Endre ekstrajobb', presentation: 'modal' }}
         />
         <Stack.Screen
           name="year-task/new"

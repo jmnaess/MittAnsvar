@@ -22,7 +22,7 @@ type Props = {
   onUndo: (completion: TodayCompletion) => void;
 };
 
-/** Ett kort på familieskjermen: en person, «Felles», «Denne måneden» eller «Ledige jobber». */
+/** Ett kort på familieskjermen: en person, «Felles», «Denne måneden» eller «Ekstrajobber». */
 export function BoardCardView({
   card, members, photoUrls, userId, busyIds, undoingId, expanded, onToggleExpanded, onPress, onUndo,
 }: Props) {

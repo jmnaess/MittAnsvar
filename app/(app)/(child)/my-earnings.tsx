@@ -50,7 +50,7 @@ function Earnings({ householdId, me }: Props) {
 
       <Section title="Siste">
         {!isPending && history?.length === 0 && (
-          <Message tone="muted">Du har ikke tjent noe ennå. Se etter ledige jobber under «I dag».</Message>
+          <Message tone="muted">Du har ikke tjent noe ennå. Ekstrajobber finner du under «I dag».</Message>
         )}
         {history?.map((event) => <RewardEventRow key={`${event.kind}-${event.id}`} event={event} />)}
       </Section>

@@ -8,7 +8,7 @@ import type { Task } from '../../../src/features/tasks/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { Button, Message, ModalFormScreen } from '../../../src/ui';
 
-/** Endre en ledig jobb fra «I dag» (langt trykk). Samme korte skjema som «Ny ledig jobb». */
+/** Endre en ekstrajobb fra «I dag» (langt trykk). Samme korte skjema som «Ny ekstrajobb». */
 export default function EditJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: household } = useMyHousehold();
@@ -22,7 +22,7 @@ export default function EditJobScreen() {
   if (!task) {
     return (
       <ModalFormScreen>
-        <Message tone="muted">Fant ikke jobben. Den kan være gjort eller slettet.</Message>
+        <Message tone="muted">Fant ikke ekstrajobben. Den kan være gjort eller slettet.</Message>
       </ModalFormScreen>
     );
   }
@@ -47,7 +47,7 @@ function EditJobForm({ task, householdId, onArchived }: FormProps) {
   }
 
   function confirmDelete() {
-    Alert.alert(`Slette «${task.title}»?`, 'Jobben forsvinner fra «Ledige jobber».', [
+    Alert.alert(`Slette «${task.title}»?`, 'Den forsvinner fra «Ekstrajobber».', [
       { text: 'Avbryt', style: 'cancel' },
       {
         text: 'Slett',
@@ -68,7 +68,7 @@ function EditJobForm({ task, householdId, onArchived }: FormProps) {
       {error && <Message>{toNorwegianMessage(error)}</Message>}
       <JobFields form={form} members={members ?? []} disabled={busy} />
       <View style={styles.delete}>
-        <Button variant="danger" title="Slett jobb" onPress={confirmDelete} disabled={busy} />
+        <Button variant="danger" title="Slett ekstrajobb" onPress={confirmDelete} disabled={busy} />
       </View>
     </ModalFormScreen>
   );

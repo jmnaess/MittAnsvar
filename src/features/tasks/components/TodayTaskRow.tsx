@@ -10,7 +10,7 @@ type RowTask = Recurrence &
 
 type Props = {
   task: RowTask;
-  /** Vises i «Denne måneden» og «Ledige jobber», der oppgavene ikke er gruppert per person. */
+  /** Vises i «Denne måneden» og «Ekstrajobber», der oppgavene ikke er gruppert per person. */
   assigneeName?: string;
   /** Fyllfarge på sjekkboksen: personens ring-farge. */
   checkColor?: string;
@@ -85,7 +85,7 @@ export function TodayTaskRow({
   );
 }
 
-/** En ledig jobb som kort i rutenettet. Trykk = utført, som en vanlig oppgave. */
+/** En ekstrajobb som kort i rutenettet. Trykk = utført, som en vanlig oppgave. */
 export function TodayJobCard({
   task, assigneeName, busy, onPress, onLongPress, longPressHint = DEFAULT_HINT,
 }: Omit<Props, 'checkColor' | 'muted'>) {

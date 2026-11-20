@@ -5,7 +5,7 @@ import { useCreateTask } from '../../../src/features/tasks/hooks';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { Message, ModalFormScreen } from '../../../src/ui';
 
-/** «Ny ledig jobb» fra «+» i «I dag». Lagres som en vanlig oppgave av typen job. */
+/** «Ny ekstrajobb» fra «+» i «I dag». Lagres som en vanlig oppgave av typen job. */
 export default function NewJobScreen() {
   // Skjermen er bare tilgjengelig med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();

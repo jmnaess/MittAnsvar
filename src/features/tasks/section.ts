@@ -23,7 +23,7 @@ export function isLongInterval(r: Pick<SectionFields, 'recurrence_type' | 'recur
 
 /**
  * Årshjul: årlige oppgaver, sesongoppgaver (alle typer) og lange intervaller.
- * Hverdag: alt annet, også engangsoppgaver langt fram i tid og ledige jobber.
+ * Hverdag: alt annet, også engangsoppgaver langt fram i tid og ekstrajobber.
  */
 export function taskSection(r: SectionFields): TaskSection {
   if (r.recurrence_type === 'once' || r.recurrence_type === 'job') return 'everyday';

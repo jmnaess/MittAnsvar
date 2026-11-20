@@ -16,7 +16,7 @@ type Props = {
   accessibilityHint?: string;
 };
 
-/** Én ledig jobb i rutenettet: beløpet øverst, så tittel og hvem. Trykk = utført. */
+/** Én ekstrajobb i rutenettet: beløpet øverst, så tittel og hvem. Trykk = utført. */
 export function JobCard({ amount, title, who, busy, onPress, onLongPress, accessibilityHint }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();

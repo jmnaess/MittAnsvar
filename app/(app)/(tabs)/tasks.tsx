@@ -42,7 +42,7 @@ export default function TasksScreen() {
   const isAdult = useMyMember(householdId)?.role === 'adult';
   const segment = useTasksSegment();
   const [personId, setPersonId] = useState<string | null>(null);
-  // «Ny oppgave» i Hverdag: velg «Oppgave» eller «Ledig jobb».
+  // «Ny oppgave» i Hverdag: velg «Oppgave» eller «Ekstrajobb».
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
   const [reveal, setReveal] = useState<{ sectionKey: string; id: number } | null>(null);

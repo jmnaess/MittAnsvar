@@ -69,7 +69,7 @@ const INTERVAL_UNIT_OPTIONS: { value: IntervalUnit; label: string }[] = [
 /**
  * «Når?»: i dag, i morgen eller en valgt dato (engangsoppgave), eller «Gjentas» med fast dag
  * i kalenderen eller et intervall etter sist utført. Gjentakelsen kan begrenses til deler av
- * året (ikke årlige oppgaver). Ledige jobber har sitt eget skjema.
+ * året (ikke årlige oppgaver). Ekstrajobber har sitt eget skjema.
  */
 export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
   const { colors } = useTheme();

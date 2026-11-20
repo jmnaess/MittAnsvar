@@ -92,7 +92,7 @@ type PostponedToast = { taskId: string; message: string };
 
 /**
  * «I dag»: dato og tittel, alle i husstanden (trykk for å vise bare én), godkjenningsbanner for
- * voksne, én seksjon per person i personens farge, «Felles», «Ledige jobber», «Denne måneden»
+ * voksne, én seksjon per person i personens farge, «Felles», «Ekstrajobber», «Denne måneden»
  * (årshjulet) og «Kommende» for hele husstanden: 8 uker, uten hyppige oppgaver, med navn på
  * raden og «Neste måned» nederst.
  * Voksne legger ut jobber med «+» og endrer dem med langt trykk. For voksne gir trykk på en
@@ -165,7 +165,7 @@ export default function TodayScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [postponed, setPostponed] = useState<PostponedToast | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  // Pluss: velg «Oppgave i dag» eller «Ledig jobb».
+  // Pluss: velg «Oppgave i dag» eller «Ekstrajobb».
   const [creating, setCreating] = useState(false);
   /** Kort der alle utførte er foldet ut (seksjonsnøkler). Ny dag: alt foldes inn igjen. */
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
@@ -185,7 +185,7 @@ export default function TodayScreen() {
 
   const me = members.find((m) => m.auth_user_id === session?.user.id);
   const isAdult = me?.role === 'adult';
-  // Voksne ser alltid «Ledige jobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
+  // Voksne ser alltid «Ekstrajobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
   const allSections = groupTodayByMember(tasks ?? [], members, {
     showEmptyJobs: isAdult && !isPending,
     done,
@@ -423,7 +423,7 @@ export default function TodayScreen() {
           onLongPress={
             isAdult ? (job) => router.push({ pathname: '/job/[id]', params: { id: job.id } }) : undefined
           }
-          emptyText={isAdult ? 'Ingen ledige jobber. Trykk + for å legge ut en.' : undefined}
+          emptyText={isAdult ? 'Ingen ekstrajobber nå. Trykk + for å legge ut en.' : undefined}
         />
       );
     }
@@ -463,7 +463,7 @@ export default function TodayScreen() {
           title="I dag"
           right={
             isAdult ? (
-              <IconButton icon="add" accessibilityLabel="Ny oppgave eller ledig jobb" onPress={() => setCreating(true)} />
+              <IconButton icon="add" accessibilityLabel="Ny oppgave eller ekstrajobb" onPress={() => setCreating(true)} />
             ) : undefined
           }
         />

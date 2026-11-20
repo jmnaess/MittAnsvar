@@ -32,13 +32,13 @@ describe('groupTodayByMember', () => {
     expect(groupTodayByMember([], [leah])).toEqual([]);
   });
 
-  it('viser tom «Ledige jobber» når showEmptyJobs er satt', () => {
+  it('viser tom «Ekstrajobber» når showEmptyJobs er satt', () => {
     const sections = groupTodayByMember([], [leah], { showEmptyJobs: true });
     expect(sections.map((s) => s.key)).toEqual([JOBS_KEY]);
     expect(sections[0].data).toEqual([]);
   });
 
-  it('legger jobber i «Ledige jobber», også når de er for ett barn', () => {
+  it('legger jobber i «Ekstrajobber», også når de er for ett barn', () => {
     const job = task({ id: 'j', recurrence_type: 'job', assigned_member_id: 'leah' });
     const vanlig = task({ id: 'v', assigned_member_id: 'leah' });
     const sections = groupTodayByMember([job, vanlig], [leah]);
@@ -58,7 +58,7 @@ describe('groupTodayByMember', () => {
     expect(sections[1].done.map((c) => c.id)).toEqual(['f']);
   });
 
-  it('legger «Denne måneden» nederst, etter «Ledige jobber». Forfalte ligger hos personen', () => {
+  it('legger «Denne måneden» nederst, etter «Ekstrajobber». Forfalte ligger hos personen', () => {
     const maned = task({ id: 'm', is_month_task: true, assigned_member_id: 'leah' });
     const forfalt = task({ id: 'f', is_month_task: true, is_overdue: true, assigned_member_id: 'leah' });
     const felles = task({ id: 's' });

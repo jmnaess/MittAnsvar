@@ -11,7 +11,7 @@ export const SHARED_KEY = 'shared';
 /**
  * Hvilken seksjon en utført oppgave hører til:
  * - den ansvarlige personens kort,
- * - ledige jobber (ingen ansvarlig) hos den som tok jobben,
+ * - ekstrajobber (ingen ansvarlig) hos den som tok jobben,
  * - ellers «Felles» (også når den ansvarlige ikke finnes lenger).
  */
 export function doneSectionKey(c: TodayCompletion, memberIds: Set<string>): string {

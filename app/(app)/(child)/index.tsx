@@ -46,7 +46,7 @@ import {
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
 
 /**
- * «I dag» på barnets egen enhet: «Mine oppgaver i dag» i barnets egen farge, og «Ledige jobber».
+ * «I dag» på barnets egen enhet: «Mine oppgaver i dag» i barnets egen farge, og «Ekstrajobber».
  * Barnet krysser alltid av for seg selv, med ett trykk. Langt trykk gjør ingenting.
  * Nederst: «Kommende» (2 uker, uten hyppige oppgaver, som barnet ser hver dag uansett) og
  * «Gjort siste 3 dager». Den nærmeste forekomsten i «Kommende» kan krysses av tidlig.
@@ -110,7 +110,7 @@ export default function ChildTodayScreen() {
   const busyId = complete.isPending ? complete.variables?.taskId : undefined;
   const recentDays = me ? groupRecentByDay(recent, me.id, today) : [];
 
-  // Fra «I dag», «Ledige jobber» og sirkelen i «Kommende» (gjort før fristen).
+  // Fra «I dag», «Ekstrajobber» og sirkelen i «Kommende» (gjort før fristen).
   function markDone(task: Pick<Task, 'id' | 'title'>) {
     if (!me) return;
     setActionError(null);

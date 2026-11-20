@@ -24,10 +24,10 @@ export const JOBS_KEY = 'jobs';
 
 /**
  * Grupperer «I dag» per medlem (i samme rekkefølge som medlemslisten), så «Felles», så
- * «Ledige jobber», og til slutt «Denne måneden» for månedsoppgaver (årshjulet) som ikke er
+ * «Ekstrajobber», og til slutt «Denne måneden» for månedsoppgaver (årshjulet) som ikke er
  * forfalt. De kan gjøres når som helst i måneden, så de ligger nederst.
  * Jobber ligger bare i sin egen seksjon, også når de er for ett bestemt barn. Forfalte månedsoppgaver ligger hos
- * personen, som vanlige forfalte oppgaver. Tomme seksjoner vises ikke, unntatt «Ledige jobber»
+ * personen, som vanlige forfalte oppgaver. Tomme seksjoner vises ikke, unntatt «Ekstrajobber»
  * når showEmptyJobs er satt (for voksne, så de ser hvor de legger ut jobber). En oppgave med et
  * ukjent medlem havner i «Felles».
  *
@@ -67,7 +67,7 @@ export function groupTodayByMember<T extends GroupableTask, M extends Pick<Membe
   });
   sections.push({
     key: JOBS_KEY,
-    title: 'Ledige jobber',
+    title: 'Ekstrajobber',
     member: null,
     data: allTasks.filter(isJob),
     done: [],

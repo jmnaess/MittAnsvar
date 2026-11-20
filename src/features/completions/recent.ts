@@ -7,7 +7,7 @@ export type RecentDay = { key: string; title: string; items: RecentCompletion[] 
 /**
  * Det personen har gjort de tre siste dagene, gruppert per dag: «I går», så ukedag («Mandag»).
  * Nyeste dag først, og nyeste avkrysning først innen dagen. Filtrerer på hvem som gjorde det,
- * så en ledig jobb havner hos den som tok den. Viewet har allerede tatt bort i dag og avviste.
+ * så en ekstrajobb havner hos den som tok den. Viewet har allerede tatt bort i dag og avviste.
  */
 export function groupRecentByDay(
   completions: RecentCompletion[],

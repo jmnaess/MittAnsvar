@@ -95,7 +95,7 @@ function EditTaskForm({ task, householdId, fromTasks, onArchived }: FormProps) {
       {error && <Message>{toNorwegianMessage(error)}</Message>}
       <Text variant="metaStrong" color={colors.textWarm}>
         {isJob(task)
-          ? 'Ledig jobb'
+          ? 'Ekstrajobb'
           : task.next_due_on
             ? `Neste gang: ${formatDate(task.next_due_on)}`
             : 'Ferdig'}

@@ -30,7 +30,7 @@ type Props<M extends PickableMember> = {
 };
 
 /**
- * «Hvem gjorde det?» Ved langt trykk, ledige jobber og oppgaver med lønn i «I dag», og når en
+ * «Hvem gjorde det?» Ved langt trykk, ekstrajobber og oppgaver med lønn i «I dag», og når en
  * voksen flytter en utført oppgave til en annen person. Med egen title også «Hvem sin oppgave?»
  * på sammenslåtte rader i «Oppgaver».
  */

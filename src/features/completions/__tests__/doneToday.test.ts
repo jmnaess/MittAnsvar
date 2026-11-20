@@ -41,7 +41,7 @@ describe('doneSectionKey', () => {
     expect(doneSectionKey(done({ assigned_member_id: 'jesper' }), members)).toBe('jesper');
   });
 
-  it('legger ledige jobber hos den som tok dem', () => {
+  it('legger ekstrajobber hos den som tok dem', () => {
     expect(doneSectionKey(done({ recurrence_type: 'job' }), members)).toBe('leah');
   });
 

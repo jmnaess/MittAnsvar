@@ -15,13 +15,13 @@ type Props = {
   emptyText?: string;
 };
 
-/** «Ledige jobber» nederst i «I dag»: overskrift og jobbkort i rutenett. */
+/** «Ekstrajobber» nederst i «I dag»: overskrift og jobbkort i rutenett. */
 export function TodayJobsSection({ jobs, whoOf, busyId, onPress, onLongPress, emptyText }: Props) {
   const { colors } = useTheme();
   if (jobs.length === 0 && !emptyText) return null;
   return (
     <View style={styles.section}>
-      <Text variant="sectionTitle" accessibilityRole="header">Ledige jobber</Text>
+      <Text variant="sectionTitle" accessibilityRole="header">Ekstrajobber</Text>
       {jobs.length === 0 ? (
         <Text variant="meta" color={colors.textMuted}>{emptyText}</Text>
       ) : (
@@ -34,7 +34,7 @@ export function TodayJobsSection({ jobs, whoOf, busyId, onPress, onLongPress, em
               busy={busyId === job.id}
               onPress={() => onPress(job)}
               onLongPress={onLongPress && (() => onLongPress(job))}
-              longPressHint={onLongPress ? 'Hold inne for å endre jobben' : undefined}
+              longPressHint={onLongPress ? 'Hold inne for å endre ekstrajobben' : undefined}
             />
           ))}
         </JobGrid>

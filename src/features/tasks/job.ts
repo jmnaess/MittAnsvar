@@ -3,7 +3,7 @@ import type { CategoryKey } from './categories';
 import { parseReward } from './reward';
 import type { TaskInput } from './types';
 
-/** Det korte skjemaet «Ny ledig jobb» fra «I dag». */
+/** Det korte skjemaet «Ny ekstrajobb» fra «I dag». */
 export type JobFormValues = {
   title: string;
   /** Barna som kan ta jobben. Tom = alle barna. */
@@ -14,7 +14,7 @@ export type JobFormValues = {
   category: CategoryKey;
 };
 
-/** Skjema → oppgave av typen ledig jobb. null når skjemaet ikke er gyldig. */
+/** Skjema → oppgave av typen ekstrajobb. null når skjemaet ikke er gyldig. */
 export function toJobInput(values: JobFormValues): TaskInput | null {
   const title = values.title.trim();
   const reward = parseReward(values.reward);

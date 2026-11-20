@@ -25,7 +25,7 @@ const emma = member('emma', 'Emma');
 const members = [adult, leah, ola, emma];
 
 describe('toJobInput', () => {
-  it('lager en ledig jobb uten dato', () => {
+  it('lager en ekstrajobb uten dato', () => {
     expect(toJobInput(values)).toEqual({
       title: 'Henge opp vask',
       category: 'laundry',

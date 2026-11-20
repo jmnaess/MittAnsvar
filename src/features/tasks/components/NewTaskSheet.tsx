@@ -11,7 +11,7 @@ type Props = {
 };
 
 /**
- * Pluss i «I dag» og «Ny oppgave» i «Oppgaver»: velg oppgave eller ledig jobb.
+ * Pluss i «I dag» og «Ny oppgave» i «Oppgaver»: velg oppgave eller ekstrajobb.
  * Begge kan lages begge steder.
  */
 export function NewTaskSheet({ visible, onClose, taskLabel, taskHref }: Props) {
@@ -23,7 +23,7 @@ export function NewTaskSheet({ visible, onClose, taskLabel, taskHref }: Props) {
   return (
     <Sheet visible={visible} title="Hva vil du lage?" onClose={onClose}>
       <Button title={taskLabel} onPress={() => go(taskHref)} />
-      <Button variant="secondary" title="Ledig jobb" onPress={() => go('/job/new')} />
+      <Button variant="secondary" title="Ekstrajobb" onPress={() => go('/job/new')} />
       <Button variant="secondary" title="Avbryt" onPress={onClose} />
     </Sheet>
   );

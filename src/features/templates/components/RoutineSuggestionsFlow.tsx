@@ -1,20 +1,43 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Avatar, Button, CheckRow, Chip, Hint, ListRow, Message, Section, ShowMoreRow, spacing, Text, useTheme } from '../../../ui';
+import { Alert, StyleSheet, View } from 'react-native';
+import {
+  Avatar,
+  Button,
+  CheckRow,
+  Chip,
+  ChoiceChip,
+  ChoiceChips,
+  Hint,
+  ListRow,
+  Message,
+  Section,
+  Sheet,
+  ShowMoreRow,
+  spacing,
+  Text,
+  useTheme,
+} from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
 import { useMemberPhotoLookup, useMembers } from '../../household/hooks';
-import { describeRecurrence } from '../../tasks/recurrence';
 import { useTasks } from '../../tasks/hooks';
-import { useActivateRoutines, useTemplates } from '../hooks';
+import type { Task } from '../../tasks/types';
+import { useActivateRoutines, useRemoveRoutine, useTemplates } from '../hooks';
 import {
   activeRoutineKeys,
   childHeading,
   defaultSelection,
+  frequencyKey,
+  frequencyOptions,
+  recurrenceLabel,
+  recurrenceOverrides,
+  restoreSuggestion,
   routineChoices,
   routineKey,
   sharedHeading,
   suggestRoutines,
+  tasksForRoutine,
   toActivation,
+  type RoutineRecurrence,
   type RoutineSuggestions,
 } from '../routines';
 import type { SuggestionHousehold } from '../suggest';
@@ -26,16 +49,20 @@ type Props = {
   /** onboarding: egen tittel og «Hopp over». settings: «Ikke nå». */
   variant: 'onboarding' | 'settings';
   onDone: () => void;
+  /** Satt: «Tilbake» nederst (oppstarten, til forrige steg). */
+  onBack?: () => void;
 };
 
 /**
  * «Forslag til hverdagen»: felles rutiner og rutiner per barn. Forslagene som passer alderen
  * vises først, resten under «Vis flere forslag», sortert etter alder. Noen få av de som passer
- * alderen er avhuket fra start (suggested_by_default). «Legg til» lager oppgavene via activate_templates: barnemaler
- * tildeles barnet (med lønnsforslaget), resten blir felles. Det som er lagt til, vises dempet
- * nederst i seksjonen, merket «Lagt til», og kan ikke velges igjen.
+ * alderen er avhuket fra start (suggested_by_default). Hyppigheten kan endres per rad før den
+ * legges til («Hvor ofte?»); malen er standard. «Legg til» lager oppgavene via activate_templates:
+ * barnemaler tildeles barnet (med lønnsforslaget), resten blir felles. Det som er lagt til, vises
+ * dempet nederst i seksjonen, merket «Lagt til», med oppgavens egen hyppighet. «Fjern» arkiverer
+ * oppgaven og gjør forslaget valgbart igjen (i Innstillinger etter et spørsmål).
  */
-export function RoutineSuggestionsFlow({ householdId, household, variant, onDone }: Props) {
+export function RoutineSuggestionsFlow({ householdId, household, variant, onDone, onBack }: Props) {
   const templates = useTemplates();
   const tasks = useTasks(householdId);
   const members = useMembers(householdId);
@@ -58,8 +85,11 @@ export function RoutineSuggestionsFlow({ householdId, household, variant, onDone
       householdId={householdId}
       householdType={household.type}
       suggestions={suggestions}
+      templateOrder={templates.data}
+      tasks={tasks.data}
       variant={variant}
       onDone={onDone}
+      onBack={onBack}
     />
   );
 }
@@ -67,18 +97,40 @@ export function RoutineSuggestionsFlow({ householdId, household, variant, onDone
 type ListProps = Omit<Props, 'household'> & {
   householdType: SuggestionHousehold['type'];
   suggestions: RoutineSuggestions;
+  /** Alle maler i vanlig rekkefølge: et fjernet forslag settes inn på sin plass igjen. */
+  templateOrder: TaskTemplate[];
+  /** Husstandens aktive oppgaver: hyppigheten på «Lagt til» og hva «Fjern» arkiverer. */
+  tasks: Task[];
 };
 
-function SuggestionList({ householdId, householdType, suggestions: initial, variant, onDone }: ListProps) {
+/** Raden som har «Hvor ofte?» åpent. */
+type FrequencyTarget = { key: string; template: TaskTemplate };
+
+function SuggestionList({
+  householdId,
+  householdType,
+  suggestions: initial,
+  templateOrder,
+  tasks,
+  variant,
+  onDone,
+  onBack,
+}: ListProps) {
   const { colors } = useTheme();
   const isOnboarding = variant === 'onboarding';
   const activate = useActivateRoutines(householdId);
+  const remove = useRemoveRoutine(householdId);
   const photoOf = useMemberPhotoLookup(householdId);
-  const [suggestions] = useState(initial);
-  const [selected, setSelected] = useState(() => defaultSelection(suggestions));
+  const [suggestions, setSuggestions] = useState(initial);
+  const [selected, setSelected] = useState(() => defaultSelection(initial));
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  // Bare radene der hyppigheten er endret fra malen (nøkkel = routineKey).
+  const [frequency, setFrequency] = useState<Map<string, RoutineRecurrence>>(() => new Map());
+  const [frequencyTarget, setFrequencyTarget] = useState<FrequencyTarget | null>(null);
   const choices = routineChoices(suggestions);
-  const busy = activate.isPending;
+  const hasAdded =
+    suggestions.sharedAdded.length > 0 || suggestions.children.some((c) => c.added.length > 0);
+  const busy = activate.isPending || remove.isPending;
 
   function toggle(key: string) {
     setSelected((prev) => {
@@ -99,35 +151,95 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
   }
 
   function add() {
-    activate.mutate(toActivation(choices, selected), { onSuccess: onDone });
+    activate.mutate(
+      { ...toActivation(choices, selected), overrides: recurrenceOverrides(choices, selected, frequency) },
+      { onSuccess: onDone },
+    );
+  }
+
+  /** Valg i «Hvor ofte?»: malens hyppighet fjerner endringen. Raden blir avhuket. */
+  function chooseFrequency(target: FrequencyTarget, optionKey: string) {
+    const option = frequencyOptions(target.template).find((o) => o.key === optionKey);
+    if (!option) return;
+    setFrequency((prev) => {
+      const next = new Map(prev);
+      if (option.key === frequencyKey(target.template)) next.delete(target.key);
+      else next.set(target.key, option.recurrence);
+      return next;
+    });
+    setSelected((prev) => new Set(prev).add(target.key));
+    setFrequencyTarget(null);
+  }
+
+  function removeAdded(t: TaskTemplate, memberId: string | null) {
+    const ids = tasksForRoutine(tasks, t.id, memberId).map((task) => task.id);
+    const run = () =>
+      remove.mutate(ids, {
+        onSuccess: () => setSuggestions((s) => restoreSuggestion(s, t.id, memberId, templateOrder)),
+      });
+    // I oppstarten er oppgaven nettopp lagt til. I Innstillinger kan den være endret og gjort mange ganger.
+    if (isOnboarding) return run();
+    Alert.alert(`Fjerne «${t.title}»?`, 'Oppgaven forsvinner fra Oppgaver.', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Fjern', style: 'destructive', onPress: run },
+    ]);
   }
 
   const row = (t: TaskTemplate, memberId: string | null) => {
     const key = routineKey(t.id, memberId);
+    const when = recurrenceLabel(frequency.get(key) ?? t);
+    const meta = memberId && t.reward_nok ? `${t.reward_nok} kr` : undefined;
     return (
       <CheckRow
         key={key}
         title={t.title}
-        meta={routineMeta(t)}
+        meta={meta}
         checked={selected.has(key)}
         onToggle={() => toggle(key)}
         disabled={busy}
+        below={
+          <ChoiceChip
+            role="button"
+            label={when}
+            icon="repeat-outline"
+            selected={false}
+            onPress={() => setFrequencyTarget({ key, template: t })}
+            disabled={busy}
+            accessibilityLabel={`Hvor ofte: ${when}. Endre`}
+          />
+        }
       />
     );
   };
 
-  // Allerede lagt til: dempet, uten avkrysning og uten trykk.
-  const addedRow = (t: TaskTemplate, memberId: string | null) => (
-    <View key={`added-${routineKey(t.id, memberId)}`} style={styles.added}>
-      <ListRow
-        title={t.title}
-        meta={routineMeta(t)}
-        muted
-        right={<Chip label="Lagt til" />}
-        accessibilityLabel={`${t.title}. ${routineMeta(t)}. Lagt til`}
-      />
-    </View>
-  );
+  // Allerede lagt til: dempet, uten avkrysning, med oppgavens egen hyppighet og lønn.
+  const addedRow = (t: TaskTemplate, memberId: string | null) => {
+    const task = tasksForRoutine(tasks, t.id, memberId)[0];
+    const meta = task ? taskMeta(task) : recurrenceLabel(t);
+    return (
+      <View key={`added-${routineKey(t.id, memberId)}`} style={styles.addedRow}>
+        <View style={styles.added}>
+          <ListRow
+            title={t.title}
+            meta={meta}
+            muted
+            right={<Chip label="Lagt til" />}
+            accessibilityLabel={`${t.title}. ${meta}. Lagt til`}
+          />
+        </View>
+        <View style={styles.removeAction}>
+          <Button
+            variant="text"
+            small
+            title="Fjern"
+            onPress={() => removeAdded(t, memberId)}
+            disabled={busy}
+            accessibilityLabel={`Fjern ${t.title}`}
+          />
+        </View>
+      </View>
+    );
+  };
 
   return (
     <>
@@ -174,6 +286,7 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
       ))}
 
       {activate.error && <Message>{toNorwegianMessage(activate.error)}</Message>}
+      {remove.error && <Message>{toNorwegianMessage(remove.error)}</Message>}
       {choices.length > 0 && (
         <Button
           title={selected.size > 0 ? `Legg til (${selected.size})` : 'Legg til'}
@@ -183,27 +296,56 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
       )}
       <Button
         variant="text"
-        title={choices.length === 0 ? 'Ferdig' : isOnboarding ? 'Hopp over' : 'Ikke nå'}
+        title={doneTitle(choices.length, isOnboarding, hasAdded)}
         onPress={onDone}
         disabled={busy}
       />
+      {onBack && <Button variant="text" title="Tilbake" onPress={onBack} disabled={busy} />}
       {isOnboarding && (
         <Text variant="meta" color={colors.textMuted} style={styles.later}>
-          Du finner forslagene igjen i Innstillinger.
+          Du kan endre dette senere under Innstillinger.
         </Text>
       )}
+
+      <Sheet
+        visible={frequencyTarget !== null}
+        title="Hvor ofte?"
+        onClose={() => setFrequencyTarget(null)}
+      >
+        {frequencyTarget && (
+          <>
+            <Text>{frequencyTarget.template.title}</Text>
+            <ChoiceChips
+              options={frequencyOptions(frequencyTarget.template).map((o) => ({ value: o.key, label: o.label }))}
+              value={frequencyKey(frequency.get(frequencyTarget.key) ?? frequencyTarget.template)}
+              onChange={(optionKey) => chooseFrequency(frequencyTarget, optionKey)}
+            />
+            <Hint>Det første valget er forslaget. Endringen gjelder bare denne oppgaven.</Hint>
+            <Button variant="text" title="Lukk" onPress={() => setFrequencyTarget(null)} />
+          </>
+        )}
+      </Sheet>
     </>
   );
 }
 
-/** «Hver dag», «Hver lørdag · 20 kr». */
-function routineMeta(t: TaskTemplate): string {
-  const when = describeRecurrence({ ...t, job_repeats: false });
-  return t.reward_nok ? `${when} · ${t.reward_nok} kr` : when;
+/** Uten nye forslag: «Ferdig». Oppstart: «Hopp over», eller «Fortsett» når noe alt er lagt til. */
+function doneTitle(choiceCount: number, isOnboarding: boolean, hasAdded: boolean): string {
+  if (choiceCount === 0) return 'Ferdig';
+  if (!isOnboarding) return 'Ikke nå';
+  return hasAdded ? 'Fortsett' : 'Hopp over';
+}
+
+/** Oppgavens egen hyppighet og lønn: «Hver dag», «Annenhver lørdag · 20 kr». */
+function taskMeta(task: Task): string {
+  const when = recurrenceLabel(task);
+  return task.reward_nok ? `${when} · ${task.reward_nok} kr` : when;
 }
 
 const styles = StyleSheet.create({
   list: { gap: spacing.row },
+  addedRow: { gap: 2 },
+  removeAction: { alignItems: 'flex-end' },
   added: { opacity: 0.7 },
   later: { textAlign: 'center' },
 });

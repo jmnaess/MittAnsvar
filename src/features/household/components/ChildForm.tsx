@@ -79,12 +79,18 @@ export function ChildFields({ form, disabled }: { form: ChildFormState; disabled
 type Props = {
   submitLabel: string;
   busy?: boolean;
+  /** Barnet som endres. Utelatt = nytt barn. */
+  initial?: ChildInput;
   onSubmit: (child: ChildInput) => void;
+  /** Satt: «Avbryt» (lukker endringen uten å lagre). */
+  onCancel?: () => void;
+  /** Satt: «Fjern barnet». */
+  onRemove?: () => void;
 };
 
-/** Barneskjema med egen knapp. Brukes i oppstarten, som ikke er en modal. */
-export function ChildForm({ submitLabel, busy, onSubmit }: Props) {
-  const form = useChildForm();
+/** Barneskjema med egne knapper. Brukes i oppstarten, som ikke er en modal. */
+export function ChildForm({ submitLabel, busy, initial, onSubmit, onCancel, onRemove }: Props) {
+  const form = useChildForm(initial);
   return (
     <View style={styles.form}>
       <ChildFields form={form} disabled={busy} />
@@ -93,6 +99,8 @@ export function ChildForm({ submitLabel, busy, onSubmit }: Props) {
         onPress={() => form.value && onSubmit(form.value)}
         disabled={busy || !form.value}
       />
+      {onCancel && <Button variant="text" title="Avbryt" onPress={onCancel} disabled={busy} />}
+      {onRemove && <Button variant="danger" title="Fjern barnet" onPress={onRemove} disabled={busy} />}
     </View>
   );
 }

@@ -13,13 +13,15 @@ type Props = {
   disabled?: boolean;
   /** Mindre knapp i rader og bannere. Fortsatt minst 44 px høy. */
   small?: boolean;
+  /** Til skjermleseren når tittelen alene er uklar («Fjern» → «Fjern Skifte sengetøy»). */
+  accessibilityLabel?: string;
 };
 
 /**
  * Pilleknapp. primary = fylt, secondary = med kant, text = bare tekst,
  * danger = rød, til handlinger som ikke kan angres (slett, logg ut av enheten).
  */
-export function Button({ title, onPress, variant = 'primary', disabled, small }: Props) {
+export function Button({ title, onPress, variant = 'primary', disabled, small, accessibilityLabel }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -27,6 +29,7 @@ export function Button({ title, onPress, variant = 'primary', disabled, small }:
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         styles.base,

@@ -25,6 +25,10 @@ type Props = {
   /** onboarding: egen tittel, «Hopp over», og ingen henting av husstanden (se useUpdateHousehold). */
   variant: 'onboarding' | 'settings';
   onDone: () => void;
+  /** Etter lagret profil. Oppstarten husker den, så skjemaet er utfylt når man går tilbake. */
+  onSaved?: (profile: HomeProfile) => void;
+  /** Satt: «Tilbake» under spørsmålene (oppstarten, til forrige steg). */
+  onBack?: () => void;
 };
 
 type Step = { kind: 'form' } | { kind: 'suggestions'; groups: SuggestionGroup[] } | { kind: 'none' };
@@ -34,14 +38,17 @@ type Step = { kind: 'form' } | { kind: 'suggestions'; groups: SuggestionGroup[] 
  * velge bort før «Legg til». Forslagene blir vanlige oppgaver (felles, ingen tildelt) via
  * activate_templates. Eksisterende oppgaver røres aldri.
  */
-export function HomeProfileFlow({ householdId, householdType, saved, variant, onDone }: Props) {
+export function HomeProfileFlow({ householdId, householdType, saved, variant, onDone, onSaved, onBack }: Props) {
   const isOnboarding = variant === 'onboarding';
   const update = useUpdateHousehold(householdId, { refetch: !isOnboarding });
   const templates = useTemplates();
   const tasks = useTasks(householdId);
 
-  // Forslagene sammenlignes med profilen slik den var da skjermen ble åpnet.
-  const [baseline] = useState(() => suggestionBaseline({ type: householdType, ...saved }));
+  // Forslagene sammenlignes med profilen slik den var da skjermen ble åpnet. I oppstarten alltid
+  // som første gang (null): går man tilbake, ser man alt som passer og ikke er lagt til ennå.
+  const [baseline] = useState(() =>
+    isOnboarding ? null : suggestionBaseline({ type: householdType, ...saved }),
+  );
   const [profile, setProfile] = useState(saved);
   const [step, setStep] = useState<Step>({ kind: 'form' });
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +61,7 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
     try {
       const changes = homeProfileChanges(saved, profile);
       if (Object.keys(changes).length > 0) await update.mutateAsync(changes);
+      onSaved?.(profile);
     } catch (e) {
       setError(toNorwegianMessage(e));
       return;
@@ -72,7 +80,14 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
   const loadError = templates.error ?? tasks.error;
 
   if (step.kind === 'suggestions') {
-    return <SuggestionsStep householdId={householdId} groups={step.groups} onDone={onDone} />;
+    return (
+      <SuggestionsStep
+        householdId={householdId}
+        groups={step.groups}
+        onDone={onDone}
+        onBack={isOnboarding ? () => setStep({ kind: 'form' }) : undefined}
+      />
+    );
   }
 
   if (step.kind === 'none') {
@@ -89,7 +104,6 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
       {isOnboarding && <Text variant="pageTitle">Om hjemmet</Text>}
       <Text>
         Noen få spørsmål om boligen, så husker årshjulet vedlikeholdet for dere.
-        {isOnboarding && ' Du kan endre svarene senere i Innstillinger.'}
       </Text>
       <HomeProfileFields value={profile} onChange={setProfile} disabled={update.isPending} />
       {(error || loadError) && <Message>{error ?? toNorwegianMessage(loadError)}</Message>}
@@ -101,13 +115,31 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
       {isOnboarding && (
         <Button variant="text" title="Hopp over" onPress={onDone} disabled={update.isPending} />
       )}
+      {onBack && <Button variant="text" title="Tilbake" onPress={onBack} disabled={update.isPending} />}
+      {isOnboarding && <LaterNote />}
     </>
   );
 }
 
-type SuggestionsStepProps = { householdId: string; groups: SuggestionGroup[]; onDone: () => void };
+/** «Du kan endre dette senere under Innstillinger.» nederst på stegene i oppstarten. */
+function LaterNote() {
+  const { colors } = useTheme();
+  return (
+    <Text variant="meta" color={colors.textMuted} style={styles.later}>
+      Du kan endre dette senere under Innstillinger.
+    </Text>
+  );
+}
 
-function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) {
+type SuggestionsStepProps = {
+  householdId: string;
+  groups: SuggestionGroup[];
+  onDone: () => void;
+  /** Tilbake til spørsmålene (oppstarten). */
+  onBack?: () => void;
+};
+
+function SuggestionsStep({ householdId, groups, onDone, onBack }: SuggestionsStepProps) {
   const { colors } = useTheme();
   const activate = useActivateTemplates(householdId);
   const templates = useTemplates();
@@ -161,6 +193,8 @@ function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) 
         disabled={selected.size === 0 || activate.isPending}
       />
       <Button variant="text" title="Ikke nå" onPress={onDone} disabled={activate.isPending} />
+      {onBack && <Button variant="text" title="Tilbake" onPress={onBack} disabled={activate.isPending} />}
+      {onBack && <LaterNote />}
       {howToSheet}
     </>
   );
@@ -168,4 +202,5 @@ function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) 
 
 const styles = StyleSheet.create({
   list: { gap: spacing.row },
+  later: { textAlign: 'center' },
 });

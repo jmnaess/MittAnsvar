@@ -1,5 +1,6 @@
 import { unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
+import type { RoutineRecurrence } from './routines';
 import type { TaskTemplate } from './types';
 
 /** Alle aktive maler (RLS gir bare aktive). Filtreres på husstanden i suggest.ts. */
@@ -27,5 +28,30 @@ export async function activateTemplates(
       // De genererte typene kjenner ikke null i en uuid[]. Postgres tar imot dem.
       ...(memberIds ? { p_member_ids: memberIds as string[] } : {}),
     }),
+  );
+}
+
+/**
+ * Ny hyppighet på oppgaven som nettopp ble laget fra en rutinemal («Forslag til hverdagen»).
+ * Treffer den aktive oppgaven med malen og den ansvarlige. Felles = assigned_member_id is null
+ * (i SQL er «= null» aldri sant). Triggeren tasks_set_defaults regner ut ny frist.
+ * Trygg å kjøre på nytt: samme verdier gir samme resultat.
+ */
+export async function setRoutineRecurrence(
+  householdId: string,
+  templateId: string,
+  memberId: string | null,
+  recurrence: RoutineRecurrence,
+): Promise<void> {
+  const query = supabase
+    .from('tasks')
+    .update({ recurrence_type: 'calendar', month: null, ...recurrence })
+    .eq('household_id', householdId)
+    .eq('template_id', templateId)
+    .is('archived_at', null);
+  unwrap(
+    await (memberId === null
+      ? query.is('assigned_member_id', null)
+      : query.eq('assigned_member_id', memberId)),
   );
 }

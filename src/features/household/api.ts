@@ -39,9 +39,13 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<stri
   );
 }
 
-/** Bare navn og tone kan endres her. Andre kolonner er stengt med kolonnerettigheter. */
-/** Det voksne kan endre på husstanden: navn, tone og hjemprofilen. */
-export type HouseholdChanges = Partial<{ name: string; feedback_tone: FeedbackTone } & HomeProfile>;
+/**
+ * Det voksne kan endre på husstanden: navn, type (bare i oppstarten i appen), tone og hjemprofilen.
+ * Andre kolonner er stengt med kolonnerettigheter.
+ */
+export type HouseholdChanges = Partial<
+  { name: string; type: HouseholdType; feedback_tone: FeedbackTone } & HomeProfile
+>;
 
 export async function updateHousehold(id: string, changes: HouseholdChanges): Promise<void> {
   unwrap(await supabase.from('households').update(changes).eq('id', id));

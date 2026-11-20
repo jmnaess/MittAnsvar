@@ -8,16 +8,20 @@ import { AvatarPicker } from './AvatarPicker';
 
 type Props = {
   busy?: boolean;
+  /** Det som er lagret, når man går tilbake til steget. Utelatt = tomt skjema. */
+  initial?: CreateHouseholdInput;
+  /** Utelatt = «Opprett husstand». */
+  submitLabel?: string;
   onSubmit: (input: CreateHouseholdInput) => void;
 };
 
 /** Oppstartsskjema: husstanden (navn, type, bolig) og deg selv (navn, avatar). */
-export function HouseholdForm({ busy, onSubmit }: Props) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState<HouseholdType | null>(null);
-  const [housingType, setHousingType] = useState<HousingType | null>(null);
-  const [displayName, setDisplayName] = useState('');
-  const [avatar, setAvatar] = useState('fox');
+export function HouseholdForm({ busy, initial, submitLabel = 'Opprett husstand', onSubmit }: Props) {
+  const [name, setName] = useState(initial?.name ?? '');
+  const [type, setType] = useState<HouseholdType | null>(initial?.type ?? null);
+  const [housingType, setHousingType] = useState<HousingType | null>(initial?.housingType ?? null);
+  const [displayName, setDisplayName] = useState(initial?.displayName ?? '');
+  const [avatar, setAvatar] = useState(initial?.avatar ?? 'fox');
 
   const canSubmit =
     !busy && name.trim() !== '' && displayName.trim() !== '' && type !== null && housingType !== null;
@@ -68,7 +72,7 @@ export function HouseholdForm({ busy, onSubmit }: Props) {
         editable={!busy}
       />
       <AvatarPicker value={avatar} onChange={setAvatar} disabled={busy} />
-      <Button title="Opprett husstand" onPress={handleSubmit} disabled={!canSubmit} />
+      <Button title={submitLabel} onPress={handleSubmit} disabled={!canSubmit} />
     </View>
   );
 }

@@ -6,12 +6,18 @@ import {
   childHeading,
   defaultSelection,
   fitsAge,
+  frequencyKey,
+  frequencyOptions,
   isRoutineTemplate,
+  recurrenceOverrides,
+  restoreSuggestion,
   routineChoices,
   routineKey,
   sharedHeading,
   suggestRoutines,
+  tasksForRoutine,
   toActivation,
+  type RoutineRecurrence,
 } from '../routines';
 import { suggestAfterProfileChange, suggestForHousehold, type SuggestionHousehold } from '../suggest';
 import type { TaskTemplate } from '../types';
@@ -193,5 +199,122 @@ describe('rutiner i årshjulet og hjemprofilen', () => {
     const templates = [template('routine'), template('child', { audience: 'child' })];
     expect(suggestForHousehold(templates, household)).toEqual([]);
     expect(suggestAfterProfileChange(templates, null, household, new Set())).toEqual([]);
+  });
+});
+
+describe('frequencyOptions', () => {
+  const labels = (t: TaskTemplate) => frequencyOptions(t).map((o) => o.label);
+
+  it('ukentlig mal: malen først, så dag, annenhver uke og måned, uten duplikat av «hver uke»', () => {
+    expect(labels(template('a', { weekdays: [7] }))).toEqual([
+      'Hver søndag',
+      'Hver dag',
+      'Annenhver søndag',
+      'Den 1. hver måned',
+    ]);
+  });
+
+  it('annenhver uke (Skifte sengetøy): hver uke og hver måned kan velges', () => {
+    expect(labels(template('a', { recurrence_every: 2, weekdays: [7] }))).toEqual([
+      'Annenhver søndag',
+      'Hver dag',
+      'Hver søndag',
+      'Den 1. hver måned',
+    ]);
+  });
+
+  it('daglig mal: ukene blir lørdag', () => {
+    expect(labels(template('a', { recurrence_unit: 'day', weekdays: null }))).toEqual([
+      'Hver dag',
+      'Hver lørdag',
+      'Annenhver lørdag',
+      'Den 1. hver måned',
+    ]);
+  });
+
+  it('flere ukedager beholdes', () => {
+    expect(labels(template('a', { weekdays: [1, 3, 5] }))[2]).toBe('Annenhver mandag, onsdag og fredag');
+  });
+
+  it('månedlig mal: malens dato beholdes', () => {
+    const options = frequencyOptions(template('a', { recurrence_unit: 'month', weekdays: null, month_day: 20 }));
+    expect(options.map((o) => o.label)).toEqual([
+      'Den 20. hver måned',
+      'Hver dag',
+      'Hver lørdag',
+      'Annenhver lørdag',
+    ]);
+  });
+
+  it('standard er malens egen hyppighet', () => {
+    const t = template('a', { recurrence_every: 2, weekdays: [7] });
+    expect(frequencyOptions(t)[0].key).toBe(frequencyKey(t));
+  });
+});
+
+describe('recurrenceOverrides', () => {
+  const monthly: RoutineRecurrence = { recurrence_unit: 'month', recurrence_every: 1, weekdays: null, month_day: 1 };
+  const choices = [
+    { key: 'a:shared', templateId: 'a', memberId: null },
+    { key: 'b:kid', templateId: 'b', memberId: 'kid' },
+    { key: 'c:shared', templateId: 'c', memberId: null },
+  ];
+
+  it('bare valgte rader med endret hyppighet', () => {
+    const frequency = new Map([['a:shared', monthly], ['b:kid', monthly]]);
+    expect(recurrenceOverrides(choices, new Set(['a:shared', 'c:shared']), frequency)).toEqual([
+      { templateId: 'a', memberId: null, recurrence: monthly },
+    ]);
+  });
+
+  it('ingen endringer gir tom liste', () => {
+    expect(recurrenceOverrides(choices, new Set(['a:shared']), new Map())).toEqual([]);
+  });
+});
+
+describe('tasksForRoutine', () => {
+  const tasks = [
+    { id: '1', template_id: 'a', assigned_member_id: null },
+    { id: '2', template_id: 'a', assigned_member_id: 'adult' },
+    { id: '3', template_id: 'k', assigned_member_id: 'kid1' },
+    { id: '4', template_id: 'k', assigned_member_id: 'kid2' },
+    { id: '5', template_id: null, assigned_member_id: null },
+  ];
+
+  it('felles mal: alle oppgaver fra malen, uansett hvem', () => {
+    expect(tasksForRoutine(tasks, 'a', null).map((t) => t.id)).toEqual(['1', '2']);
+  });
+
+  it('barnemal: bare oppgaven til barnet', () => {
+    expect(tasksForRoutine(tasks, 'k', 'kid2').map((t) => t.id)).toEqual(['4']);
+  });
+});
+
+describe('restoreSuggestion', () => {
+  const a = template('a');
+  const b = template('b');
+  const young = template('young', { audience: 'child', min_age: 3, max_age: 6 });
+  const old = template('old', { audience: 'child', min_age: 12, max_age: 18 });
+  const order = [a, b, young, old];
+  const kid = member('kid', 'child', YEAR - 5);
+
+  it('felles: tilbake i shared på sin plass, borte fra sharedAdded', () => {
+    const s = { shared: [b], sharedAdded: [a], children: [] };
+    const next = restoreSuggestion(s, 'a', null, order);
+    expect(next.shared.map((t) => t.id)).toEqual(['a', 'b']);
+    expect(next.sharedAdded).toEqual([]);
+  });
+
+  it('barn: passer alderen → templates, ellers → more', () => {
+    const s = {
+      shared: [],
+      sharedAdded: [],
+      children: [{ member: kid, age: 5, templates: [], more: [], added: [young, old] }],
+    };
+    const afterYoung = restoreSuggestion(s, 'young', 'kid', order);
+    expect(afterYoung.children[0].templates.map((t) => t.id)).toEqual(['young']);
+    const afterOld = restoreSuggestion(afterYoung, 'old', 'kid', order);
+    expect(afterOld.children[0].more.map((t) => t.id)).toEqual(['old']);
+    expect(afterOld.children[0].added).toEqual([]);
   });
 });

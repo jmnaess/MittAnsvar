@@ -1,7 +1,7 @@
 // «Forslag til hverdagen» (steg 16): daglige, ukentlige og månedlige rutinemaler.
 // Ren logikk, så den kan testes uten React Native. Se docs/DATABASE.md §4.
 import type { Member } from '../household/types';
-import { isSeasonal } from '../tasks/recurrence';
+import { describeRecurrence, isSeasonal } from '../tasks/recurrence';
 import type { Task } from '../tasks/types';
 import { fitsHousehold, type SuggestionHousehold } from './suggest';
 import type { TaskTemplate } from './types';
@@ -169,4 +169,142 @@ export function toActivation(
 /** «Leah, 9 år» eller bare «Leah» uten fødselsår. */
 export function childHeading(name: string, age: number | null): string {
   return age === null ? name : `${name}, ${age} år`;
+}
+
+// ---------------------------------------------------------------------------
+// Hyppighet: endres per forslag før det legges til. Malen er standard og endres aldri.
+// ---------------------------------------------------------------------------
+
+/** Gjentakelsen en rutine kan ha: fast kalender hver dag, uke eller måned. */
+export type RoutineRecurrence = Pick<Task, 'recurrence_unit' | 'recurrence_every' | 'weekdays' | 'month_day'>;
+
+export type FrequencyOption = { key: string; label: string; recurrence: RoutineRecurrence };
+
+/** Gjentakelsen til en mal eller en oppgave, bare kolonnene en rutine bruker. */
+export function routineRecurrence(r: RoutineRecurrence): RoutineRecurrence {
+  return {
+    recurrence_unit: r.recurrence_unit,
+    recurrence_every: r.recurrence_every,
+    weekdays: r.weekdays,
+    month_day: r.month_day,
+  };
+}
+
+/** Lik nøkkel = lik gjentakelse. */
+export function frequencyKey(r: RoutineRecurrence): string {
+  return [r.recurrence_unit, r.recurrence_every, (r.weekdays ?? []).join(','), r.month_day ?? ''].join(':');
+}
+
+/** «Hver dag», «Annenhver søndag», «Den 1. hver måned». */
+export function recurrenceLabel(r: RoutineRecurrence): string {
+  return describeRecurrence({
+    recurrence_type: 'calendar',
+    ...routineRecurrence(r),
+    month: null,
+    job_repeats: false,
+    season_start_month: null,
+    season_end_month: null,
+  });
+}
+
+const SATURDAY = 6;
+
+/**
+ * Valgene i «Hvor ofte?»: malens egen hyppighet først (standard), så hver dag, hver uke,
+ * annenhver uke og hver måned, uten duplikater. Ukene bruker malens ukedager (lørdag hvis malen
+ * ikke er ukentlig), måneden malens dato (ellers den 1.).
+ */
+export function frequencyOptions(t: RoutineRecurrence): FrequencyOption[] {
+  const weekdays = t.recurrence_unit === 'week' && t.weekdays?.length ? t.weekdays : [SATURDAY];
+  const monthDay = t.recurrence_unit === 'month' && t.month_day ? t.month_day : 1;
+  const candidates: RoutineRecurrence[] = [
+    routineRecurrence(t),
+    { recurrence_unit: 'day', recurrence_every: 1, weekdays: null, month_day: null },
+    { recurrence_unit: 'week', recurrence_every: 1, weekdays, month_day: null },
+    { recurrence_unit: 'week', recurrence_every: 2, weekdays, month_day: null },
+    { recurrence_unit: 'month', recurrence_every: 1, weekdays: null, month_day: monthDay },
+  ];
+  const seen = new Set<string>();
+  return candidates.flatMap((recurrence) => {
+    const key = frequencyKey(recurrence);
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ key, label: recurrenceLabel(recurrence), recurrence }];
+  });
+}
+
+/** En valgt rad der hyppigheten er endret fra malens. */
+export type RecurrenceOverride = { templateId: string; memberId: string | null; recurrence: RoutineRecurrence };
+
+/**
+ * De valgte radene med endret hyppighet. frequency har bare radene som er endret fra malen
+ * (nøkkel = routineKey). Rader som ikke er valgt, tas ikke med.
+ */
+export function recurrenceOverrides(
+  choices: RoutineChoice[],
+  selected: Set<string>,
+  frequency: Map<string, RoutineRecurrence>,
+): RecurrenceOverride[] {
+  return choices.flatMap((c) => {
+    const recurrence = frequency.get(c.key);
+    return selected.has(c.key) && recurrence
+      ? [{ templateId: c.templateId, memberId: c.memberId, recurrence }]
+      : [];
+  });
+}
+
+// ---------------------------------------------------------------------------
+// «Fjern»: et forslag som er lagt til, arkiveres og blir valgbart igjen.
+// ---------------------------------------------------------------------------
+
+/**
+ * Oppgavene en «Lagt til»-rad står for. Barnemal: oppgaven til barnet. Felles mal: alle aktive
+ * oppgaver fra malen, uansett hvem de er tildelt (samme regel som activeRoutineKeys).
+ */
+export function tasksForRoutine<T extends Pick<Task, 'id' | 'template_id' | 'assigned_member_id'>>(
+  tasks: T[],
+  templateId: string,
+  memberId: string | null,
+): T[] {
+  return tasks.filter(
+    (t) => t.template_id === templateId && (memberId === null || t.assigned_member_id === memberId),
+  );
+}
+
+/**
+ * Flytter et lagt til-forslag tilbake blant de valgbare. Felles: til shared i malens rekkefølge.
+ * Barn: til templates hvis malen passer alderen, ellers til more (sortert etter alder).
+ */
+export function restoreSuggestion(
+  s: RoutineSuggestions,
+  templateId: string,
+  memberId: string | null,
+  order: TaskTemplate[],
+): RoutineSuggestions {
+  const inOrder = (list: TaskTemplate[]) =>
+    order.filter((t) => list.some((x) => x.id === t.id));
+
+  if (memberId === null) {
+    const t = s.sharedAdded.find((x) => x.id === templateId);
+    if (!t) return s;
+    return {
+      ...s,
+      shared: inOrder([...s.shared, t]),
+      sharedAdded: s.sharedAdded.filter((x) => x.id !== templateId),
+    };
+  }
+  return {
+    ...s,
+    children: s.children.map((c) => {
+      const t = c.member.id === memberId ? c.added.find((x) => x.id === templateId) : undefined;
+      if (!t) return c;
+      const fits = fitsAge(t, c.age);
+      return {
+        ...c,
+        templates: fits ? inOrder([...c.templates, t]) : c.templates,
+        more: fits ? c.more : byAge(inOrder([...c.more, t])),
+        added: c.added.filter((x) => x.id !== templateId),
+      };
+    }),
+  };
 }

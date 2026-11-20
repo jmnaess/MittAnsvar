@@ -13,8 +13,13 @@ type Props = {
   selected: boolean;
   onPress: () => void;
   disabled?: boolean;
-  /** radio = ett valg i en gruppe, checkbox = flere valg. Brukes av skjermlesere. */
-  role: 'radio' | 'checkbox';
+  /**
+   * radio = ett valg i en gruppe, checkbox = flere valg, button = åpner noe (f.eks. «Hvor ofte?»).
+   * Brukes av skjermlesere.
+   */
+  role: 'radio' | 'checkbox' | 'button';
+  /** Til skjermleseren. Utelatt = label. */
+  accessibilityLabel?: string;
   /** Foran teksten, f.eks. en Avatar på 20 px. */
   left?: ReactNode;
   /** Ikon foran teksten. Farges av brikken: onPrimary når valgt, ellers textMuted. */
@@ -29,7 +34,7 @@ const HIT_SLOP = { top: 6, bottom: 6 };
  * Brukes av FilterChips (én rad som rulles), ChoiceChips og MultiChoiceChips (bryter linje).
  * Ikke det samme som Chip, som bare er en merkelapp.
  */
-export function ChoiceChip({ label, selected, onPress, disabled, role, left, icon }: Props) {
+export function ChoiceChip({ label, selected, onPress, disabled, role, left, icon, accessibilityLabel }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   const fg = selected ? colors.onPrimary : colors.text;
@@ -46,10 +51,12 @@ export function ChoiceChip({ label, selected, onPress, disabled, role, left, ico
         disabled && styles.disabled,
       ]}
       accessibilityRole={role}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={role === 'radio'
         ? { selected, disabled: !!disabled }
-        : { checked: selected, disabled: !!disabled }}
+        : role === 'checkbox'
+          ? { checked: selected, disabled: !!disabled }
+          : { disabled: !!disabled }}
     >
       {left}
       {icon && <Ionicons name={icon} size={16} color={selected ? colors.onPrimary : colors.textMuted} />}

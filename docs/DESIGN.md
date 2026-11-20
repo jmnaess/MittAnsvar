@@ -195,9 +195,9 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `ShowMoreRow` | liten tekstrad med chevron som folder en liste ut og inn («4 til gjort i dag» / «Vis færre») |
 | `TaskRow` | sjekkboks, tittel, metalinje, merkelapper til høyre. `done`, `muted` (i hvite kort) |
 | `Checkbox` | sirkel 30, kant 2.5; avkrysset = fylt med ring-farge og hvit hake |
-| `CheckRow` | velg i en liste (forslag fra hjemprofilen): sjekkboks, tittel, metalinje. Avkrysset = valgt, ingen gjennomstreking |
+| `CheckRow` | velg i en liste (forslag fra hjemprofilen): sjekkboks, tittel, metalinje. Avkrysset = valgt, ingen gjennomstreking. `below` legger noe under metalinjen (brikken «Hvor ofte?») |
 | `Chip` | merkelapp: `money`, `overdue`, `neutral` |
-| `Button` | `primary` (pille), `secondary` (kant), `text`, `danger` (slett). `small` i rader og bannere |
+| `Button` | `primary` (pille), `secondary` (kant), `text`, `danger` (slett). `small` i rader og bannere. `accessibilityLabel` når tittelen alene er uklar («Fjern Skifte sengetøy») |
 | `IconButton` | rund ikonknapp, 38, 40 eller 48 (hitSlop opp til 48) |
 | `InfoButton` | lite (i)-ikon (20, `large` 26, `textMuted`, hitSlop opp til 48) som åpner «Slik gjør du». Settes med `onInfoPress` på `TaskRow`, `ListRow`, `CheckRow` og raden i «Oppgaver». Trykk på raden ellers er uendret |
 | `IconBadge` | ikon i en flate (32/34/36/44), `shape` `round` eller `square` (radius 10), bare visning: kategori i «Oppgaver», og «Felles» der en person ellers har avatar |
@@ -218,7 +218,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `TextField` | kompakt tekstfelt med etikett: høyde 44, radius 12, 1 px `border`, tekst 16. `code` gir stor, sentrert tekst |
 | `SearchField` | søkefelt (høyde 40, tekst 14): `TextField` med forstørrelsesglass og «Tøm søket» når det har tekst |
 | `DateField` | datovelger med etikett. iOS: kompakt velger i raden, Android: knapp som åpner kalenderen. `minimumDate` stopper datoer bakover |
-| `ChoiceChip` | den eneste valgbrikken i appen: høyde 32 (+ hitSlop 6 over og under = 44), radius 14, 1 px `border` på `surface`, tekst `label`. Valgt = fylt `primary` med `onPrimary`. Valgfritt `left` (avatar 20) eller `icon` (Ionicons 16, `textMuted`, `onPrimary` når valgt) |
+| `ChoiceChip` | den eneste valgbrikken i appen: høyde 32 (+ hitSlop 6 over og under = 44), radius 14, 1 px `border` på `surface`, tekst `label`. Valgt = fylt `primary` med `onPrimary`. Valgfritt `left` (avatar 20) eller `icon` (Ionicons 16, `textMuted`, `onPrimary` når valgt). `role="button"` når brikken åpner noe i stedet for å velge (hyppigheten i «Forslag til hverdagen») |
 | `ChoiceChips`, `MultiChoiceChips` | ett eller flere valg med `ChoiceChip`, bryter linje (`flexWrap`, gap 6) så alle valg synes. Brukes i alle skjemaer |
 | `Switch` | bryter i primary med lys tommel (`switchThumb`), med valgfri etikett |
 | `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |
@@ -290,8 +290,24 @@ gruppeoverskriftene. Gjentakelse, ukedager og måneder: samme brikke uten ikon.
 `features/templates/components/RoutineSuggestionsFlow.tsx`, i oppstarten (husstand → barn → hverdagen →
 hjemmet) og som modal fra Innstillinger → «Hjemmet». Seksjonen «Felles» («Forslag til deg» for enslige,
 uten forklaring), så én `Section` per barn med «Leah, 9 år» og avatar 32 til høyre. Hver rad er en
-`CheckRow` med gjentakelsen og eventuell lønn som meta («Hver lørdag · 20 kr»). Noen få rader er avhuket
-fra start. Barn uten fødselsår får en `Hint` om å legge det inn. «Legg til (n)», og «Hopp over» eller «Ikke nå».
+`CheckRow` med eventuell lønn som meta («20 kr») og hyppigheten som en `ChoiceChip` (`role="button"`, ikon
+`repeat-outline`) under: «Annenhver søndag». Trykk åpner `Sheet` «Hvor ofte?» med `ChoiceChips`: malens hyppighet
+først (standard), så hver dag, hver uke, annenhver uke og hver måned (`frequencyOptions` i
+`features/templates/routines.ts`). Valget huker av raden og gjelder bare oppgaven som lages, aldri malen. Noen få
+rader er avhuket fra start. Barn uten fødselsår får en `Hint` om å legge det inn. «Legg til (n)», og «Hopp over»
+(«Fortsett» når noe alt er lagt til) eller «Ikke nå».
+Det som er lagt til, står dempet nederst i seksjonen med `Chip` «Lagt til» og oppgavens egen hyppighet (ingen brikke).
+«Fjern» under raden arkiverer oppgaven (historikken blir stående) og gjør forslaget valgbart igjen. I oppstarten skjer
+det uten spørsmål, i Innstillinger etter «Fjerne «…»? Oppgaven forsvinner fra Oppgaver.».
+
+### Oppstarten
+
+`app/(app)/onboarding.tsx`. Stegene står i `features/household/onboardingSteps.ts` (barnesteget bare for familie).
+Hvert steg har «Tilbake» og nederst «Du kan endre dette senere under Innstillinger.» (barnesteget har sin egen
+setning). Ingenting lages to ganger: går man tilbake til første steg, er skjemaet utfylt og «Lagre og fortsett»
+oppdaterer bare det som er endret. Barna leses fra databasen; trykk på et barn endrer eller fjerner det.
+Forslagene regnes ut på nytt fra oppgavene, så det som er lagt til, står som «Lagt til». Hjemprofilen huskes i
+skjermen, fordi husstanden ikke kan hentes på nytt før oppstarten er ferdig (da vises fanene).
 
 ## Avatarer
 

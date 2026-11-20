@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Checkbox } from './Checkbox';
 import { InfoButton } from './InfoButton';
@@ -16,13 +17,15 @@ type Props = {
   onInfoPress?: () => void;
   /** Tekst til skjermleseren for (i). Utelatt = «Slik gjør du: …». */
   infoLabel?: string;
+  /** Under metalinjen, f.eks. en brikke som endrer hyppigheten. Egne trykk går til den. */
+  below?: ReactNode;
 };
 
 /**
  * Rad for å velge ting i en liste (f.eks. forslag som skal legges til). Ligner TaskRow, men
  * avkrysset betyr «valgt», ikke «gjort»: ingen gjennomstreking. Hele raden er ett trykk.
  */
-export function CheckRow({ title, meta, checked, onToggle, disabled, onInfoPress, infoLabel }: Props) {
+export function CheckRow({ title, meta, checked, onToggle, disabled, onInfoPress, infoLabel, below }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -38,6 +41,7 @@ export function CheckRow({ title, meta, checked, onToggle, disabled, onInfoPress
       <View style={styles.text}>
         <Text variant="rowTitle">{title}</Text>
         {meta ? <Text variant="meta" color={colors.textMuted}>{meta}</Text> : null}
+        {below ? <View style={styles.below}>{below}</View> : null}
       </View>
       {onInfoPress && <InfoButton onPress={onInfoPress} title={title} accessibilityLabel={infoLabel} />}
     </Pressable>
@@ -59,5 +63,6 @@ const useStyles = makeStyles(({ colors }) =>
     pressed: { backgroundColor: colors.surfaceMuted },
     disabled: { opacity: 0.6 },
     text: { flex: 1, gap: 1 },
+    below: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 6 },
   }),
 );

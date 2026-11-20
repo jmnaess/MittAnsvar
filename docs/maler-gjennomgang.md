@@ -1,8 +1,9 @@
 # Gjennomgang av malene: korte titler og «Slik gjør du»
 
 Forslag til nye titler og forklaringer på alle 78 malene, i tråd med [VISJON.md](VISJON.md).
-**Ingenting er endret i databasen.** Endringene gjøres i en egen migrasjon etter at du har gått
-gjennom dette dokumentet.
+**Lagt inn i `supabase/migrations/20261201090000_template_review.sql`**, med endringene fra
+kildesjekken (hyppighet, kilder, røykvarslerne delt i to, el-sjekk, ny tekst for berederen og
+radiatorene). Tabellene under viser forslagene slik de var før kildesjekken.
 
 Hentet fra den lokale databasen (78 maler, 76 aktive). I dag er 33 titler lengre enn 30 tegn.
 

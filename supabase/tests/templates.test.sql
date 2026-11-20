@@ -8,7 +8,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(38);
+select plan(40);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i de andre testfilene)
@@ -101,21 +101,31 @@ select tests.login_as('00000000-0000-0000-0000-00000000a001');
 
 -- 25 i startsettet (22 + 3 fra *_adjust_task_templates.sql). Hjemprofilen (*_home_profile_templates.sql)
 -- deaktiverer 2 og legger til 23 (21 årsmaler og 2 intervallmaler). Sesongoppgavene
--- (*_seasonal_tasks.sql) legger til 2: 25 − 2 + 23 + 2 = 48 aktive. Rutinemalene (steg 16) telles
--- i routine_templates.test.sql.
+-- (*_seasonal_tasks.sql) legger til 2, og gjennomgangen (*_template_review.sql) 2:
+-- 25 − 2 + 23 + 2 + 2 = 50 aktive. Rutinemalene (steg 16) telles i routine_templates.test.sql.
 select is((select count(*)::int from public.task_templates
-           where slug not like 'test-%' and slug not like 'routine-%'), 48,
-  '48 aktive maler (startsettet, hjemprofilen og sesongmalene)');
+           where slug not like 'test-%' and slug not like 'routine-%'), 50,
+  '50 aktive maler (startsettet, hjemprofilen, sesongmalene og gjennomgangen)');
 select is((select count(*)::int from public.task_templates where slug = 'test-inactive'), 0,
   'inaktive maler vises ikke');
 select is((select count(*)::int from public.task_templates
-           where slug not like 'test-%' and recurrence_unit = 'year' and month_day is null), 43,
-  '43 av malene er månedsoppgaver (alle årsmaler unntatt røykvarslerne)');
-select ok((select description like '%frostsikker utekran%' from public.task_templates
+           where slug not like 'test-%' and recurrence_type = 'calendar' and recurrence_unit = 'year'
+             and month_day is null), 40,
+  '40 av malene er månedsoppgaver (43 før tre ble kvartalsvise, røykvarslerne har fast dato)');
+select ok((select description ilike '%frostsikker utekran%' from public.task_templates
            where slug = 'outdoor-tap-close'),
   'justert forklaring er lagt inn (finnes på slug)');
 select is((select month_day from public.task_templates where slug = 'smoke-alarms'), 1::smallint,
   'røykvarslerne har fast dato 1. desember');
+select is((select array_agg(row(slug, recurrence_type, recurrence_unit, recurrence_every, month)::text order by slug)
+           from public.task_templates
+           where slug in ('smoke-alarms-test', 'fire-extinguisher', 'earth-fault-breaker', 'kitchen-hood-filter', 'electrical-check')),
+  array['(earth-fault-breaker,interval,month,3,)', '(electrical-check,interval,year,5,)',
+        '(fire-extinguisher,interval,month,3,)', '(kitchen-hood-filter,interval,month,3,)',
+        '(smoke-alarms-test,interval,month,3,)'],
+  'kvartalsmalene er intervall hver 3. måned, el-sjekken hvert 5. år');
+select is((select row(title, source_name)::text from public.task_templates where slug = 'smoke-alarms'),
+  '("Bytt batteri i røykvarslerne",DSB)', 'røykvarslerne: batteriet 1. desember, med kilde');
 select is((select housing_types::text from public.task_templates where slug = 'gutters-autumn'),
   '{townhouse,house}', '«hus»-maler gjelder rekkehus og enebolig');
 select is((select household_types::text from public.task_templates where slug = 'school-start'),

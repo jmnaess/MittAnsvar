@@ -196,7 +196,7 @@ select is(
 
 select is(
   (select array_agg(month order by month) from public.task_templates
-   where title = 'Sjekk at utedelen på varmepumpen er fri for løv, snø og is'),
+   where title = 'Sjekk utedelen på varmepumpen'),
   '{1,11}'::smallint[],
   'innhold: utedelen på varmepumpen i januar og november');
 

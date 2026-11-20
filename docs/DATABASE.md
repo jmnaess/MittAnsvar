@@ -434,6 +434,12 @@ Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `r
 - **Erstattet:** `ventilation-filter-spring/autumn` er deaktivert og erstattet av intervallmalen `ventilation-filter`.
 - **Nye maler:** 21 årsmaler og 2 intervallmaler (`heat-pump-filter` hver 8. uke, `ventilation-filter` hver 6. måned). Det gir 46 aktive maler.
 - **Sesongmaler** (`*_seasonal_tasks.sql`): `lawn-mow` og `weed-beds`. Det gir 48 aktive maler. Se §2 Sesong.
+
+**Gjennomgang av malene** (`*_template_review.sql`, fra `docs/maler-gjennomgang.md` og kildesjekken):
+- **Tekst:** korte titler og ny «Slik gjør du» på årshjul, hjemprofil, intervall og sesong. Rutinene er uendret. Noen maler har fått kilde (DSB, Bergen kommune).
+- **Kvartalsvis = intervall hver 3. måned**, ikke kalender: bare årlige kalenderoppgaver står i Årshjul (`tasks/section.ts`), mens intervaller på minst 3 måneder gjør det. `fire-extinguisher`, `earth-fault-breaker` og `kitchen-hood-filter` er gjort om, og teksten sier hva kilden anbefaler, og at hyppigheten kan endres.
+- **Røykvarslerne er delt i to:** `smoke-alarms` er batteribyttet 1. desember, og den nye `smoke-alarms-test` testes hver 3. måned. Ny mal: `electrical-check` (el-sjekk) hvert 5. år. Det gir 50 aktive maler.
+- **Unntak fra regelen om at justeringer bare endrer malene:** oppgaver laget fra malene fikk ny tittel og beskrivelse der de fortsatt var lik malens gamle tekst, og ny gjentakelse der den fortsatt var lik malens gamle. Neste frist ble det som kom først av den gamle fristen (`due_by`) og 3 måneder fram, så ingen oppgave ble forfalt av migrasjonen.
 - **Årshjulet** viser maler som passer husstanden, og i tillegg maler husstanden allerede har aktive (`yearWheelTemplates`). En aktiv oppgave forsvinner dermed ikke når et svar endres. En oppgave fra en deaktivert mal vises som egen.
 
 **Aktivering:** RPC `activate_templates(p_household_id, p_template_ids uuid[], p_member_ids uuid[] default null) returns int` **kopierer** malene til nye `tasks`-rader med `template_id` satt og returnerer antall nye oppgaver.

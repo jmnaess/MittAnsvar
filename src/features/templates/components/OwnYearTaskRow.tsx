@@ -10,10 +10,12 @@ type Props = {
   onPress?: () => void;
   /** Gjentakelse og neste frist i én tekst («Hver 3. måned · neste i mars»). Brukes i «Med jevne mellomrom». */
   when?: string;
+  /** Åpner «Slik gjør du». */
+  onInfoPress?: () => void;
 };
 
 /** En egen oppgave i årshjulet, merket «Egen». Trykk åpner den for redigering. */
-export function OwnYearTaskRow({ task, assigneeName, onPress, when }: Props) {
+export function OwnYearTaskRow({ task, assigneeName, onPress, when, onInfoPress }: Props) {
   return (
     <ListRow
       title={task.title}
@@ -24,6 +26,7 @@ export function OwnYearTaskRow({ task, assigneeName, onPress, when }: Props) {
           : [assigneeName, isSeasonal(task) && describeRecurrence(task), `Neste frist: ${formatNextDue(task)}`]
       }
       onPress={onPress}
+      onInfoPress={onInfoPress}
       accessibilityLabel={`${task.title}. Egen oppgave`}
       accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}
     />

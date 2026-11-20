@@ -32,6 +32,8 @@ type Props<T extends UpcomingTask> = {
   /** Listen hentes fortsatt: ikke vis «Ingenting planlagt» ennå. */
   loading?: boolean;
   emptyText: string;
+  /** «Slik gjør du» for raden: en trykkfunksjon, eller undefined = ikke ikon (useHowToSheet). */
+  infoPressFor?: (task: T) => (() => void) | undefined;
   /** Satt i «Alle»: hvem oppgaven er til («Kari» eller «Felles»), etter datoen på raden. */
   nameOf?: (task: T) => string;
 };
@@ -43,7 +45,7 @@ type Props<T extends UpcomingTask> = {
  * (onComplete). Voksne: trykk på raden (onRowPress), langt trykk gir valgene (onLongPress). nameOf legger til hvem.
  */
 export function UpcomingCard<T extends UpcomingTask = Task>({
-  upcoming, showReward, onRowPress, onLongPress, onComplete, busyId, checkColor, loading, emptyText, nameOf,
+  upcoming, showReward, onRowPress, onLongPress, onComplete, busyId, checkColor, loading, emptyText, nameOf, infoPressFor,
 }: Props<T>) {
   const { colors } = useTheme();
   const { repeating, groups, nextMonth } = upcoming;
@@ -59,6 +61,7 @@ export function UpcomingCard<T extends UpcomingTask = Task>({
     const open = onRowPress ? () => onRowPress(task, checkable) : undefined;
     const longPress = onLongPress ? () => onLongPress(task, checkable) : undefined;
     const hint = longPress ? 'Hold inne for valg' : undefined;
+    const info = infoPressFor?.(task);
     if (!checkable || !onComplete) {
       return (
         <ListRow
@@ -69,6 +72,7 @@ export function UpcomingCard<T extends UpcomingTask = Task>({
           right={reward(task)}
           onPress={open}
           onLongPress={longPress}
+          onInfoPress={info}
           accessibilityLabel={open ? `${task.title}, ${meta}. Åpne valg` : undefined}
           accessibilityHint={hint}
         />
@@ -89,6 +93,7 @@ export function UpcomingCard<T extends UpcomingTask = Task>({
         onPress={open ?? complete}
         onCheckPress={open ? complete : undefined}
         onLongPress={longPress}
+        onInfoPress={info}
         checkAccessibilityLabel={open ? `Marker ${task.title} som utført nå` : undefined}
         accessibilityLabel={open ? `${task.title}, ${meta}` : `${task.title}, ${meta}. Marker som utført nå`}
         accessibilityHint={open ? 'Trykk for å velge hvem som gjorde det. Hold inne for valg' : hint}

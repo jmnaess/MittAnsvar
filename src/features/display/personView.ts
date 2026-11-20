@@ -1,4 +1,4 @@
-import type { BoardMember, FamilyBoard } from './types';
+import type { BoardHowTo, BoardMember, FamilyBoard } from './types';
 import { boardCards, type BoardCard } from './board';
 import { groupRecentByDay, type RecentDay } from '../completions/recent';
 import { focusSections } from '../tasks/groupToday';
@@ -15,7 +15,7 @@ export type BoardPersonView = {
   /** Personens kort i dag, og personens egne oppgaver i «Denne måneden». Kan krysses av. */
   sections: BoardCard[];
   /** Bare visning. */
-  upcoming: MemberUpcoming<UpcomingTask>;
+  upcoming: MemberUpcoming<UpcomingTask & BoardHowTo>;
   /** Bare visning. */
   recentDays: RecentDay[];
 };

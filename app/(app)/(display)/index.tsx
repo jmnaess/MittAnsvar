@@ -11,14 +11,16 @@ import { BoardSettingsSheet } from '../../../src/features/display/components/Boa
 import { useFamilyBoard, useKeepAwakeSetting } from '../../../src/features/display/hooks';
 import { boardColumnCount, distributeCards } from '../../../src/features/display/layout';
 import { boardPersonView, focusedMember } from '../../../src/features/display/personView';
-import type { FamilyBoard } from '../../../src/features/display/types';
+import type { BoardHowTo, FamilyBoard } from '../../../src/features/display/types';
 import { useBoardActions } from '../../../src/features/display/useBoardActions';
 import { useIdleReset } from '../../../src/features/display/useIdleReset';
 import { CelebrationOverlay } from '../../../src/features/feedback/components/CelebrationOverlay';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
 import { MemberPhotoUrlsContext, usePhotoUrls } from '../../../src/features/household/hooks';
 import { memberPhoto, photoPathsToSign } from '../../../src/features/household/photo';
+import { useHowToSheet } from '../../../src/features/tasks/components/HowToSheet';
 import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
+import { howToForTask } from '../../../src/features/tasks/howTo';
 import { formatWeekdayDate } from '../../../src/lib/dates';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
@@ -73,6 +75,10 @@ function Board({ board }: { board: FamilyBoard }) {
   const urls = photoUrls ?? EMPTY_URLS;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Malen kommer med fra get_family_board, så skjermen trenger ikke useTemplates.
+  const { infoPress, sheet: howToSheet } = useHowToSheet();
+  const infoPressFor = (task: Parameters<typeof howToForTask>[0] & BoardHowTo) =>
+    infoPress(howToForTask(task, task.template));
   const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<string>>(new Set());
   /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -109,6 +115,7 @@ function Board({ board }: { board: FamilyBoard }) {
         onToggleExpanded={() => toggleExpanded(card.key)}
         onPress={actions.press}
         onUndo={actions.undoCompletion}
+        infoPressFor={infoPressFor}
       />
     );
   }
@@ -124,6 +131,7 @@ function Board({ board }: { board: FamilyBoard }) {
         upcoming={view.upcoming}
         showReward={member.role === 'child'}
         emptyText="Ingenting planlagt de neste to ukene."
+        infoPressFor={infoPressFor}
       />,
     );
     if (view.recentDays.length > 0) {
@@ -206,6 +214,7 @@ function Board({ board }: { board: FamilyBoard }) {
           onKeepAwakeChange={keepAwake.setEnabled}
           onClose={() => setSettingsOpen(false)}
         />
+        {howToSheet}
         {actions.toast && (
           <FeedbackToast
             resetKey={actions.toast.completionId}

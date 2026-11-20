@@ -6,6 +6,8 @@ import { HomeProfileFields } from '../../household/components/HomeProfileFields'
 import { homeProfileChanges, suggestionBaseline } from '../../household/homeProfile';
 import { useUpdateHousehold } from '../../household/hooks';
 import type { HomeProfile, HouseholdType } from '../../household/types';
+import { useHowToSheet } from '../../tasks/components/HowToSheet';
+import { howToForTemplate } from '../../tasks/howTo';
 import { useTasks } from '../../tasks/hooks';
 import { useActivateTemplates, useTemplates } from '../hooks';
 import {
@@ -108,6 +110,13 @@ type SuggestionsStepProps = { householdId: string; groups: SuggestionGroup[]; on
 function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) {
   const { colors } = useTheme();
   const activate = useActivateTemplates(householdId);
+  const templates = useTemplates();
+  const { infoPress, sheet: howToSheet } = useHowToSheet();
+  // Gruppens nøkkel er id-en til den første malen i gruppen (groupSuggestions).
+  const howToOf = (group: SuggestionGroup) => {
+    const first = templates.data?.find((t) => t.id === group.key);
+    return first ? howToForTemplate(first) : null;
+  };
   // Alle forslag er valgt fra start.
   const [selected, setSelected] = useState(() => new Set(groups.map((g) => g.key)));
 
@@ -141,6 +150,7 @@ function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) 
             checked={selected.has(group.key)}
             onToggle={() => toggle(group.key)}
             disabled={activate.isPending}
+            onInfoPress={infoPress(howToOf(group))}
           />
         ))}
       </View>
@@ -151,6 +161,7 @@ function SuggestionsStep({ householdId, groups, onDone }: SuggestionsStepProps) 
         disabled={selected.size === 0 || activate.isPending}
       />
       <Button variant="text" title="Ikke nå" onPress={onDone} disabled={activate.isPending} />
+      {howToSheet}
     </>
   );
 }

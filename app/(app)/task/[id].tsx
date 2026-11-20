@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
+import { HowToContent, useTaskHowTo } from '../../../src/features/tasks/components/HowToSheet';
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useArchiveTask, useTasks, useUpdateTask } from '../../../src/features/tasks/hooks';
 import { isJob } from '../../../src/features/tasks/recurrence';
@@ -9,7 +10,7 @@ import { isFromTasks, revealSaved } from '../../../src/features/tasks/tasksSegme
 import type { Task } from '../../../src/features/tasks/types';
 import { formatDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
-import { Button, Message, ModalFormScreen, Text, useTheme } from '../../../src/ui';
+import { Button, Card, Message, ModalFormScreen, Text, useTheme } from '../../../src/ui';
 
 export default function EditTaskScreen() {
   const params = useLocalSearchParams<{ id: string; from?: string }>();
@@ -55,6 +56,8 @@ function EditTaskForm({ task, householdId, fromTasks, onArchived }: FormProps) {
   const archiveTask = useArchiveTask(householdId);
   const me = useMyMember(householdId);
   const form = useTaskForm(members ?? [], task);
+  // Øverst for alle oppgaver med beskrivelse, også rutiner (som ikke har (i) i listene).
+  const howTo = useTaskHowTo()(task, { always: true });
 
   const busy = updateTask.isPending || archiveTask.isPending;
   const error = updateTask.error ?? archiveTask.error;
@@ -93,6 +96,11 @@ function EditTaskForm({ task, householdId, fromTasks, onArchived }: FormProps) {
   return (
     <ModalFormScreen canSave={!!form.value} saving={busy} onSave={save}>
       {error && <Message>{toNorwegianMessage(error)}</Message>}
+      {howTo && (
+        <Card>
+          <HowToContent howTo={howTo} />
+        </Card>
+      )}
       <Text variant="metaStrong" color={colors.textWarm}>
         {isJob(task)
           ? 'Ekstrajobb'

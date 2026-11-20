@@ -39,6 +39,7 @@ import {
   withOpenState,
 } from '../taskGroups';
 import type { Task } from '../types';
+import { useHowToSheet, useTaskHowTo } from './HowToSheet';
 import { TaskRow } from './TaskRow';
 
 // FilterChips trenger en verdi for «Alle». null kan ikke brukes som nøkkel.
@@ -76,6 +77,8 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
   const archive = useArchiveTask(householdId);
   const restore = useRestoreTask(householdId);
   const openKeys = useOpenGroups();
+  const howToOf = useTaskHowTo();
+  const { infoPress, sheet: howToSheet } = useHowToSheet();
   const [query, setQuery] = useState('');
   // Oppgavene i raden som ble slettet (flere når raden var sammenslått).
   const [deleted, setDeleted] = useState<Task[] | null>(null);
@@ -167,6 +170,7 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
         assigneeName={nameOf(rowTasks)}
         today={today}
         onPress={() => (rowTasks.length > 1 ? setPicking(rowTasks) : edit(rowTasks[0]))}
+        onInfoPress={infoPress(howToOf(rowTasks[0]))}
       />
     );
     return isAdult ? (
@@ -239,6 +243,7 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
         onPick={pickOwner}
         onClose={() => setPicking(null)}
       />
+      {howToSheet}
       {deleted && (
         <UndoToast
           resetKey={deleted[0].id}

@@ -24,6 +24,7 @@ import type { Member } from '../../../src/features/household/types';
 import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
+import { useHowToSheet, useTaskHowTo } from '../../../src/features/tasks/components/HowToSheet';
 import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TaskRowMenu } from '../../../src/features/tasks/components/TaskRowMenu';
@@ -155,6 +156,9 @@ export default function TodayScreen() {
   const postpone = usePostponeTask(householdId);
   const undoPostpone = useUndoPostpone(householdId);
   const insets = useSafeAreaInsets();
+  const howToOf = useTaskHowTo();
+  const { infoPress, sheet: howToSheet } = useHowToSheet();
+  const infoPressFor = (task: Task | TodayTask) => infoPress(howToOf(task));
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
@@ -384,6 +388,7 @@ export default function TodayScreen() {
         onRowPress={isAdult ? () => pressOpenRow(task) : undefined}
         onLongPress={isAdult ? () => openMenu({ kind: 'open', task }) : () => pickDoer(task)}
         longPressHint={isAdult ? 'Trykk for å velge hvem som gjorde det. Hold inne for valg' : undefined}
+        onInfoPress={infoPressFor(task)}
       />
     ));
     return (
@@ -499,6 +504,7 @@ export default function TodayScreen() {
               checkColor={colors.primary}
               loading={upcomingPending}
               emptyText="Ingenting planlagt de neste ukene."
+              infoPressFor={infoPressFor}
               onRowPress={isAdult ? pressUpcomingRow : undefined}
               onLongPress={
                 isAdult
@@ -530,6 +536,7 @@ export default function TodayScreen() {
                 checkColor={personColor(focused.avatar).ring}
                 loading={upcomingPending}
                 emptyText="Ingenting planlagt de neste ukene."
+                infoPressFor={infoPressFor}
                 onRowPress={isAdult ? pressUpcomingRow : undefined}
                 onLongPress={
                   isAdult
@@ -595,6 +602,8 @@ export default function TodayScreen() {
         }}
         onEdit={editFromMenu}
       />
+
+      {howToSheet}
 
       <NewTaskSheet
         visible={creating}

@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(27);
+select plan(32);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere
@@ -100,6 +100,14 @@ insert into public.tasks (id, household_id, title, recurrence_type, job_repeats,
 
 update public.tasks set archived_at = now() where id = 'aaaaaaaa-1111-0000-0000-000000000004';
 
+-- En mal med kilde, og «K ukentlig» laget fra den.
+insert into public.task_templates (id, slug, title, description, category, recurrence_type,
+                                   recurrence_unit, recurrence_every, source_name, source_url) values
+  ('eeeeeeee-0000-0000-0000-000000000001', 'test-kilde', 'Testmal', 'hemmelig beskrivelse', 'maintenance',
+   'interval', 'week', 1, 'DSB', 'https://www.dsb.no');
+update public.tasks set template_id = 'eeeeeeee-0000-0000-0000-000000000001'
+where id = 'aaaaaaaa-1111-0000-0000-000000000001';
+
 -- Avkrysninger: i går (godkjent), for to dager siden (avvist), for tre dager siden (venter),
 -- for fire dager siden og i dag. I B: i går.
 insert into public.task_completions
@@ -142,9 +150,33 @@ select ok(
    from tests.board, jsonb_array_elements(b -> 'upcoming_tasks') e),
   'upcoming_tasks: alle fra egen husstand');
 select ok(
-  not (tests.keys_in('upcoming_tasks') && array['description', 'created_by', 'category', 'anchor_on',
-                                                 'archived_at', 'auth_user_id']),
-  'upcoming_tasks: ingen beskrivelse eller andre interne felt');
+  not (tests.keys_in('upcoming_tasks') && array['created_by', 'category', 'anchor_on',
+                                                 'archived_at', 'auth_user_id', 'template_id']),
+  'upcoming_tasks: ingen interne felt');
+select is(
+  (select e ->> 'description' from tests.board, jsonb_array_elements(b -> 'upcoming_tasks') e
+   where e ->> 'title' = 'K ukentlig'),
+  'hemmelig beskrivelse', 'upcoming_tasks: beskrivelsen er med («Slik gjør du»)');
+select is(
+  (select e -> 'template' from tests.board, jsonb_array_elements(b -> 'upcoming_tasks') e
+   where e ->> 'title' = 'K ukentlig'),
+  jsonb_build_object('description', 'hemmelig beskrivelse', 'source_name', 'DSB',
+                     'source_url', 'https://www.dsb.no', 'recurrence_type', 'interval',
+                     'recurrence_unit', 'week', 'season_start_month', null),
+  'upcoming_tasks: malen med kilde og gjentakelse');
+select is(
+  (select e -> 'template' from tests.board, jsonb_array_elements(b -> 'upcoming_tasks') e
+   where e ->> 'title' = 'L daglig'),
+  'null'::jsonb, 'upcoming_tasks: template er null uten mal');
+select is(
+  (select e -> 'template' ->> 'source_name' from tests.board, jsonb_array_elements(b -> 'tasks') e
+   where e ->> 'title' = 'K ukentlig'),
+  'DSB', 'tasks: malen er med');
+select throws_ok(
+  $$insert into public.task_templates (slug, title, description, category, recurrence_type,
+                                       recurrence_unit, recurrence_every, source_url)
+    values ('test-uten-navn', 'X', 'X', 'other', 'interval', 'week', 1, 'https://example.com')$$,
+  '23514', null, 'source_url krever source_name');
 select ok(
   (select (e ->> 'reward_nok')::int = 20 from tests.board, jsonb_array_elements(b -> 'upcoming_tasks') e
    where e ->> 'title' = 'K ukentlig'),

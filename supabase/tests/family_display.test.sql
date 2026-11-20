@@ -208,7 +208,7 @@ select is(jsonb_array_length(public.get_family_board() -> 'tasks'), 4, 'bare egn
 select ok(public.get_family_board()::text !~ 'Oppgave B', 'ingenting fra husstand B');
 select ok(public.get_family_board()::text !~ 'birth_year', 'ikke fødselsår');
 select ok(public.get_family_board()::text !~ 'auth_user_id', 'ikke auth_user_id');
-select ok(public.get_family_board()::text !~ 'hemmelig', 'ikke oppgavebeskrivelser');
+select ok(public.get_family_board()::text ~ 'hemmelig', 'beskrivelsen er med («Slik gjør du»)');
 select ok(public.get_family_board()::text !~ '00000000-0000-0000-0000-00000000a00', 'ingen voksnes bruker-id');
 
 -- Ingen direkte lesing.

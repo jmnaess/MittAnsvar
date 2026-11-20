@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Checkbox } from './Checkbox';
+import { InfoButton } from './InfoButton';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
 import { minTouch, radius } from './theme';
@@ -11,13 +12,15 @@ type Props = {
   checked: boolean;
   onToggle: () => void;
   disabled?: boolean;
+  /** Satt: (i)-ikon til høyre som åpner «Slik gjør du». Trykk på raden velger som før. */
+  onInfoPress?: () => void;
 };
 
 /**
  * Rad for å velge ting i en liste (f.eks. forslag som skal legges til). Ligner TaskRow, men
  * avkrysset betyr «valgt», ikke «gjort»: ingen gjennomstreking. Hele raden er ett trykk.
  */
-export function CheckRow({ title, meta, checked, onToggle, disabled }: Props) {
+export function CheckRow({ title, meta, checked, onToggle, disabled, onInfoPress }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -34,6 +37,7 @@ export function CheckRow({ title, meta, checked, onToggle, disabled }: Props) {
         <Text variant="rowTitle">{title}</Text>
         {meta ? <Text variant="meta" color={colors.textMuted}>{meta}</Text> : null}
       </View>
+      {onInfoPress && <InfoButton onPress={onInfoPress} title={title} />}
     </Pressable>
   );
 }

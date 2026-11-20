@@ -198,6 +198,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `Chip` | merkelapp: `money`, `overdue`, `neutral` |
 | `Button` | `primary` (pille), `secondary` (kant), `text`, `danger` (slett). `small` i rader og bannere |
 | `IconButton` | rund ikonknapp, 38, 40 eller 48 (hitSlop opp til 48) |
+| `InfoButton` | lite (i)-ikon (20, `large` 26, `textMuted`, hitSlop opp til 48) som åpner «Slik gjør du». Settes med `onInfoPress` på `TaskRow`, `ListRow`, `CheckRow` og raden i «Oppgaver». Trykk på raden ellers er uendret |
 | `IconBadge` | ikon i en flate (32/34/36/44), `shape` `round` eller `square` (radius 10), bare visning: kategori i «Oppgaver», og «Felles» der en person ellers har avatar |
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
 | `AvatarStack` | overlappende avatarer (−10 px fra 32 og opp, ca. 30 % av størrelsen under). Flere enn `max`: en rund «+N» i `surfaceMuted` til slutt |
@@ -220,6 +221,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `ChoiceChips`, `MultiChoiceChips` | ett eller flere valg med `ChoiceChip`, bryter linje (`flexWrap`, gap 6) så alle valg synes. Brukes i alle skjemaer |
 | `Switch` | bryter i primary med lys tommel (`switchThumb`), med valgfri etikett |
 | `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |
+| `HowToSheet` / `HowToContent` | (`features/tasks/components/HowToSheet.tsx`) «Slik gjør du»: beskrivelsen og «Kilde: …» (lenke når malen har URL). `useHowToSheet()` gir arket og `infoPress(howTo)`. Hvem som får ikon, står i `features/tasks/howTo.ts`: maler og oppgaver fra årshjul, hjemprofil, intervall og sesong, og oppgaver uten mal som har beskrivelse. Rutiner («Re opp senga») får ikke ikon. Redigeringsskjermen viser beskrivelsen øverst for alle |
 | `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
 | `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
 | `Toast` / `UndoToast` / `NoticeToast` | mørkt banner nederst. `UndoToast` har «Angre» i 5 s, `NoticeToast` er bare en kort melding i 3 s («Lagt i Årshjul») |

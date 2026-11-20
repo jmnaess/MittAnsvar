@@ -19,12 +19,15 @@ type Props = {
   expanded: boolean;
   onToggleExpanded: () => void;
   onPress: (task: BoardTask) => void;
+  /** «Slik gjør du» for raden, eller undefined = ikke ikon. */
+  infoPressFor: (task: BoardTask) => (() => void) | undefined;
   onUndo: (completion: TodayCompletion) => void;
 };
 
 /** Ett kort på familieskjermen: en person, «Felles», «Denne måneden» eller «Ekstrajobber». */
 export function BoardCardView({
   card, members, photoUrls, userId, busyIds, undoingId, expanded, onToggleExpanded, onPress, onUndo,
+  infoPressFor,
 }: Props) {
   const { personColor, sharedColors } = useTheme();
   const { member } = card;
@@ -57,6 +60,7 @@ export function BoardCardView({
           checkColor={color.ring}
           busy={busyIds.has(task.id)}
           onPress={() => onPress(task)}
+          onInfoPress={infoPressFor(task)}
         />
       ))}
       <DoneList

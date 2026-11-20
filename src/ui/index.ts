@@ -26,6 +26,7 @@ export { GroupCard } from './GroupCard';
 export { GroupHeader } from './GroupHeader';
 export { IconBadge } from './IconBadge';
 export { IconButton } from './IconButton';
+export { InfoButton } from './InfoButton';
 export { JobCard } from './JobCard';
 export { JobGrid } from './JobGrid';
 export { ListRow } from './ListRow';

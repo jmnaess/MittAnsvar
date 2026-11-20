@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { InfoButton } from './InfoButton';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
 import { minTouch, radius } from './theme';
@@ -19,6 +20,8 @@ type Props = {
   /** Utelatt = bare visning, uten pil. */
   onPress?: () => void;
   onLongPress?: () => void;
+  /** Satt: (i)-ikon etter teksten som åpner «Slik gjør du». Trykk på raden er uendret. */
+  onInfoPress?: () => void;
   /** Raden ligger i et hvitt kort: bruk surfaceMuted som bakgrunn. */
   muted?: boolean;
   accessibilityLabel?: string;
@@ -27,7 +30,7 @@ type Props = {
 
 /** Én rad i en liste (Oppgaver, Årshjul, Husstand, historikk): hvit, avrundet, pil når den kan trykkes. */
 export function ListRow({
-  title, meta, left, right, badge, onPress, onLongPress, muted, accessibilityLabel, accessibilityHint,
+  title, meta, left, right, badge, onPress, onLongPress, onInfoPress, muted, accessibilityLabel, accessibilityHint,
 }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -56,6 +59,7 @@ export function ListRow({
           <Text key={i} variant="meta" color={colors.textMuted}>{line}</Text>
         ))}
       </View>
+      {onInfoPress && <InfoButton onPress={onInfoPress} title={title} />}
       {right}
       {onPress && <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />}
     </Pressable>

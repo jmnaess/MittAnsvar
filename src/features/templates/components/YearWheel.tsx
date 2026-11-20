@@ -9,6 +9,8 @@ import { hasAnyAnswer } from '../../household/homeProfile';
 import { useMembers, useMyHousehold, useMyMember } from '../../household/hooks';
 import { useArchiveTask, useTasks } from '../../tasks/hooks';
 import { FROM_TASKS } from '../../tasks/tasksSegment';
+import { useHowToSheet, useTaskHowTo } from '../../tasks/components/HowToSheet';
+import { howToForTemplate } from '../../tasks/howTo';
 import type { Task } from '../../tasks/types';
 import { useActivateTemplates, useTemplates } from '../hooks';
 import {
@@ -54,6 +56,8 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
   const tasks = useTasks(householdId);
   const activate = useActivateTemplates(householdId);
   const archive = useArchiveTask(householdId);
+  const howToOf = useTaskHowTo();
+  const { infoPress, sheet: howToSheet } = useHowToSheet();
 
   // Bryterens verdi mens en endring lagres, så den ikke hopper tilbake før listen er hentet på nytt.
   const [pending, setPending] = useState<Record<string, boolean>>({});
@@ -158,97 +162,103 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
   );
 
   return (
-    <SectionList
-      ref={listRef}
-      contentContainerStyle={styles.container}
-      sections={sections}
-      keyExtractor={(item) => item.key}
-      stickySectionHeadersEnabled={false}
-      {...pullToRefresh}
-      // Uten faste høyder kan listen ikke alltid rulle rett til en seksjon langt nede.
-      // Rull omtrent dit først, og prøv igjen når radene der er tegnet.
-      onScrollToIndexFailed={(info) => {
-        if (retries.current >= MAX_SCROLL_RETRIES) return;
-        retries.current += 1;
-        listRef.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
-        scrollToTarget(100);
-      }}
-      ListHeaderComponent={
-        <View style={styles.header}>
-          {header}
-          <Text variant="meta" color={colors.textMuted}>
-            Årshjulet husker det som bare skjer noen ganger i året. Slå på det som passer, eller
-            lag egne med +. Oppgavene dukker opp i «I dag» når det er tid.
-          </Text>
-          {isAdult && notActive.length > 0 && (
-            <Button
-              title="Huk av alle"
-              variant="secondary"
-              onPress={checkAll}
-              disabled={activate.isPending}
-            />
-          )}
-          {isAdult && !hasAnyAnswer(household!) && (
-            <Button
-              title="Fortell om hjemmet for flere forslag"
-              variant="text"
-              onPress={() => router.push('/home-profile')}
-            />
-          )}
-          {!isAdult && members.length > 0 && (
-            <Message tone="muted">Bare voksne kan endre årshjulet.</Message>
-          )}
-          {(loadError || actionError) && <Message>{actionError ?? toNorwegianMessage(loadError)}</Message>}
-        </View>
-      }
-      renderSectionHeader={({ section }) => (
-        <Text variant="sectionTitle" accessibilityRole="header" style={styles.month}>{section.title}</Text>
-      )}
-      ItemSeparatorComponent={Separator}
-      renderSectionFooter={({ section }) =>
-        section.data.length === 0 && !templates.isPending ? (
-          <Message tone="muted">
-            {section.key === INTERVAL_SECTION_KEY ? 'Ingen oppgaver med jevne mellomrom.' : 'Ingenting denne måneden.'}
-          </Message>
-        ) : null
-      }
-      renderItem={({ item, section }) => {
-        const inIntervals = section.key === INTERVAL_SECTION_KEY;
-        if (item.kind === 'own') {
+    <>
+      <SectionList
+        ref={listRef}
+        contentContainerStyle={styles.container}
+        sections={sections}
+        keyExtractor={(item) => item.key}
+        stickySectionHeadersEnabled={false}
+        {...pullToRefresh}
+        // Uten faste høyder kan listen ikke alltid rulle rett til en seksjon langt nede.
+        // Rull omtrent dit først, og prøv igjen når radene der er tegnet.
+        onScrollToIndexFailed={(info) => {
+          if (retries.current >= MAX_SCROLL_RETRIES) return;
+          retries.current += 1;
+          listRef.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+          scrollToTarget(100);
+        }}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            {header}
+            <Text variant="meta" color={colors.textMuted}>
+              Årshjulet husker det som bare skjer noen ganger i året. Slå på det som passer, eller
+              lag egne med +. Oppgavene dukker opp i «I dag» når det er tid.
+            </Text>
+            {isAdult && notActive.length > 0 && (
+              <Button
+                title="Huk av alle"
+                variant="secondary"
+                onPress={checkAll}
+                disabled={activate.isPending}
+              />
+            )}
+            {isAdult && !hasAnyAnswer(household!) && (
+              <Button
+                title="Fortell om hjemmet for flere forslag"
+                variant="text"
+                onPress={() => router.push('/home-profile')}
+              />
+            )}
+            {!isAdult && members.length > 0 && (
+              <Message tone="muted">Bare voksne kan endre årshjulet.</Message>
+            )}
+            {(loadError || actionError) && <Message>{actionError ?? toNorwegianMessage(loadError)}</Message>}
+          </View>
+        }
+        renderSectionHeader={({ section }) => (
+          <Text variant="sectionTitle" accessibilityRole="header" style={styles.month}>{section.title}</Text>
+        )}
+        ItemSeparatorComponent={Separator}
+        renderSectionFooter={({ section }) =>
+          section.data.length === 0 && !templates.isPending ? (
+            <Message tone="muted">
+              {section.key === INTERVAL_SECTION_KEY ? 'Ingen oppgaver med jevne mellomrom.' : 'Ingenting denne måneden.'}
+            </Message>
+          ) : null
+        }
+        renderItem={({ item, section }) => {
+          const inIntervals = section.key === INTERVAL_SECTION_KEY;
+          if (item.kind === 'own') {
+            return (
+              <OwnYearTaskRow
+                task={item.task}
+                assigneeName={nameOf(item.task.assigned_member_id)}
+                when={inIntervals ? describeEvery(item.task, item.task.next_due_on, today) : undefined}
+                onInfoPress={infoPress(howToOf(item.task))}
+                onPress={
+                  isAdult
+                    ? () => router.push({ pathname: '/task/[id]', params: { id: item.task.id, ...FROM_TASKS } })
+                    : undefined
+                }
+              />
+            );
+          }
+          const template = item.template;
+          const task = taskByTemplate.get(template.id) ?? null;
+          const isPending = template.id in pending;
           return (
-            <OwnYearTaskRow
-              task={item.task}
-              assigneeName={nameOf(item.task.assigned_member_id)}
-              when={inIntervals ? describeEvery(item.task, item.task.next_due_on, today) : undefined}
+            <TemplateRow
+              template={template}
+              task={task}
+              value={isPending ? pending[template.id] : task !== null}
+              disabled={!isAdult || isPending}
+              onToggle={(on) => toggle(template, on)}
+              when={inIntervals ? describeEvery(template, task?.next_due_on ?? null, today) : undefined}
+              // Aktivert: oppgavens tekst (den kan være endret). Ellers malens.
+              onInfoPress={infoPress(task ? howToOf(task) : howToForTemplate(template))}
+              // En mal som er på, er en vanlig oppgave: voksne kan endre ansvarlig, lønn og frist.
               onPress={
-                isAdult
-                  ? () => router.push({ pathname: '/task/[id]', params: { id: item.task.id, ...FROM_TASKS } })
+                isAdult && task
+                  ? () => router.push({ pathname: '/task/[id]', params: { id: task.id, ...FROM_TASKS } })
                   : undefined
               }
             />
           );
-        }
-        const template = item.template;
-        const task = taskByTemplate.get(template.id) ?? null;
-        const isPending = template.id in pending;
-        return (
-          <TemplateRow
-            template={template}
-            task={task}
-            value={isPending ? pending[template.id] : task !== null}
-            disabled={!isAdult || isPending}
-            onToggle={(on) => toggle(template, on)}
-            when={inIntervals ? describeEvery(template, task?.next_due_on ?? null, today) : undefined}
-            // En mal som er på, er en vanlig oppgave: voksne kan endre ansvarlig, lønn og frist.
-            onPress={
-              isAdult && task
-                ? () => router.push({ pathname: '/task/[id]', params: { id: task.id, ...FROM_TASKS } })
-                : undefined
-            }
-          />
-        );
-      }}
-    />
+        }}
+      />
+      {howToSheet}
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { type AvatarPhotoSource, AvatarStack, Chip, makeStyles, Text, useTheme } from '../../../ui';
+import { type AvatarPhotoSource, AvatarStack, Chip, InfoButton, makeStyles, Text, useTheme } from '../../../ui';
 import { bundleReward, bundleSchedule } from '../taskGroups';
 import type { Task } from '../types';
 
@@ -16,6 +16,8 @@ type Props = {
   /** Enhetens dato, for «neste …» og «Forfalt». */
   today: string;
   onPress: () => void;
+  /** Satt: (i)-ikon etter tittelen som åpner «Slik gjør du». */
+  onInfoPress?: () => void;
 };
 
 /**
@@ -23,7 +25,7 @@ type Props = {
  * Til høyre: «Forfalt», lønn og avatarene til de tildelte (felles/ingen: et personer-ikon).
  * Flere oppgaver: nærmeste frist, «Forfalt» hvis én er forfalt, og lønnsspenn («10–20 kr»).
  */
-export function TaskRow({ tasks, people, assigneeName, today, onPress }: Props) {
+export function TaskRow({ tasks, people, assigneeName, today, onPress, onInfoPress }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   const task = tasks[0];
@@ -42,6 +44,7 @@ export function TaskRow({ tasks, people, assigneeName, today, onPress }: Props) 
         <Text variant="rowTitleSmall">{task.title}</Text>
         {meta !== '' && <Text variant="metaSmall" color={colors.textMuted}>{meta}</Text>}
       </View>
+      {onInfoPress && <InfoButton onPress={onInfoPress} title={task.title} />}
       {overdue && <Chip label="Forfalt" tone="overdue" />}
       {reward && <Chip label={reward} tone="money" />}
       {people.length === 0 ? (

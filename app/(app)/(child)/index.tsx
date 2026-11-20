@@ -21,12 +21,13 @@ import { useMyHousehold, useMyMember } from '../../../src/features/household/hoo
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalance } from '../../../src/features/rewards/hooks';
 import { childTodaySections, MINE_KEY } from '../../../src/features/tasks/childToday';
+import { useHowToSheet, useTaskHowTo } from '../../../src/features/tasks/components/HowToSheet';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
 import { JOBS_KEY } from '../../../src/features/tasks/groupToday';
 import { useMemberUpcoming, useTodayTasks } from '../../../src/features/tasks/hooks';
-import type { Task } from '../../../src/features/tasks/types';
+import type { Task, TodayTask } from '../../../src/features/tasks/types';
 import { CHILD_UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
@@ -58,6 +59,9 @@ export default function ChildTodayScreen() {
   const householdId = household!.id;
   const me = useMyMember(householdId);
   const { session } = useSession();
+  const howToOf = useTaskHowTo();
+  const { infoPress, sheet: howToSheet } = useHowToSheet();
+  const infoPressFor = (task: Task | TodayTask) => infoPress(howToOf(task));
   const { data: tasks, error, isPending, refetch: refetchTasks } = useTodayTasks(householdId);
   const { data: done = [], refetch: refetchDone } = useTodayCompletions(householdId);
   const today = toIsoDate(new Date());
@@ -160,6 +164,7 @@ export default function ChildTodayScreen() {
                   checkColor={color.ring}
                   busy={busyId === task.id}
                   onPress={() => markDone(task, isLastOfToday(mine.map((t) => t.id), task.id))}
+                  onInfoPress={infoPressFor(task)}
                 />
               ))}
               <DoneList
@@ -191,12 +196,15 @@ export default function ChildTodayScreen() {
                 checkColor={color.ring}
                 loading={upcomingPending}
                 emptyText="Ingenting nytt de neste to ukene."
+                infoPressFor={infoPressFor}
               />
               <RecentDoneCard days={recentDays} checkColor={color.ring} />
             </>
           )}
         </View>
       </ScrollView>
+
+      {howToSheet}
 
       {celebration && me && (
         <CelebrationOverlay celebration={celebration} member={me} onHide={() => setCelebration(null)} />

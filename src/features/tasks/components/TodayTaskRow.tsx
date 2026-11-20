@@ -30,6 +30,8 @@ type Props = {
   onLongPress?: () => void;
   /** Hva trykk og langt trykk gjør, for skjermlesere. Standard: velg hvem som gjorde det. */
   longPressHint?: string;
+  /** Satt: (i)-ikon som åpner «Slik gjør du» (useHowToSheet). */
+  onInfoPress?: () => void;
 };
 
 const DEFAULT_HINT = 'Hold inne for å velge hvem som gjorde det';
@@ -54,7 +56,7 @@ function metaText(task: RowTask, assigneeName?: string): string {
  */
 export function TodayTaskRow({
   task, assigneeName, checkColor, muted, large, busy, onPress, onRowPress, onLongPress,
-  longPressHint = DEFAULT_HINT,
+  longPressHint = DEFAULT_HINT, onInfoPress,
 }: Props) {
   const label = `${task.title}${task.is_overdue ? ', forfalt' : ''}`;
   const hasChips = task.reward_nok !== null || !!task.is_overdue;
@@ -71,6 +73,7 @@ export function TodayTaskRow({
       onCheckPress={onRowPress ? onPress : undefined}
       checkAccessibilityLabel={onRowPress ? `Marker ${task.title} som utført` : undefined}
       onLongPress={onLongPress}
+      onInfoPress={onInfoPress}
       accessibilityLabel={onRowPress ? label : `${label}. Marker som utført`}
       accessibilityHint={onLongPress ? longPressHint : undefined}
       right={
@@ -88,7 +91,7 @@ export function TodayTaskRow({
 /** En ekstrajobb som kort i rutenettet. Trykk = utført, som en vanlig oppgave. */
 export function TodayJobCard({
   task, assigneeName, busy, onPress, onLongPress, longPressHint = DEFAULT_HINT,
-}: Omit<Props, 'checkColor' | 'muted'>) {
+}: Omit<Props, 'checkColor' | 'muted' | 'onInfoPress'>) {
   const who = assigneeName ?? 'Alle barna';
   return (
     <JobCard

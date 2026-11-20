@@ -15,23 +15,25 @@ type Props = {
   when?: string;
   /** Åpner oppgaven malen er aktivert som. Utelatt = bare bryteren. */
   onPress?: () => void;
+  /** Åpner «Slik gjør du». Forklaringen står bak ikonet, ikke i raden. */
+  onInfoPress?: () => void;
 };
 
-/** Én mal i årshjulet: tittel, kort forklaring, bryter og neste frist når den er aktivert. Trykk åpner oppgaven. */
-export function TemplateRow({ template, task, value, disabled, onToggle, when, onPress }: Props) {
+/** Én mal i årshjulet: tittel, (i) for «Slik gjør du», bryter og neste frist når den er aktivert. Trykk åpner oppgaven. */
+export function TemplateRow({ template, task, value, disabled, onToggle, when, onPress, onInfoPress }: Props) {
   return (
     <ListRow
       title={template.title}
       meta={
         when
-          ? [when, template.description]
+          ? [when]
           : [
               isSeasonal(template) && describeRecurrence({ ...template, job_repeats: false }),
-              template.description,
               task && `Neste frist: ${formatNextDue(task)}`,
             ]
       }
       onPress={onPress}
+      onInfoPress={onInfoPress}
       accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}
       right={
         <Switch

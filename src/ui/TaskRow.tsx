@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Checkbox } from './Checkbox';
+import { InfoButton } from './InfoButton';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
 import { largeTouch, minTouch, radius } from './theme';
@@ -22,6 +23,8 @@ type Props = {
   /** Utelatt = bare visning (f.eks. «Gjort siste 3 dager»). */
   onPress?: () => void;
   onLongPress?: () => void;
+  /** Satt: (i)-ikon etter tittelen som åpner «Slik gjør du». Trykk på raden er uendret. */
+  onInfoPress?: () => void;
   /**
    * Satt: sjekkboksen får sitt eget trykk (f.eks. «Merke som ikke gjort?»), og resten av raden
    * bruker onPress. Ikke satt: hele raden er ett trykk.
@@ -36,7 +39,7 @@ type Props = {
 /** Én oppgave med sjekkboks: hvit rad, tittel og valgfri metalinje. */
 export function TaskRow({
   title, meta, right, done = false, checkColor, disabled, muted, large, onPress, onLongPress,
-  onCheckPress, checkAccessibilityLabel, accessibilityLabel, accessibilityHint,
+  onInfoPress, onCheckPress, checkAccessibilityLabel, accessibilityLabel, accessibilityHint,
 }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -82,6 +85,7 @@ export function TaskRow({
         </Text>
         {meta ? <Text variant="meta" color={colors.textMuted}>{meta}</Text> : null}
       </View>
+      {onInfoPress && <InfoButton onPress={onInfoPress} title={title} large={large} />}
       {right ? <View style={styles.right}>{right}</View> : null}
     </Pressable>
   );

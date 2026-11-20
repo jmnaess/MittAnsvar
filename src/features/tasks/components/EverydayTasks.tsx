@@ -50,7 +50,7 @@ type Bundle = TaskBundle<Task>;
 
 type Props = {
   householdId: string;
-  /** Toppen av fanen (tittel, avatar og segmentene). Ruller med listen. */
+  /** Toppen av fanen (segmentene). Ruller med listen. */
   header: ReactElement;
   /** Personfilteret. null = Alle. Plussen bruker det for å forhåndsvelge personen. */
   personId: string | null;

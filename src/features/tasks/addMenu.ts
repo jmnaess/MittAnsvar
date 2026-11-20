@@ -1,49 +1,58 @@
-// Menyen bak den flytende plussen (AddFab) på «I dag» og «Oppgaver». Samme fire valg i samme
-// rekkefølge overalt, så man finner dem igjen. Valget som passer fanen er forhåndsvalgt (uthevet
-// og får skjermleserfokus først). Bare voksne lager oppgaver, så barn får ingen meny (og ingen knapp).
+// Hva plussen nede til høyre gjør. Bare voksne lager oppgaver, så barn får ingen pluss.
+//   «I dag»:     en meny med Ny oppgave, Ekstrajobb og Årshjul-oppgave (todayAddMenu).
+//   «Oppgaver»: en knapp med tekst uten meny, etter segmentet (tasksAddButton).
 
 import type { Href } from 'expo-router';
 import type { ChipIconName } from '../../ui';
+import type { TaskSection } from './section';
 import { FROM_TASKS } from './tasksSegment';
 
-/** Hvor menyen åpnes fra: «I dag», eller segmentet i «Oppgaver». */
-export type AddMenuTab = 'today' | 'everyday' | 'year';
-
-export type AddMenuContext = {
-  tab: AddMenuTab;
-  isAdult: boolean;
-  /** Valgt person (personvisningen på «I dag», personfilteret i Hverdag). Forhåndsvelges i skjemaet. */
-  memberId?: string | null;
-};
-
-export type AddMenuKey = 'today' | 'task' | 'job' | 'year';
+export type AddMenuKey = 'task' | 'job' | 'year';
 
 export type AddMenuItem = {
   key: AddMenuKey;
   label: string;
   icon: ChipIconName;
   href: Href;
-  suggested: boolean;
 };
 
-const SUGGESTED: Record<AddMenuTab, AddMenuKey> = {
-  today: 'today',
-  everyday: 'task',
-  year: 'year',
-};
-
-/** Valgene i plussmenyen. Tom liste = ingen pluss. */
-export function addMenuItems({ tab, isAdult, memberId }: AddMenuContext): AddMenuItem[] {
+/**
+ * Menyen på «I dag». Tom liste = ingen pluss. Valgt person i personvisningen forhåndsvelges i
+ * «Ny oppgave». Uten from=tasks, så man blir stående på «I dag» etter lagring.
+ */
+export function todayAddMenu({ isAdult, memberId }: { isAdult: boolean; memberId?: string | null }): AddMenuItem[] {
   if (!isAdult) return [];
-  // Fra «Oppgaver» bytter skjemaene til segmentet der oppgaven havnet (tasksSegment.ts).
-  // Fra «I dag» blir man stående der, så parameteren sendes ikke.
-  const from = tab === 'today' ? {} : FROM_TASKS;
-  const member = memberId ? { memberId } : {};
-  const items: Omit<AddMenuItem, 'suggested'>[] = [
-    { key: 'today', label: 'Oppgave i dag', icon: 'today-outline', href: { pathname: '/task/today', params: { ...member, ...from } } },
-    { key: 'task', label: 'Ny oppgave', icon: 'repeat-outline', href: { pathname: '/task/new', params: { ...member, ...from } } },
-    { key: 'job', label: 'Ekstrajobb', icon: 'cash-outline', href: { pathname: '/job/new', params: from } },
-    { key: 'year', label: 'Årshjul-oppgave', icon: 'calendar-outline', href: { pathname: '/year-task/new', params: from } },
+  return [
+    {
+      key: 'task',
+      label: 'Ny oppgave',
+      icon: 'add-circle-outline',
+      href: { pathname: '/task/new', params: memberId ? { memberId } : {} },
+    },
+    { key: 'job', label: 'Ekstrajobb', icon: 'cash-outline', href: '/job/new' },
+    { key: 'year', label: 'Årshjul-oppgave', icon: 'calendar-outline', href: '/year-task/new' },
   ];
-  return items.map((item) => ({ ...item, suggested: item.key === SUGGESTED[tab] }));
+}
+
+export type AddButton = { label: string; href: Href };
+
+/**
+ * Knappen på «Oppgaver». null = ingen pluss. from=tasks, så «Oppgaver» viser oppgaven der den
+ * havnet (tasksSegment.ts). Personen i filteret i Hverdag forhåndsvelges.
+ */
+export function tasksAddButton({
+  segment,
+  isAdult,
+  memberId,
+}: {
+  segment: TaskSection;
+  isAdult: boolean;
+  memberId?: string | null;
+}): AddButton | null {
+  if (!isAdult) return null;
+  if (segment === 'year') return { label: 'Ny årshjul-oppgave', href: { pathname: '/year-task/new', params: FROM_TASKS } };
+  return {
+    label: 'Ny oppgave',
+    href: { pathname: '/task/new', params: { ...(memberId ? { memberId } : {}), ...FROM_TASKS } },
+  };
 }

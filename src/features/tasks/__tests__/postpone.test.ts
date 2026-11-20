@@ -1,4 +1,4 @@
-import { isPostponed, postponeChoices, weekendDate } from '../postpone';
+import { isPostponed, nextWeekDate, postponeChoices, weekendDate } from '../postpone';
 
 describe('weekendDate («Til helga»)', () => {
   // Uken 16.–22. november 2026: mandag til søndag.
@@ -21,6 +21,25 @@ describe('weekendDate («Til helga»)', () => {
   it('over årsskifte', () => {
     expect(weekendDate('2026-12-31')).toBe('2027-01-02'); // torsdag
     expect(weekendDate('2027-01-03')).toBe('2027-01-09'); // søndag
+  });
+});
+
+describe('nextWeekDate («Neste uke»)', () => {
+  // Uken 16.–22. november 2026: mandag til søndag. Alltid mandag 23. november.
+  it.each([
+    ['mandag → mandagen etter', '2026-11-16'],
+    ['tirsdag', '2026-11-17'],
+    ['onsdag', '2026-11-18'],
+    ['torsdag', '2026-11-19'],
+    ['fredag', '2026-11-20'],
+    ['lørdag', '2026-11-21'],
+    ['søndag → dagen etter', '2026-11-22'],
+  ])('%s', (_, today) => {
+    expect(nextWeekDate(today)).toBe('2026-11-23');
+  });
+
+  it('over årsskifte', () => {
+    expect(nextWeekDate('2026-12-31')).toBe('2027-01-04'); // torsdag
   });
 });
 

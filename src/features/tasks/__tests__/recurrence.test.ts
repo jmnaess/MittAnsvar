@@ -37,6 +37,13 @@ describe('«Når?» → kolonner', () => {
     expect(toRecurrence({ ...form, when: 'date', date: '2026-12-24' }, today)?.once_on).toBe('2026-12-24');
   });
 
+  it('Til helga og Neste uke gir en engangsoppgave lørdag og mandag neste uke', () => {
+    // today er onsdag 18. november 2026.
+    const form = defaultRecurrenceForm(today);
+    expect(toRecurrence({ ...form, when: 'weekend' }, today)).toMatchObject({ recurrence_type: 'once', once_on: '2026-11-21' });
+    expect(toRecurrence({ ...form, when: 'nextWeek' }, today)).toMatchObject({ recurrence_type: 'once', once_on: '2026-11-23' });
+  });
+
   it('Velg dato starter i overmorgen', () => {
     expect(defaultRecurrenceForm(today).date).toBe('2026-11-20');
   });

@@ -8,8 +8,10 @@ import { toNorwegianMessage } from '../../../src/lib/errors';
 import { Message, ModalFormScreen } from '../../../src/ui';
 
 /**
- * Ny oppgave fra «Oppgaver». Er en person valgt i filteret, kommer memberId med, og personen
- * er forhåndsvalgt (som «+ Ny oppgave til Leah» i «I dag»).
+ * Ny oppgave fra plussen i «I dag» og «Oppgaver», og fra «+ Ny oppgave til Leah» i personvisningen.
+ * «Når?» starter på «I dag». Er en person valgt (personvisningen eller filteret i «Oppgaver»),
+ * kommer memberId med, og personen er forhåndsvalgt. Databasen flytter en dato som er passert i
+ * husstandens tidssone til i dag, og useCreateTasks henter «I dag» på nytt.
  */
 export default function NewTaskScreen() {
   const params = useLocalSearchParams<{ memberId?: string; from?: string }>();

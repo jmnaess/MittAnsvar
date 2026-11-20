@@ -7,7 +7,7 @@ import {
   MONTH_NAMES,
   WEEKDAY_NAMES,
 } from '../../lib/dates';
-import { isPostponed } from './postpone';
+import { isPostponed, nextWeekDate, weekendDate } from './postpone';
 import type { Recurrence } from './types';
 
 /**
@@ -65,8 +65,11 @@ export function formatNextDue(
 // Skjematilstand ↔ gjentakelseskolonnene i databasen, og en norsk beskrivelse.
 // Neste frist beregnes IKKE her. Det gjør databasen (private.first_due og compute_next_due).
 
-/** «Når?» i oppgaveskjemaet. I dag, I morgen og Velg dato er engangsoppgaver med dato. */
-export type WhenChoice = 'today' | 'tomorrow' | 'date' | 'repeat';
+/**
+ * «Når?» i oppgaveskjemaet. Alt unntatt Gjentas er engangsoppgaver med dato.
+ * Til helga = førstkommende lørdag (weekendDate), Neste uke = mandag neste uke (nextWeekDate).
+ */
+export type WhenChoice = 'today' | 'tomorrow' | 'weekend' | 'nextWeek' | 'date' | 'repeat';
 /** Gjentakelse under «Gjentas». Ekstrajobber har sitt eget skjema (JobForm). */
 export type RecurrenceMode = 'calendar' | 'interval';
 export type CalendarUnit = 'week' | 'month' | 'year';
@@ -146,6 +149,10 @@ export function toRecurrence(form: RecurrenceForm, today: string): Schedule | nu
       return { recurrence_type: 'once', ...NONE, once_on: today };
     case 'tomorrow':
       return { recurrence_type: 'once', ...NONE, once_on: addDays(today, 1) };
+    case 'weekend':
+      return { recurrence_type: 'once', ...NONE, once_on: weekendDate(today) };
+    case 'nextWeek':
+      return { recurrence_type: 'once', ...NONE, once_on: nextWeekDate(today) };
     case 'date':
       return { recurrence_type: 'once', ...NONE, once_on: form.date };
     case 'repeat':

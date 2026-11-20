@@ -30,7 +30,7 @@ import { OwnYearTaskRow } from './OwnYearTaskRow';
 import { TemplateRow } from './TemplateRow';
 
 type Props = {
-  /** Toppen av fanen (tittel, pluss og segmentene). Ruller med listen. */
+  /** Toppen av fanen (segmentene). Ruller med listen. */
   header: ReactElement;
   /** Seksjonen som skal rulles fram (etter lagring). id endres for hver ny lagring. */
   reveal: { sectionKey: string; id: number } | null;

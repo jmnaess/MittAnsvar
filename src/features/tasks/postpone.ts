@@ -22,6 +22,11 @@ export function weekendDate(today: string): string {
   return addDays(today, 6 - weekday);
 }
 
+/** «Neste uke» i «Når?»: mandag neste uke. Er det mandag, blir det mandagen etter. Alltid etter i dag. */
+export function nextWeekDate(today: string): string {
+  return addDays(today, 8 - isoWeekday(today));
+}
+
 /**
  * De faste valgene i «Utsett til», regnet fra from: i dag, eller fristen for en kommende
  * forekomst. Begge er etter from. «Velg dato» starter på nextDay.

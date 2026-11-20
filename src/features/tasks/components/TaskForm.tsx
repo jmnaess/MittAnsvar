@@ -103,13 +103,11 @@ type Props = {
   members: Member[];
   /** «Lønn (kr)» vises bare for voksne, og skjules når alle valgte er voksne. */
   canSetReward: boolean;
-  /** false = uten «Når?» («Oppgave i dag» fra «I dag»). Skjemaet står da på I dag. */
-  showWhen?: boolean;
   disabled?: boolean;
 };
 
 /** Tittel, når, hvem som har ansvaret, kategori og lønn. */
-export function TaskFields({ form, members, canSetReward, showWhen = true, disabled }: Props) {
+export function TaskFields({ form, members, canSetReward, disabled }: Props) {
   const photoOf = useMemberPhotoLookup(members[0]?.household_id);
   // En årsoppgave er for voksne: barna vises ikke (unntatt et barn som allerede har den).
   const choosable = form.yearly
@@ -148,14 +146,12 @@ export function TaskFields({ form, members, canSetReward, showWhen = true, disab
         editable={!disabled}
       />
       {/* «Når?» rett under tittelen. I dag er forhåndsvalgt. */}
-      {showWhen && (
-        <RecurrencePicker
-          value={form.recurrenceForm}
-          onChange={form.setRecurrenceForm}
-          today={form.today}
-          disabled={disabled}
-        />
-      )}
+      <RecurrencePicker
+        value={form.recurrenceForm}
+        onChange={form.setRecurrenceForm}
+        today={form.today}
+        disabled={disabled}
+      />
       {form.multiple ? (
         <>
           <MultiChoiceChips

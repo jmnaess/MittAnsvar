@@ -242,15 +242,15 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
 | `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
 | `Toast` / `UndoToast` / `NoticeToast` | mørkt banner nederst. `UndoToast` har «Angre» i 5 s, `NoticeToast` er bare en kort melding i 3 s («Lagt i Årshjul»). `aboveFab` på skjermer med flytende pluss: banneret ligger over knappen (`fab.size + fab.margin + fab.toastGap`), ellers 16 px fra bunnen |
-| `AddFab` | flytende pluss nede til høyre over fanelinjen (56 px, `primary`, skygge, token `fab`). Trykk: knappen vokser til en meny (Reanimated, 250 ms), + roterer til ×, bakgrunnen dempes. «Reduser bevegelse»: bare fade. Skjermleser: «Legg til», fokus på det forhåndsvalgte valget. Lister på skjermer med pluss får `spacing.fabClearance` nederst. Valgene står i `features/tasks/addMenu.ts`: «Oppgave i dag», «Ny oppgave», «Ekstrajobb», «Årshjul-oppgave», samme rekkefølge overalt, det som passer fanen er uthevet. Bare voksne, på «I dag» og «Oppgaver» |
-| `MyProfileButton` | (`features/household/components/`) egen avatar øverst til høyre (48 i sidetoppene, 32 i navigasjonsheaderen). Voksen: personskjermen, barn: «Innstillinger». Ikke på familieskjermen |
+| `AddFab` | flytende pluss nede til høyre over fanelinjen (høyde 56, `primary`, skygge, token `fab`). Med `items`: rund +, trykk gjør knappen om til en meny (Reanimated, 250 ms), + roterer til ×, bakgrunnen dempes; «Reduser bevegelse»: bare fade; skjermleser: «Legg til», fokus på første valg. Med `label`: bredere knapp med + og tekst, uten meny. Lister på skjermer med pluss får `spacing.fabClearance` nederst. Hva den gjør, står i `features/tasks/addMenu.ts`: på «I dag» en meny med «Ny oppgave», «Ekstrajobb» og «Årshjul-oppgave»; på «Oppgaver» «+ Ny oppgave» (Hverdag) eller «+ Ny årshjul-oppgave» (Årshjul). Bare voksne |
+| `MyProfileButton` | (`features/household/components/`) egen avatar øverst til høyre (48 i sidetoppen på «I dag», 32 i navigasjonsheaderen på de andre fanene). Voksen: personskjermen, barn: «Innstillinger». Ikke på familieskjermen |
 | `tabIcon` | Ionicons-ikon til fanene, fylt når valgt |
 | `tabScreenOptions(colors)`, `modalScreenOptions(colors)`, `navigationTheme(scheme, colors)` | utseendet på fanelinjen, headerne og navigasjonen (`tabOptions.tsx`) |
 | `ThemeProvider`, `useTheme`, `useAppearance`, `makeStyles` | temaet som vises, valget under «Utseende», temaavhengige stiler |
 
 ### «Oppgaver»
 
-Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`), egen avatar (`MyProfileButton`) og under dem
+Navigasjonsheader med «Oppgaver» og egen avatar (`MyProfileButton`), som Husstand og Innstillinger. Øverst i listen
 `SegmentedControl` («Hverdag | Årshjul»). Valget huskes per enhet (`features/tasks/tasksSegment.ts`,
 `secureStorage`). `/tasks?view=year` velger Årshjul, og den gamle ruten `/year` sender dit.
 Hvilket segment en oppgave står i, avgjør `taskSection` i `features/tasks/section.ts`: Årshjul for årlige
@@ -304,7 +304,7 @@ Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah
 
 ### Skjemaene
 
-Ny og endre oppgave, «Oppgave i dag», ny og endre jobb og årshjulsoppgaven bruker samme brikker og
+Ny og endre oppgave, ny og endre jobb og årshjulsoppgaven bruker samme brikker og
 felt som «Oppgaver». Alle valg er `ChoiceChips`/`MultiChoiceChips` som bryter linje, aldri sidelengs rulling.
 «Hvem har ansvaret?» / «For hvem?»: hver person med avatar 20 (`left`), «Felles» og «Alle barna» med
 ikonet `people-outline`. «Kategori»: kategoriens ikon fra `features/tasks/categories.ts`, samme som i

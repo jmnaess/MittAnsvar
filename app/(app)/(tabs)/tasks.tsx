@@ -1,12 +1,10 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AddFab, makeStyles, NoticeToast, SegmentedControl, Text } from '../../../src/ui';
-import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
+import { AddFab, makeStyles, NoticeToast, SegmentedControl } from '../../../src/ui';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { EverydayTasks } from '../../../src/features/tasks/components/EverydayTasks';
-import { addMenuItems } from '../../../src/features/tasks/addMenu';
+import { tasksAddButton } from '../../../src/features/tasks/addMenu';
 import type { TaskSection } from '../../../src/features/tasks/section';
 import {
   getTasksSegment,
@@ -35,7 +33,6 @@ const NOTICE: Record<TaskSection, string> = {
  */
 export default function TasksScreen() {
   const styles = useStyles();
-  const insets = useSafeAreaInsets();
   // Fanene vises bare med husstand (se app/(app)/_layout.tsx), så data finnes.
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
@@ -64,27 +61,16 @@ export default function TasksScreen() {
     }, []),
   );
 
-  // Pluss nede til høyre (bare voksne). Segmentet bestemmer forhåndsvalget, og personen i
-  // filteret i Hverdag forhåndsvelges i oppgaveskjemaene.
-  const addItems = addMenuItems({
-    tab: segment,
-    isAdult,
-    memberId: segment === 'everyday' ? personId : null,
-  });
-  const hasFab = addItems.length > 0;
+  // Knapp med tekst nede til høyre (bare voksne), uten meny: «Ny oppgave» i Hverdag (med personen
+  // fra filteret) og «Ny årshjul-oppgave» i Årshjul. Teksten følger segmentet.
+  const addButton = tasksAddButton({ segment, isAdult, memberId: personId });
+  const hasFab = addButton !== null;
 
-  const header = (
-    <View style={styles.top}>
-      <View style={styles.titleRow}>
-        <Text variant="screenTitle" accessibilityRole="header" style={styles.title}>Oppgaver</Text>
-        <MyProfileButton size={48} />
-      </View>
-      <SegmentedControl options={SEGMENTS} value={segment} onChange={setTasksSegment} />
-    </View>
-  );
+  // Tittel og avatar står i navigasjonsheaderen (app/(app)/(tabs)/_layout.tsx). Segmentene ruller med listen.
+  const header = <SegmentedControl options={SEGMENTS} value={segment} onChange={setTasksSegment} />;
 
   return (
-    <View style={[styles.flex, { paddingTop: insets.top }]}>
+    <View style={styles.flex}>
       {segment === 'everyday' ? (
         <EverydayTasks
           householdId={householdId}
@@ -96,9 +82,7 @@ export default function TasksScreen() {
       ) : (
         <YearWheel header={header} reveal={reveal} onRevealed={() => setReveal(null)} />
       )}
-      {hasFab && (
-        <AddFab items={addItems.map((item) => ({ ...item, onPress: () => router.push(item.href) }))} />
-      )}
+      {addButton && <AddFab label={addButton.label} onPress={() => router.push(addButton.href)} />}
       {notice && (
         <NoticeToast
           resetKey={String(notice.id)}
@@ -114,8 +98,5 @@ export default function TasksScreen() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    top: { gap: 12 },
-    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8 },
-    title: { flex: 1 },
   }),
 );

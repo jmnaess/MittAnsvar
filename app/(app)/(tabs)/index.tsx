@@ -28,7 +28,7 @@ import { PendingApprovalBanner } from '../../../src/features/rewards/components/
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
 import { useHowToSheet, useTaskHowTo } from '../../../src/features/tasks/components/HowToSheet';
-import { addMenuItems } from '../../../src/features/tasks/addMenu';
+import { todayAddMenu } from '../../../src/features/tasks/addMenu';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TaskRowMenu } from '../../../src/features/tasks/components/TaskRowMenu';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
@@ -488,7 +488,7 @@ export default function TodayScreen() {
     );
   }
 
-  const addItems = addMenuItems({ tab: 'today', isAdult, memberId: focusedId });
+  const addItems = todayAddMenu({ isAdult, memberId: focusedId });
   const hasFab = addItems.length > 0;
 
   return (
@@ -547,7 +547,7 @@ export default function TodayScreen() {
           )}
           {focused && (
             <>
-              {/* Rett under personens kort: ny oppgave i dag med personen forhåndsvalgt. */}
+              {/* Rett under personens kort: ny oppgave (starter på «I dag») med personen forhåndsvalgt. */}
               {isAdult && (
                 <View style={styles.newTaskFor}>
                   <Button
@@ -555,7 +555,7 @@ export default function TodayScreen() {
                     small
                     title={newTaskForLabel(focused.display_name)}
                     onPress={() =>
-                      router.push({ pathname: '/task/today', params: { memberId: focused.id } })
+                      router.push({ pathname: '/task/new', params: { memberId: focused.id } })
                     }
                   />
                 </View>
@@ -638,7 +638,7 @@ export default function TodayScreen() {
 
       {howToSheet}
 
-      {/* Pluss nede til høyre (bare voksne). Valgt person forhåndsvelges i oppgaveskjemaene. */}
+      {/* Pluss nede til høyre (bare voksne). Valgt person forhåndsvelges i «Ny oppgave». */}
       {addItems.length > 0 && (
         <AddFab items={addItems.map((item) => ({ ...item, onPress: () => router.push(item.href) }))} />
       )}

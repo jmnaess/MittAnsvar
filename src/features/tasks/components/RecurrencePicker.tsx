@@ -32,6 +32,8 @@ type Props = {
 const WHEN_OPTIONS: { value: WhenChoice; label: string }[] = [
   { value: 'today', label: 'I dag' },
   { value: 'tomorrow', label: 'I morgen' },
+  { value: 'weekend', label: 'Til helga' },
+  { value: 'nextWeek', label: 'Neste uke' },
   { value: 'date', label: 'Velg dato' },
   { value: 'repeat', label: 'Gjentas' },
 ];
@@ -67,7 +69,7 @@ const INTERVAL_UNIT_OPTIONS: { value: IntervalUnit; label: string }[] = [
 ];
 
 /**
- * «Når?»: i dag, i morgen eller en valgt dato (engangsoppgave), eller «Gjentas» med fast dag
+ * «Når?»: i dag, i morgen, til helga, neste uke eller en valgt dato (engangsoppgave), eller «Gjentas» med fast dag
  * i kalenderen eller et intervall etter sist utført. Gjentakelsen kan begrenses til deler av
  * året (ikke årlige oppgaver). Ekstrajobber har sitt eget skjema.
  */

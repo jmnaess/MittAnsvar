@@ -1,61 +1,57 @@
-import { addMenuItems, type AddMenuTab } from '../addMenu';
+import { tasksAddButton, todayAddMenu } from '../addMenu';
 
-const TABS: AddMenuTab[] = ['today', 'everyday', 'year'];
+type HrefObject = { pathname: string; params?: Record<string, string> };
 
-function paramsOf(href: unknown): Record<string, string> {
-  return (href as { params: Record<string, string> }).params;
-}
+const pathOf = (href: unknown) => (typeof href === 'string' ? href : (href as HrefObject).pathname);
+const paramsOf = (href: unknown) => (typeof href === 'string' ? {} : ((href as HrefObject).params ?? {}));
 
-describe('addMenuItems', () => {
-  it('barn får ingen meny, på noen fane', () => {
-    for (const tab of TABS) expect(addMenuItems({ tab, isAdult: false, memberId: 'm1' })).toEqual([]);
+describe('todayAddMenu («I dag»)', () => {
+  it('barn får ingen meny', () => {
+    expect(todayAddMenu({ isAdult: false, memberId: 'm1' })).toEqual([]);
   });
 
-  it('voksne får de samme fire valgene i samme rekkefølge overalt', () => {
-    for (const tab of TABS) {
-      const items = addMenuItems({ tab, isAdult: true });
-      expect(items.map((i) => i.key)).toEqual(['today', 'task', 'job', 'year']);
-      expect(items.map((i) => i.label)).toEqual(['Oppgave i dag', 'Ny oppgave', 'Ekstrajobb', 'Årshjul-oppgave']);
-      expect(items.map((i) => (i.href as { pathname: string }).pathname)).toEqual([
-        '/task/today',
-        '/task/new',
-        '/job/new',
-        '/year-task/new',
-      ]);
-    }
+  it('voksne får tre valg i fast rekkefølge, uten «Oppgave i dag»', () => {
+    const items = todayAddMenu({ isAdult: true });
+    expect(items.map((i) => i.label)).toEqual(['Ny oppgave', 'Ekstrajobb', 'Årshjul-oppgave']);
+    expect(items.map((i) => pathOf(i.href))).toEqual(['/task/new', '/job/new', '/year-task/new']);
   });
 
-  it('forhåndsvelger det som passer fanen, og bare ett', () => {
-    const suggested = (tab: AddMenuTab) =>
-      addMenuItems({ tab, isAdult: true }).filter((i) => i.suggested).map((i) => i.label);
-    expect(suggested('today')).toEqual(['Oppgave i dag']);
-    expect(suggested('everyday')).toEqual(['Ny oppgave']);
-    expect(suggested('year')).toEqual(['Årshjul-oppgave']);
+  it('valgt person følger bare med til «Ny oppgave»', () => {
+    const [task, job, year] = todayAddMenu({ isAdult: true, memberId: 'm1' });
+    expect(paramsOf(task.href)).toEqual({ memberId: 'm1' });
+    expect(paramsOf(job.href)).toEqual({});
+    expect(paramsOf(year.href)).toEqual({});
   });
 
-  it('valgt person følger med til oppgaveskjemaene, ikke til jobb og årshjul', () => {
-    const items = addMenuItems({ tab: 'everyday', isAdult: true, memberId: 'm1' });
-    const byKey = Object.fromEntries(items.map((i) => [i.key, paramsOf(i.href)]));
-    expect(byKey.today.memberId).toBe('m1');
-    expect(byKey.task.memberId).toBe('m1');
-    expect(byKey.job).not.toHaveProperty('memberId');
-    expect(byKey.year).not.toHaveProperty('memberId');
-  });
-
-  it('uten valgt person sendes ingen memberId', () => {
+  it('uten valgt person og aldri from=tasks', () => {
     for (const memberId of [null, undefined]) {
-      for (const item of addMenuItems({ tab: 'today', isAdult: true, memberId })) {
-        expect(paramsOf(item.href)).not.toHaveProperty('memberId');
-      }
+      for (const item of todayAddMenu({ isAdult: true, memberId })) expect(paramsOf(item.href)).toEqual({});
     }
   });
+});
 
-  it('from=tasks bare fra «Oppgaver», aldri fra «I dag»', () => {
-    for (const item of addMenuItems({ tab: 'today', isAdult: true })) {
-      expect(paramsOf(item.href)).not.toHaveProperty('from');
-    }
-    for (const tab of ['everyday', 'year'] as const) {
-      for (const item of addMenuItems({ tab, isAdult: true })) expect(paramsOf(item.href).from).toBe('tasks');
-    }
+describe('tasksAddButton («Oppgaver»)', () => {
+  it('barn får ingen knapp, i noen av segmentene', () => {
+    expect(tasksAddButton({ segment: 'everyday', isAdult: false })).toBeNull();
+    expect(tasksAddButton({ segment: 'year', isAdult: false })).toBeNull();
+  });
+
+  it('Hverdag: «Ny oppgave» med personen fra filteret og from=tasks', () => {
+    const button = tasksAddButton({ segment: 'everyday', isAdult: true, memberId: 'm1' })!;
+    expect(button.label).toBe('Ny oppgave');
+    expect(pathOf(button.href)).toBe('/task/new');
+    expect(paramsOf(button.href)).toEqual({ memberId: 'm1', from: 'tasks' });
+  });
+
+  it('Hverdag uten person i filteret: bare from=tasks', () => {
+    const button = tasksAddButton({ segment: 'everyday', isAdult: true, memberId: null })!;
+    expect(paramsOf(button.href)).toEqual({ from: 'tasks' });
+  });
+
+  it('Årshjul: «Ny årshjul-oppgave», uten person', () => {
+    const button = tasksAddButton({ segment: 'year', isAdult: true, memberId: 'm1' })!;
+    expect(button.label).toBe('Ny årshjul-oppgave');
+    expect(pathOf(button.href)).toBe('/year-task/new');
+    expect(paramsOf(button.href)).toEqual({ from: 'tasks' });
   });
 });

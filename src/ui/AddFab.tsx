@@ -32,12 +32,11 @@ export type AddFabItem = {
   key: string;
   label: string;
   icon: ChipIconName;
-  /** Passer fanen: uthevet, og får skjermleserfokus når menyen åpnes. */
-  suggested?: boolean;
   onPress: () => void;
 };
 
-type Props = { items: AddFabItem[] };
+/** Enten en meny (rund +), eller en knapp med tekst («+ Ny oppgave») som gjør én ting. */
+type Props = { items: AddFabItem[] } | { label: string; onPress: () => void };
 
 /** Morph-tiden. Med «Reduser bevegelse» bare en kort fade. */
 const MORPH_MS = 250;
@@ -47,14 +46,36 @@ const ROW_HEIGHT = 52;
 
 /**
  * Flytende pluss nede til høyre, over fanelinjen. Legg den sist i skjermens rot-View.
- * Trykk: knappen vokser og blir en meny (Reanimated), plusstegnet roterer til et kryss og bakgrunnen
+ * Med label: en bredere knapp med + og tekst, samme høyde og stil, som kjører onPress direkte.
+ * Med items: rund knapp. Trykk: knappen vokser og blir en meny (Reanimated), plusstegnet roterer til et kryss og bakgrunnen
  * dempes. Trykk utenfor, på krysset eller tilbakeknappen lukker. Et valg lukker og kjører onPress.
  *
  * Menyen ligger i en Modal, så den dekker fanelinjen og er modal for skjermlesere. Kortet tegnes
  * med samme anker som knappen (høyre kant, fanelinjens høyde + fab.margin), så det starter nøyaktig
  * over knappen. Bare til skjermer i fanene (bruker fanelinjens høyde).
  */
-export function AddFab({ items }: Props) {
+export function AddFab(props: Props) {
+  if ('label' in props) return <AddFabButton label={props.label} onPress={props.onPress} />;
+  return <AddFabWithMenu items={props.items} />;
+}
+
+function AddFabButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.fab, styles.extended, pressed && { backgroundColor: colors.primaryPressed }]}
+    >
+      <Ionicons name="add" size={ICON_SIZE_EXTENDED} color={colors.onPrimary} />
+      <Text variant="bodyStrong" color={colors.onPrimary} numberOfLines={1}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function AddFabWithMenu({ items }: { items: AddFabItem[] }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
@@ -77,8 +98,9 @@ export function AddFab({ items }: Props) {
 }
 
 const ICON_SIZE = 30;
+const ICON_SIZE_EXTENDED = 24;
 
-function AddFabMenu({ items, onClose }: Props & { onClose: () => void }) {
+function AddFabMenu({ items, onClose }: { items: AddFabItem[]; onClose: () => void }) {
   const styles = useStyles();
   const { colors } = useTheme();
   const reduceMotion = useReducedMotion();
@@ -109,7 +131,7 @@ function AddFabMenu({ items, onClose }: Props & { onClose: () => void }) {
     } else {
       progress.value = withTiming(1, { duration: MORPH_MS, easing: Easing.out(Easing.cubic) });
     }
-    // Skjermleseren: fokus på valget som passer fanen, ellers det første.
+    // Skjermleseren: fokus på det første valget.
     const timer = setTimeout(() => {
       if (focusRef.current) AccessibilityInfo.sendAccessibilityEvent(focusRef.current, 'focus');
     }, 100);
@@ -154,8 +176,6 @@ function AddFabMenu({ items, onClose }: Props & { onClose: () => void }) {
   const plusStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }));
   const crossStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
-  const focusIndex = Math.max(0, items.findIndex((item) => item.suggested));
-
   return (
     <Modal
       visible
@@ -184,19 +204,14 @@ function AddFabMenu({ items, onClose }: Props & { onClose: () => void }) {
             {items.map((item, index) => (
               <Pressable
                 key={item.key}
-                ref={index === focusIndex ? focusRef : undefined}
+                ref={index === 0 ? focusRef : undefined}
                 onPress={() => choose(item)}
                 accessibilityRole="button"
                 accessibilityLabel={item.label}
-                accessibilityHint={item.suggested ? 'Foreslått her' : undefined}
-                style={({ pressed }) => [
-                  styles.row,
-                  item.suggested && styles.suggested,
-                  pressed && { backgroundColor: colors.surfaceMuted },
-                ]}
+                style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceMuted }]}
               >
                 <Ionicons name={item.icon} size={22} color={colors.primary} />
-                <Text variant={item.suggested ? 'bodyStrong' : 'body'}>{item.label}</Text>
+                <Text variant="body">{item.label}</Text>
               </Pressable>
             ))}
             {/* Plass til krysset nederst til høyre. */}
@@ -238,6 +253,8 @@ const useStyles = makeStyles(({ colors, shadow }) =>
       backgroundColor: colors.primary,
       ...shadow,
     },
+    // Knappen med tekst: samme høyde og runding, bredden følger teksten.
+    extended: { width: undefined, flexDirection: 'row', gap: 6, paddingLeft: 16, paddingRight: 20 },
     backdrop: { backgroundColor: colors.backdrop },
     card: { position: 'absolute', right: spacing.page, ...shadow },
     clip: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
@@ -251,7 +268,6 @@ const useStyles = makeStyles(({ colors, shadow }) =>
       paddingHorizontal: spacing.row,
       borderRadius: radius.row,
     },
-    suggested: { backgroundColor: colors.iconTint },
     closeSpace: { height: fab.size - spacing.row },
     close: {
       position: 'absolute',

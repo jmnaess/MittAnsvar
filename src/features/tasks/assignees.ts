@@ -39,6 +39,14 @@ export function allAdults(assignees: string[], members: Member[]): boolean {
 }
 
 /**
+ * Husstanden har ingen barn, og da gir lønn ikke mening (bare barn får lønn). false så lenge
+ * personene ikke er hentet (tom liste), så lønnen ikke tømmes på en barneoppgave som endres.
+ */
+export function hasNoChildren(members: Pick<Member, 'role'>[]): boolean {
+  return members.length > 0 && !members.some((m) => m.role === 'child');
+}
+
+/**
  * Én oppgave per valgt person, med samme tittel, gjentakelse, dato og lønn. «Felles» gir én
  * oppgave uten ansvarlig. En voksen får aldri lønn, så beløpet fjernes på den voksnes oppgave.
  */

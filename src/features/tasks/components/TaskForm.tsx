@@ -7,6 +7,7 @@ import type { HouseholdType, Member } from '../../household/types';
 import {
   allAdults,
   allowedAssignees,
+  hasNoChildren,
   nextAssignees,
   SHARED,
   soloMemberId,
@@ -149,13 +150,15 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
   // Voksne får aldri lønn, så feltet skjules når alle valgte er voksne. Er noen barn, vises
   // det, og beløpet fjernes på de voksnes oppgaver (toTaskInputs). Årshjul-oppgaver har aldri
   // lønn, så der er feltet alltid skjult (også for et barn som har en årsoppgave fra før).
+  // Uten barn i husstanden er feltet også skjult: bare barn får lønn.
   const onlyAdults = allAdults(form.assignees, members);
-  const showReward = canSetReward && !onlyAdults && !form.yearly;
+  const noChildren = hasNoChildren(members);
+  const showReward = canSetReward && !onlyAdults && !form.yearly && !noChildren;
 
   // Tøm beløpet når feltet er skjult, så det ikke lagres i det skjulte.
   // Effekt i stedet for i onChange, så det også gjelder gamle oppgaver og medlemmer som lastes sent.
   const { reward, setReward } = form;
-  const hideReward = onlyAdults || form.yearly;
+  const hideReward = onlyAdults || form.yearly || noChildren;
   useEffect(() => {
     if (hideReward && reward !== '') setReward('');
   }, [hideReward, reward, setReward]);

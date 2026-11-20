@@ -3,6 +3,7 @@ import {
   allAdults,
   allowedAssignees,
   canHaveYearlyTask,
+  hasNoChildren,
   initialAssignees,
   newTaskForLabel,
   nextAssignees,
@@ -162,5 +163,20 @@ describe('enslig husstand (soloMemberId)', () => {
     expect(waitingForSolo('single', alone)).toBe(false);
     expect(waitingForSolo('couple', [])).toBe(false);
     expect(waitingForSolo(undefined, [])).toBe(false);
+  });
+});
+
+describe('hasNoChildren (lønn skjules)', () => {
+  it('bare voksne: ingen barn', () => {
+    expect(hasNoChildren([member('meg', 'adult')])).toBe(true);
+    expect(hasNoChildren([member('mor', 'adult'), member('far', 'adult')])).toBe(true);
+  });
+
+  it('med barn: lønn kan settes', () => {
+    expect(hasNoChildren(members)).toBe(false);
+  });
+
+  it('personene er ikke hentet ennå: ikke skjul (og ikke tøm) lønnen', () => {
+    expect(hasNoChildren([])).toBe(false);
   });
 });

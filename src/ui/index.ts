@@ -35,6 +35,7 @@ export { Hint, Message } from './Message';
 export { ModalFormScreen } from './ModalFormScreen';
 export { MultiChoiceChips } from './MultiChoiceChips';
 export { PageHeader } from './PageHeader';
+export { ProgressRing } from './ProgressRing';
 export { SearchField } from './SearchField';
 export { Section } from './Section';
 export { SectionCard } from './SectionCard';

@@ -18,6 +18,10 @@ import { isLastOfToday, toCelebration, type Celebration } from '../../../src/fea
 import { CelebrationOverlay } from '../../../src/features/feedback/components/CelebrationOverlay';
 import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
+import { ChildHeroCard } from '../../../src/features/motivation/components/ChildHeroCard';
+import { isYoungChild, weekRange, weekStats, weekText } from '../../../src/features/motivation/heroCard';
+import { useWeekCompletions } from '../../../src/features/motivation/hooks';
+import { phraseForDate } from '../../../src/features/motivation/phrases';
 import { MyProposalsCard } from '../../../src/features/proposals/components/MyProposalsCard';
 import { ProposalSheet, type ProposalSubmit } from '../../../src/features/proposals/components/ProposalSheet';
 import { useAddOwnTask, useMyProposals, useSubmitProposal } from '../../../src/features/proposals/hooks';
@@ -32,13 +36,12 @@ import { JOBS_KEY } from '../../../src/features/tasks/groupToday';
 import { useMemberUpcoming, useTodayTasks } from '../../../src/features/tasks/hooks';
 import type { Task, TodayTask } from '../../../src/features/tasks/types';
 import { CHILD_UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
-import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
+import { formatWeekdayDate, householdToday, toIsoDate } from '../../../src/lib/dates';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
   AddFab,
-  EmptyState,
   makeStyles,
   NoticeToast,
   PageHeader,
@@ -50,7 +53,8 @@ import {
 } from '../../../src/ui';
 
 /**
- * «I dag» på barnets egen enhet: «Mine oppgaver i dag» i barnets egen farge, og «Ekstrajobber».
+ * «I dag» på barnets egen enhet. Øverst ChildHeroCard: hilsen, dagens framgang, uka og dagens
+ * setning. Så «Mine oppgaver i dag» i barnets egen farge, og «Ekstrajobber».
  * Barnet krysser alltid av for seg selv, med ett trykk. Langt trykk gjør ingenting.
  * Nederst: «Kommende» (2 uker, uten hyppige oppgaver, som barnet ser hver dag uansett) og
  * «Gjort siste 3 dager». Den nærmeste forekomsten i «Kommende» kan krysses av tidlig.
@@ -83,6 +87,10 @@ export default function ChildTodayScreen() {
   // RLS: barnet får bare sine egne avkrysninger.
   const { data: recent = [], refetch: refetchRecentQuery } = useRecentCompletions(householdId, today, !!me);
   const { data: myProposals = [], refetch: refetchProposals } = useMyProposals(householdId, !!me);
+  // Uka og dagens setning går etter husstandens dato, som completed_on i databasen.
+  const homeToday = householdToday(household!.timezone);
+  const { monday, sunday } = weekRange(homeToday);
+  const { data: weekRows = [], refetch: refetchWeek } = useWeekCompletions(householdId, me?.id, monday, sunday);
   // Dra for å oppdatere, fokus og midnatt: også «Kommende» og «Gjort siste 3 dager».
   const hasMe = !!me;
   const refetch = useCallback(
@@ -93,8 +101,9 @@ export default function ChildTodayScreen() {
         refetchUpcoming(),
         hasMe ? refetchRecentQuery() : undefined,
         hasMe ? refetchProposals() : undefined,
+        hasMe ? refetchWeek() : undefined,
       ]),
-    [refetchTasks, refetchDone, refetchUpcoming, refetchRecentQuery, refetchProposals, hasMe],
+    [refetchTasks, refetchDone, refetchUpcoming, refetchRecentQuery, refetchProposals, refetchWeek, hasMe],
   );
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
@@ -123,7 +132,6 @@ export default function ChildTodayScreen() {
   const mine = mineSection?.data ?? [];
   const mineDone = mineSection?.done ?? [];
   const jobs = sections.find((s) => s.key === JOBS_KEY)?.data ?? [];
-  const nothingToDo = !isPending && !!me && sections.length === 0;
   const color = personColor(me?.avatar);
   // «3 av 7 · 35 kr tjent»
   const right =
@@ -197,7 +205,7 @@ export default function ChildTodayScreen() {
       >
         <PageHeader
           overline={formatWeekdayDate(today)}
-          title={me ? `Hei, ${me.display_name}!` : 'I dag'}
+          title="I dag"
           right={<MyProfileButton />}
         />
 
@@ -205,7 +213,18 @@ export default function ChildTodayScreen() {
           {(error || actionError) && (
             <Text variant="metaStrong" color={colors.danger}>{actionError ?? toNorwegianMessage(error)}</Text>
           )}
-          {nothingToDo && <EmptyState title="Ingenting å gjøre i dag 🎉" />}
+          {me && !isPending && (
+            <ChildHeroCard
+              member={me}
+              open={mine.length}
+              done={mineDone.length}
+              week={weekText(weekStats(weekRows))}
+              phrase={phraseForDate(homeToday)}
+              young={isYoungChild(me, Number(homeToday.slice(0, 4)))}
+              hour={new Date().getHours()}
+              onAdd={canPropose ? openProposal : undefined}
+            />
+          )}
 
           {me && (mine.length > 0 || mineDone.length > 0) && (
             <SectionCard title="Mine oppgaver i dag" color={color} right={right}>

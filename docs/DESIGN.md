@@ -224,6 +224,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `ApprovalBanner` | gult banner: avatarer, tittel og metalinje, knappen «Se». Teksten regnes i `approvalBannerText` (`features/proposals/format.ts`): «Leah spør om lønn» / «Leah og Ola spør om lønn» med «2 spørsmål om lønn», eller «Leah venter», «2 til godkjenning · 35 kr · 1 spørsmål om lønn» |
 | `JobCard` / `JobGrid` | ekstrajobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |
+| `ProgressRing` | framgangsring (SVG) med innhold i midten: spor i `trackColor`, fyll i personens ring-farge. Fylles med Reanimated (600 ms), med «Reduser bevegelse» med en gang. `progressbar` for skjermleseren. Brukes i `ChildHeroCard` |
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
 | `ListRow` | rad i lister (Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil. `reserveChevron` holder av pilens plass når raden ikke kan trykkes, så (i), bryter og pil står likt på alle rader (årshjulet). Rader uten bryter får `right={<SwitchSpacer />}`: en usynlig bryter med nøyaktig samme størrelse |
 | `Section` | seksjon på en side: tittel, forklaring og innhold |
@@ -388,6 +389,26 @@ et beløp, ellers «Godkjenn uten lønn». Banneret hentes på nytt ved fokus, v
 (`WAITING_REFRESH_MS`, samme for forslag og godkjenninger). Innstillinger → «Barna»: bryteren «Barn kan legge inn egne oppgaver og spørre om lønn» (bare voksne, bare med
 barn), med beskrivelsen «Uten lønn legges det inn med en gang. Med lønn godkjenner en voksen.». Av = ingen «Legg inn».
 Familieskjermen viser ingenting om forslag.
+
+### Barnets kort øverst i «I dag»
+
+`features/motivation/components/ChildHeroCard.tsx`, over «Mine oppgaver i dag», bare på barnets egen enhet
+(ikke familieskjermen eller de voksne). Sidetoppen heter «I dag», hilsenen står i kortet. Kortet er i personens
+`tint` med `ProgressRing` (76, fyll i `ring`, spor i `surface`) rundt figuren/bildet (56).
+
+- Hilsen etter enhetens klokke (`greetingFor`): 05–11 «God morgen, Leah!», 12–17 «God ettermiddag», ellers «God kveld».
+- «2 av 5 i dag» (åpne og gjort i «Mine oppgaver i dag»). Alt gjort: «Alt er gjort i dag! 🎉» og «Nå har du fri.»,
+  full ring med hake og 2 px kant i `sun` (kanten ligger alltid der i tint, så kortet ikke hopper). Ingen ekstra
+  konfetti: `CelebrationOverlay` feirer allerede. Ingen oppgaver: «Ingen oppgaver i dag.» «Ser du noe du kan
+  hjelpe til med?» og «Legg inn» når innstillingen er på.
+- «Denne uka: 12 oppgaver gjort · 85 kr tjent» (mandag–søndag i husstandens tidssone, `householdToday`). Tjent =
+  godkjent + venter, som saldoen. Uten lønn bare antall, ingenting gjort: ingen linje. Leses fra barnets egne
+  rader i `task_completions` (RLS), ingen egen tabell.
+- Dagens setning (`features/motivation/phrases.ts`): fast per dag, i rekkefølge. Hardt mellomrom før siste ord
+  (`noWidow`), så det aldri står ett ord alene. Den lengste bryter etter kommaet på en iPhone SE.
+- 5 år og yngre (`isYoungChild`, samme regel som `young` i databasen): sentrert, ring 132 rundt figur 100,
+  «Hei, Leah!» og «2 av 5» / «Alt er gjort! 🎉» / «Ingen oppgaver i dag». Ingen uke eller setning.
+- Ikke med: dager på rad, rangering eller sammenligning med søsken.
 
 ## Avatarer
 

@@ -1,6 +1,7 @@
 import {
   formatWeekdayDate,
   formatWeekRange,
+  householdToday,
   isoWeekNumber,
   msUntilNextMidnight,
   startOfIsoWeek,
@@ -52,5 +53,20 @@ describe('msUntilNextMidnight', () => {
 
   it('går over til neste måned', () => {
     expect(msUntilNextMidnight(new Date(2026, 10, 30, 23, 0, 0))).toBe(60 * 60 * 1000);
+  });
+});
+
+describe('householdToday', () => {
+  it('gir datoen i husstandens tidssone', () => {
+    // 23:30 UTC 21. nov. er 00:30 22. nov. i Oslo.
+    expect(householdToday('Europe/Oslo', new Date('2026-11-21T23:30:00Z'))).toBe('2026-11-22');
+    expect(householdToday('Europe/Oslo', new Date('2026-11-21T12:00:00Z'))).toBe('2026-11-21');
+    // Sommertid: 22:30 UTC 30. juni er 00:30 1. juli.
+    expect(householdToday('Europe/Oslo', new Date('2026-06-30T22:30:00Z'))).toBe('2026-07-01');
+  });
+
+  it('bruker enhetens dato når tidssonen er ukjent', () => {
+    const now = new Date(2026, 10, 21, 12, 0);
+    expect(householdToday('Ikke/En_Sone', now)).toBe('2026-11-21');
   });
 });

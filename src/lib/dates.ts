@@ -134,3 +134,25 @@ export function formatWeekdayDate(isoDate: string): string {
   const weekday = WEEKDAY_NAMES[isoWeekday(year, month, day) - 1];
   return `${weekday[0].toUpperCase()}${weekday.slice(1)} ${day}. ${MONTH_NAMES[month - 1]}`;
 }
+
+/**
+ * Dagens kalenderdato i husstandens tidssone (households.timezone), samme dato som databasen
+ * bruker for completed_on. Unntak fra «ingen Intl»: her er det nettopp tidssonen vi trenger.
+ * Virker ikke Intl eller tidssonen, brukes enhetens dato.
+ */
+export function householdToday(timeZone: string, now: Date = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value;
+    const [year, month, day] = [get('year'), get('month'), get('day')];
+    if (year && month && day) return `${year}-${month}-${day}`;
+  } catch {
+    // Ukjent tidssone eller Intl uten timeZone: faller tilbake under.
+  }
+  return toIsoDate(now);
+}

@@ -8,6 +8,8 @@ type Props = {
   onHide: () => void;
   /** Ny verdi starter nedtellingen på nytt. */
   resetKey: string;
+  /** Legg banneret over den flytende plussen (se Toast). */
+  aboveFab?: boolean;
 };
 
 /** Banner nederst med en kort melding i 3 sekunder, uten «Angre». */

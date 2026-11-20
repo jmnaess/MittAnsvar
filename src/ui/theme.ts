@@ -134,6 +134,16 @@ export const spacing = {
   card: 14,
   /** Mellom rader. */
   row: 10,
+  /** Luft nederst i lister med flytende pluss (AddFab), så knappen aldri dekker den nederste raden. */
+  fabClearance: 120,
+} as const;
+
+/** Den flytende plussknappen (AddFab): størrelse og avstand fra kanten nederst. */
+export const fab = {
+  size: 56,
+  margin: 16,
+  /** Toastene ligger så mye over knappen når den vises. */
+  toastGap: 12,
 } as const;
 
 /** Største bredde på innholdet. Mobil er smalere og merker ingenting; på iPad blir det en midtstilt spalte. */

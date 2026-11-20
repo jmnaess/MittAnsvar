@@ -326,7 +326,7 @@ function Separator() {
 
 const useStyles = makeStyles(() =>
   StyleSheet.create({
-    container: { ...pageWidth, padding: spacing.page, paddingBottom: 120 },
+    container: { ...pageWidth, padding: spacing.page, paddingBottom: spacing.fabClearance },
     header: { gap: 12 },
     month: { marginTop: spacing.section + 6, marginBottom: spacing.row },
     separator: { height: spacing.row },

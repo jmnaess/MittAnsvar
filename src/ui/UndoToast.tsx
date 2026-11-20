@@ -10,6 +10,8 @@ type Props = {
   undoing?: boolean;
   /** Ny verdi starter nedtellingen på nytt (f.eks. når en ny rad slettes). */
   resetKey: string;
+  /** Legg banneret over den flytende plussen (se Toast). */
+  aboveFab?: boolean;
 };
 
 /** Banner nederst med en kort tekst og «Angre» i 5 sekunder. */

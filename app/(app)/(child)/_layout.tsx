@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
-import { tabIcon, useTheme } from '../../../src/ui';
+import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
+import { spacing, tabIcon, useTheme } from '../../../src/ui';
 import { tabScreenOptions } from '../../../src/ui/tabOptions';
 
 /**
@@ -16,7 +17,16 @@ export default function ChildTabsLayout() {
         name="index"
         options={{ title: 'I dag', tabBarIcon: tabIcon('sunny'), headerShown: false }}
       />
-      <Tabs.Screen name="my-earnings" options={{ title: 'Min lønn', tabBarIcon: tabIcon('wallet') }} />
+      {/* Egen avatar øverst til høyre åpner «Innstillinger». Ikke på «Innstillinger» selv. */}
+      <Tabs.Screen
+        name="my-earnings"
+        options={{
+          title: 'Min lønn',
+          tabBarIcon: tabIcon('wallet'),
+          headerRight: () => <MyProfileButton size={32} />,
+          headerRightContainerStyle: { paddingRight: spacing.page },
+        }}
+      />
       <Tabs.Screen
         name="my-settings"
         options={{ title: 'Innstillinger', tabBarIcon: tabIcon('settings') }}

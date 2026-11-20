@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import { makeStyles } from './makeStyles';
-import { contentMaxWidth, radius, spacing } from './theme';
+import { contentMaxWidth, fab, radius, spacing } from './theme';
 import { useTheme } from './ThemeProvider';
 
 type Props = {
@@ -15,10 +15,12 @@ type Props = {
   resetKey: string;
   /** Hvor lenge banneret, og dermed «Angre», vises. */
   visibleMs: number;
+  /** Skjermen har flytende pluss (AddFab): banneret legges over knappen, så det aldri dekker den. */
+  aboveFab?: boolean;
 };
 
 /** Mørkt banner nederst med innhold og «Angre» (når onUndo er med). Felles for FeedbackToast, UndoToast og NoticeToast. */
-export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs }: Props) {
+export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs, aboveFab }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   // onHide er en ny funksjon ved hver render. Med en ref starter nedtellingen bare på nytt
@@ -33,7 +35,7 @@ export function Toast({ children, onUndo, onHide, undoing, resetKey, visibleMs }
 
   return (
     // Ytterste lag sentrerer banneret på brede skjermer og slipper trykk gjennom ved siden av det.
-    <View style={styles.position} pointerEvents="box-none">
+    <View style={[styles.position, aboveFab && styles.aboveFab]} pointerEvents="box-none">
       <View style={styles.toast} accessibilityLiveRegion="polite" accessibilityRole="alert">
         <View style={styles.content}>{children}</View>
         {onUndo && (
@@ -61,6 +63,7 @@ const useStyles = makeStyles(({ colors, shadow }) =>
       bottom: 16,
       alignItems: 'center',
     },
+    aboveFab: { bottom: fab.size + fab.margin + fab.toastGap },
     toast: {
       width: '100%',
       // Samme bredde som kortene i innholdet over.

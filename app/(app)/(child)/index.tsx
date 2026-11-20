@@ -16,7 +16,7 @@ import {
 } from '../../../src/features/completions/hooks';
 import { isLastOfToday, toCelebration, type Celebration } from '../../../src/features/feedback/celebration';
 import { CelebrationOverlay } from '../../../src/features/feedback/components/CelebrationOverlay';
-import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
+import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalance } from '../../../src/features/rewards/hooks';
@@ -146,7 +146,7 @@ export default function ChildTodayScreen() {
         <PageHeader
           overline={formatWeekdayDate(today)}
           title={me ? `Hei, ${me.display_name}!` : 'I dag'}
-          right={me ? <MemberAvatar member={me} size={48} ring={color.ring} /> : undefined}
+          right={<MyProfileButton size={48} />}
         />
 
         <View style={styles.body}>

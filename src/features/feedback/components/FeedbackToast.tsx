@@ -12,6 +12,8 @@ type Props = {
   undoing?: boolean;
   /** Ny verdi (f.eks. completion-id) starter nedtellingen på nytt. */
   resetKey: string;
+  /** Legg banneret over den flytende plussen (se Toast). */
+  aboveFab?: boolean;
 };
 
 /** Banner nederst etter avkrysning: tilbakemelding og «Angre» i 6 sekunder. Serveren tillater angring i 10 minutter. */

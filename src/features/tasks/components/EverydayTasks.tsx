@@ -50,11 +50,13 @@ type Bundle = TaskBundle<Task>;
 
 type Props = {
   householdId: string;
-  /** Toppen av fanen (tittel, pluss og segmentene). Ruller med listen. */
+  /** Toppen av fanen (tittel, avatar og segmentene). Ruller med listen. */
   header: ReactElement;
-  /** Personfilteret. null = Alle. Pluss øverst bruker det for å forhåndsvelge personen. */
+  /** Personfilteret. null = Alle. Plussen bruker det for å forhåndsvelge personen. */
   personId: string | null;
   onPersonChange: (id: string | null) => void;
+  /** Fanen viser flytende pluss: «Angre»-banneret legges over den. */
+  aboveFab?: boolean;
 };
 
 /**
@@ -67,7 +69,7 @@ type Props = {
  * Like oppgaver for flere personer er én rad (bundleTasks). Trykk spør hvem sin oppgave som skal
  * endres, og sveip-slett sletter alle i raden.
  */
-export function EverydayTasks({ householdId, header, personId, onPersonChange }: Props) {
+export function EverydayTasks({ householdId, header, personId, onPersonChange, aboveFab }: Props) {
   const styles = useStyles();
   const { data: allTasks, error, isPending, refetch } = useTasks(householdId);
   const pullToRefresh = usePullToRefresh(refetch);
@@ -251,6 +253,7 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
           undoing={restore.isPending}
           onUndo={undoRemove}
           onHide={() => setDeleted(null)}
+          aboveFab={aboveFab}
         />
       )}
     </>
@@ -287,8 +290,8 @@ function Separator() {
 
 const useStyles = makeStyles(() =>
   StyleSheet.create({
-    // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-    container: { ...pageWidth, padding: spacing.page, paddingBottom: 120 },
+    // Ekstra plass nederst, så plussen og banneret ikke dekker den siste oppgaven.
+    container: { ...pageWidth, padding: spacing.page, paddingBottom: spacing.fabClearance },
     header: { gap: 12, marginBottom: spacing.row + 4 },
     separator: { height: spacing.row },
   }),

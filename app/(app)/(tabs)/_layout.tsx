@@ -3,7 +3,8 @@ import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import { ReminderPrompt } from '../../../src/features/notifications/components/ReminderPrompt';
 import { useOpenTodayOnTap, useReminderSync } from '../../../src/features/notifications/hooks';
-import { tabIcon, useTheme } from '../../../src/ui';
+import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
+import { spacing, tabIcon, useTheme } from '../../../src/ui';
 import { tabScreenOptions } from '../../../src/ui/tabOptions';
 
 export default function TabsLayout() {
@@ -32,13 +33,23 @@ export default function TabsLayout() {
           name="tasks"
           options={{ title: 'Oppgaver', tabBarIcon: tabIcon('list'), headerShown: false }}
         />
-        <Tabs.Screen name="household" options={{ title: 'Husstand', tabBarIcon: tabIcon('home') }} />
+        {/* Husstand og Innstillinger: egen avatar øverst til høyre i headeren, som snarvei til profilen. */}
+        <Tabs.Screen
+          name="household"
+          options={{ title: 'Husstand', tabBarIcon: tabIcon('home'), ...profileHeaderRight }}
+        />
         <Tabs.Screen
           name="settings"
-          options={{ title: 'Innstillinger', tabBarIcon: tabIcon('settings') }}
+          options={{ title: 'Innstillinger', tabBarIcon: tabIcon('settings'), ...profileHeaderRight }}
         />
       </Tabs>
       <ReminderPrompt userId={userId} />
     </>
   );
 }
+
+/** Egen avatar i navigasjonsheaderen (se MyProfileButton). */
+const profileHeaderRight = {
+  headerRight: () => <MyProfileButton size={32} />,
+  headerRightContainerStyle: { paddingRight: spacing.page },
+};

@@ -241,14 +241,16 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `HowToSheet` / `HowToContent` | (`features/tasks/components/HowToSheet.tsx`) «Slik gjør du»: beskrivelsen og «Kilde: …» (lenke når malen har URL). `useHowToSheet()` gir arket og `infoPress(howTo)`. Hvem som får ikon, står i `features/tasks/howTo.ts`: maler og oppgaver fra årshjul, hjemprofil, intervall og sesong, og oppgaver uten mal som har beskrivelse. Rutiner («Re opp senga») får ikke ikon. Redigeringsskjermen viser beskrivelsen øverst for alle |
 | `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
 | `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
-| `Toast` / `UndoToast` / `NoticeToast` | mørkt banner nederst. `UndoToast` har «Angre» i 5 s, `NoticeToast` er bare en kort melding i 3 s («Lagt i Årshjul») |
+| `Toast` / `UndoToast` / `NoticeToast` | mørkt banner nederst. `UndoToast` har «Angre» i 5 s, `NoticeToast` er bare en kort melding i 3 s («Lagt i Årshjul»). `aboveFab` på skjermer med flytende pluss: banneret ligger over knappen (`fab.size + fab.margin + fab.toastGap`), ellers 16 px fra bunnen |
+| `AddFab` | flytende pluss nede til høyre over fanelinjen (56 px, `primary`, skygge, token `fab`). Trykk: knappen vokser til en meny (Reanimated, 250 ms), + roterer til ×, bakgrunnen dempes. «Reduser bevegelse»: bare fade. Skjermleser: «Legg til», fokus på det forhåndsvalgte valget. Lister på skjermer med pluss får `spacing.fabClearance` nederst. Valgene står i `features/tasks/addMenu.ts`: «Oppgave i dag», «Ny oppgave», «Ekstrajobb», «Årshjul-oppgave», samme rekkefølge overalt, det som passer fanen er uthevet. Bare voksne, på «I dag» og «Oppgaver» |
+| `MyProfileButton` | (`features/household/components/`) egen avatar øverst til høyre (48 i sidetoppene, 32 i navigasjonsheaderen). Voksen: personskjermen, barn: «Innstillinger». Ikke på familieskjermen |
 | `tabIcon` | Ionicons-ikon til fanene, fylt når valgt |
 | `tabScreenOptions(colors)`, `modalScreenOptions(colors)`, `navigationTheme(scheme, colors)` | utseendet på fanelinjen, headerne og navigasjonen (`tabOptions.tsx`) |
 | `ThemeProvider`, `useTheme`, `useAppearance`, `makeStyles` | temaet som vises, valget under «Utseende», temaavhengige stiler |
 
 ### «Oppgaver»
 
-Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`), en rund + (`IconButton` 38) og under dem
+Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`), egen avatar (`MyProfileButton`) og under dem
 `SegmentedControl` («Hverdag | Årshjul»). Valget huskes per enhet (`features/tasks/tasksSegment.ts`,
 `secureStorage`). `/tasks?view=year` velger Årshjul, og den gamle ruten `/year` sender dit.
 Hvilket segment en oppgave står i, avgjør `taskSection` i `features/tasks/section.ts`: Årshjul for årlige

@@ -8,6 +8,7 @@ export {
   type AppearancePreference,
   type ThemeValue,
 } from './ThemeProvider';
+export { AddFab, type AddFabItem } from './AddFab';
 export { ApprovalBanner } from './ApprovalBanner';
 export { Avatar, type AvatarPhotoSource, type AvatarSize } from './Avatar';
 export { AvatarStack, type AvatarStackPerson } from './AvatarStack';

@@ -14,7 +14,7 @@ type Props = {
 };
 
 /** Uten denne vrir iOS en åpen Modal til stående, også når iPaden står liggende. */
-const ALL_ORIENTATIONS: ModalProps['supportedOrientations'] = [
+export const ALL_ORIENTATIONS: ModalProps['supportedOrientations'] = [
   'portrait',
   'portrait-upside-down',
   'landscape',

@@ -2,13 +2,13 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { IconButton, makeStyles, NoticeToast, SegmentedControl, Text } from '../../../src/ui';
+import { AddFab, makeStyles, NoticeToast, SegmentedControl, Text } from '../../../src/ui';
+import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { EverydayTasks } from '../../../src/features/tasks/components/EverydayTasks';
-import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
+import { addMenuItems } from '../../../src/features/tasks/addMenu';
 import type { TaskSection } from '../../../src/features/tasks/section';
 import {
-  FROM_TASKS,
   getTasksSegment,
   setTasksSegment,
   takeReveal,
@@ -42,8 +42,6 @@ export default function TasksScreen() {
   const isAdult = useMyMember(householdId)?.role === 'adult';
   const segment = useTasksSegment();
   const [personId, setPersonId] = useState<string | null>(null);
-  // «Ny oppgave» i Hverdag: velg «Oppgave» eller «Ekstrajobb».
-  const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState<{ id: number; message: string } | null>(null);
   const [reveal, setReveal] = useState<{ sectionKey: string; id: number } | null>(null);
 
@@ -66,28 +64,20 @@ export default function TasksScreen() {
     }, []),
   );
 
-  /** Pluss i Hverdag: med en person valgt i filteret rett til skjemaet med personen forhåndsvalgt. */
-  function create() {
-    if (segment === 'year') router.push({ pathname: '/year-task/new', params: FROM_TASKS });
-    else if (personId) router.push({ pathname: '/task/new', params: { memberId: personId, ...FROM_TASKS } });
-    else setCreating(true);
-  }
-
-  // Bare voksne lager årsoppgaver, som før i Årshjul-fanen.
-  const canAdd = segment === 'everyday' || isAdult;
+  // Pluss nede til høyre (bare voksne). Segmentet bestemmer forhåndsvalget, og personen i
+  // filteret i Hverdag forhåndsvelges i oppgaveskjemaene.
+  const addItems = addMenuItems({
+    tab: segment,
+    isAdult,
+    memberId: segment === 'everyday' ? personId : null,
+  });
+  const hasFab = addItems.length > 0;
 
   const header = (
     <View style={styles.top}>
       <View style={styles.titleRow}>
         <Text variant="screenTitle" accessibilityRole="header" style={styles.title}>Oppgaver</Text>
-        {canAdd && (
-          <IconButton
-            icon="add"
-            size={38}
-            accessibilityLabel={segment === 'year' ? 'Ny årlig oppgave' : 'Ny oppgave'}
-            onPress={create}
-          />
-        )}
+        <MyProfileButton size={48} />
       </View>
       <SegmentedControl options={SEGMENTS} value={segment} onChange={setTasksSegment} />
     </View>
@@ -101,18 +91,21 @@ export default function TasksScreen() {
           header={header}
           personId={personId}
           onPersonChange={setPersonId}
+          aboveFab={hasFab}
         />
       ) : (
         <YearWheel header={header} reveal={reveal} onRevealed={() => setReveal(null)} />
       )}
-      <NewTaskSheet
-        visible={creating}
-        onClose={() => setCreating(false)}
-        taskLabel="Oppgave"
-        taskHref={{ pathname: '/task/new', params: FROM_TASKS }}
-      />
+      {hasFab && (
+        <AddFab items={addItems.map((item) => ({ ...item, onPress: () => router.push(item.href) }))} />
+      )}
       {notice && (
-        <NoticeToast resetKey={String(notice.id)} message={notice.message} onHide={() => setNotice(null)} />
+        <NoticeToast
+          resetKey={String(notice.id)}
+          message={notice.message}
+          onHide={() => setNotice(null)}
+          aboveFab={hasFab}
+        />
       )}
     </View>
   );

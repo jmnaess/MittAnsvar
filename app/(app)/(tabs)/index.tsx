@@ -19,6 +19,7 @@ import {
   useUndoCompletion,
 } from '../../../src/features/completions/hooks';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
+import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
 import { useMemberPhotoLookup, useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
 import { ExpiringCard } from '../../../src/features/preparedness/components/ExpiringCard';
@@ -27,7 +28,7 @@ import { PendingApprovalBanner } from '../../../src/features/rewards/components/
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
 import { useHowToSheet, useTaskHowTo } from '../../../src/features/tasks/components/HowToSheet';
-import { NewTaskSheet } from '../../../src/features/tasks/components/NewTaskSheet';
+import { addMenuItems } from '../../../src/features/tasks/addMenu';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TaskRowMenu } from '../../../src/features/tasks/components/TaskRowMenu';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
@@ -58,11 +59,11 @@ import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
+  AddFab,
   Button,
   Card,
   EmptyState,
   FamilyStrip,
-  IconButton,
   makeStyles,
   PageHeader,
   SectionCard,
@@ -180,8 +181,6 @@ export default function TodayScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [postponed, setPostponed] = useState<PostponedToast | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  // Pluss: velg «Oppgave i dag» eller «Ekstrajobb».
-  const [creating, setCreating] = useState(false);
   /** Kort der alle utførte er foldet ut (seksjonsnøkler). Ny dag: alt foldes inn igjen. */
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   useEffect(() => setExpandedKeys(new Set()), [day]);
@@ -489,6 +488,9 @@ export default function TodayScreen() {
     );
   }
 
+  const addItems = addMenuItems({ tab: 'today', isAdult, memberId: focusedId });
+  const hasFab = addItems.length > 0;
+
   return (
     <View style={[styles.flex, { paddingTop: insets.top }]}>
       <ScrollView
@@ -498,11 +500,7 @@ export default function TodayScreen() {
         <PageHeader
           overline={formatWeekdayDate(today)}
           title="I dag"
-          right={
-            isAdult ? (
-              <IconButton icon="add" accessibilityLabel="Ny oppgave eller ekstrajobb" onPress={() => setCreating(true)} />
-            ) : undefined
-          }
+          right={<MyProfileButton size={48} />}
         />
 
         {members.length > 1 && (
@@ -640,12 +638,10 @@ export default function TodayScreen() {
 
       {howToSheet}
 
-      <NewTaskSheet
-        visible={creating}
-        onClose={() => setCreating(false)}
-        taskLabel="Oppgave i dag"
-        taskHref="/task/today"
-      />
+      {/* Pluss nede til høyre (bare voksne). Valgt person forhåndsvelges i oppgaveskjemaene. */}
+      {addItems.length > 0 && (
+        <AddFab items={addItems.map((item) => ({ ...item, onPress: () => router.push(item.href) }))} />
+      )}
 
       {toast && (
         <FeedbackToast
@@ -656,6 +652,7 @@ export default function TodayScreen() {
           undoing={undo.isPending}
           onUndo={handleUndo}
           onHide={() => setToast(null)}
+          aboveFab={hasFab}
         />
       )}
 
@@ -666,6 +663,7 @@ export default function TodayScreen() {
           undoing={undoPostpone.isPending}
           onUndo={handleUndoPostpone}
           onHide={() => setPostponed(null)}
+          aboveFab={hasFab}
         />
       )}
     </View>
@@ -675,8 +673,8 @@ export default function TodayScreen() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    // Ekstra plass nederst, så banneret ikke dekker den siste oppgaven.
-    container: { ...pageWidth, paddingBottom: 120, gap: spacing.section },
+    // Ekstra plass nederst, så plussen og banneret ikke dekker den siste oppgaven.
+    container: { ...pageWidth, paddingBottom: spacing.fabClearance, gap: spacing.section },
     body: { paddingHorizontal: spacing.page, gap: spacing.section },
     // Ikke full bredde: tydelig, men skal ikke dominere over kortene.
     newTaskFor: { alignSelf: 'flex-start' },

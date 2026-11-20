@@ -41,8 +41,10 @@ type Props = { items: AddFabItem[] } | { label: string; onPress: () => void };
 /** Morph-tiden. Med «Reduser bevegelse» bare en kort fade. */
 const MORPH_MS = 250;
 const FADE_MS = 150;
-const MENU_MAX_WIDTH = 280;
-const ROW_HEIGHT = 52;
+/** Minste trykkflate. */
+const ROW_HEIGHT = 44;
+/** Luft rundt valgene i kortet. */
+const MENU_PADDING = 6;
 
 /**
  * Flytende pluss nede til høyre, over fanelinjen. Legg den sist i skjermens rot-View.
@@ -106,17 +108,20 @@ function AddFabMenu({ items, onClose }: { items: AddFabItem[]; onClose: () => vo
   const reduceMotion = useReducedMotion();
   const tabBarHeight = useBottomTabBarHeight();
   const { width: windowWidth } = useWindowDimensions();
-  const menuWidth = Math.min(MENU_MAX_WIDTH, windowWidth - 2 * spacing.page);
+  const maxMenuWidth = windowWidth - 2 * spacing.page;
 
   // progress: 0 = rund knapp, 1 = åpen meny. fade: hele menyen (brukes bare med «Reduser bevegelse»).
   const progress = useSharedValue(0);
   const fade = useSharedValue(reduceMotion ? 0 : 1);
+  // Kortet får innholdets størrelse: bredden følger teksten, høyden antall valg (og skriftstørrelsen).
+  const contentWidth = useSharedValue<number>(fab.size);
   const contentHeight = useSharedValue<number>(fab.size);
   const [measured, setMeasured] = useState(false);
   const closing = useRef(false);
   const focusRef = useRef<ComponentRef<typeof View>>(null);
 
   function onContentLayout(event: LayoutChangeEvent) {
+    contentWidth.value = event.nativeEvent.layout.width;
     contentHeight.value = event.nativeEvent.layout.height;
     setMeasured(true);
   }
@@ -160,7 +165,7 @@ function AddFabMenu({ items, onClose }: { items: AddFabItem[]; onClose: () => vo
   const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value * fade.value }));
   const cardStyle = useAnimatedStyle(() => ({
     opacity: fade.value,
-    width: interpolate(progress.value, [0, 1], [fab.size, menuWidth]),
+    width: interpolate(progress.value, [0, 1], [fab.size, contentWidth.value]),
     height: interpolate(progress.value, [0, 1], [fab.size, contentHeight.value]),
     borderRadius: interpolate(progress.value, [0, 1], [fab.size / 2, radius.section]),
     backgroundColor: interpolateColor(progress.value, [0, 1], [colors.primary, colors.surface]),
@@ -196,11 +201,8 @@ function AddFabMenu({ items, onClose }: { items: AddFabItem[]; onClose: () => vo
         style={[styles.card, { bottom: tabBarHeight + fab.margin }, cardStyle]}
       >
         <Animated.View style={[styles.clip, clipStyle]}>
-          {/* Innholdet har fast bredde og ligger nederst til høyre, så det avdekkes mens kortet vokser. */}
-          <Animated.View style={[styles.content, { width: menuWidth }, contentStyle]} onLayout={onContentLayout}>
-            <Text variant="label" color={colors.textMuted} accessibilityRole="header" style={styles.heading}>
-              Hva vil du lage?
-            </Text>
+          {/* Innholdet ligger nederst til høyre i sin egen størrelse, så det avdekkes mens kortet vokser. */}
+          <Animated.View style={[styles.content, { maxWidth: maxMenuWidth }, contentStyle]} onLayout={onContentLayout}>
             {items.map((item, index) => (
               <Pressable
                 key={item.key}
@@ -214,8 +216,6 @@ function AddFabMenu({ items, onClose }: { items: AddFabItem[]; onClose: () => vo
                 <Text variant="body">{item.label}</Text>
               </Pressable>
             ))}
-            {/* Plass til krysset nederst til høyre. */}
-            <View style={styles.closeSpace} />
           </Animated.View>
         </Animated.View>
 
@@ -258,8 +258,18 @@ const useStyles = makeStyles(({ colors, shadow }) =>
     backdrop: { backgroundColor: colors.backdrop },
     card: { position: 'absolute', right: spacing.page, ...shadow },
     clip: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
-    content: { position: 'absolute', right: 0, bottom: 0, padding: spacing.row, gap: 2 },
-    heading: { paddingHorizontal: spacing.row, paddingTop: 4, paddingBottom: 6 },
+    // Valgene til venstre, krysset i kolonnen til høyre (paddingRight). Ingen fast bredde: kortet
+    // blir så smalt som teksten tillater, og så lavt som valgene (minst like høyt som knappen).
+    content: {
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      minHeight: fab.size,
+      justifyContent: 'center',
+      padding: MENU_PADDING,
+      paddingRight: fab.size,
+      gap: 2,
+    },
     row: {
       minHeight: ROW_HEIGHT,
       flexDirection: 'row',
@@ -268,7 +278,6 @@ const useStyles = makeStyles(({ colors, shadow }) =>
       paddingHorizontal: spacing.row,
       borderRadius: radius.row,
     },
-    closeSpace: { height: fab.size - spacing.row },
     close: {
       position: 'absolute',
       right: 0,

@@ -26,25 +26,47 @@ const FALLBACK_TEXT: Record<FeedbackKind, string> = {
   young: 'Hurra!',
 };
 
-const DURATION_MS: Record<FeedbackKind, number> = {
-  regular: 2200,
-  young: 2200,
-  day_done: 3200,
-};
+/** Teksten under beløpet når lønnen venter på en voksen. */
+export const PENDING_TEXT = 'Venter på godkjenning';
+
+/** Visningstid: grunntid + tid per ord, med et tak. Siste for dagen får litt ekstra. */
+const BASE_MS = 3500;
+const PER_WORD_MS = 400;
+const MAX_MS = 7000;
+const DAY_DONE_EXTRA_MS = 1500;
 
 const CONFETTI_COUNT = 16;
+
+/** Ord med minst én bokstav eller ett tall. Emoji og tankestrek teller ikke. */
+export function countWords(text: string): number {
+  return text.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+}
+
+/**
+ * Hvor lenge feiringen står: 3,5 s + 0,4 s per ord, maks 7 s. Siste for dagen: 1,5 s ekstra
+ * (maks 8,5 s). Alt som står på skjermen teller: teksten, beløpet og «Venter på godkjenning».
+ */
+export function celebrationDurationMs(kind: FeedbackKind, shownTexts: readonly string[]): number {
+  const words = shownTexts.reduce((sum, t) => sum + countWords(t), 0);
+  const base = Math.min(MAX_MS, BASE_MS + PER_WORD_MS * words);
+  return kind === 'day_done' ? base + DAY_DONE_EXTRA_MS : base;
+}
 
 export function toCelebration(
   result: Pick<CompletionResult, 'completionId' | 'feedbackText' | 'feedbackKind' | 'rewardNok' | 'pending'>,
 ): Celebration {
   const kind = result.feedbackKind;
+  const text = result.feedbackText ?? FALLBACK_TEXT[kind];
+  const reward = result.rewardNok ? `+${formatKroner(result.rewardNok)}` : undefined;
+  const pending = !!result.rewardNok && result.pending;
+  const shown = [text, reward ?? '', pending ? PENDING_TEXT : ''];
   return {
     completionId: result.completionId,
     kind,
-    text: result.feedbackText ?? FALLBACK_TEXT[kind],
-    reward: result.rewardNok ? `+${formatKroner(result.rewardNok)}` : undefined,
-    pending: !!result.rewardNok && result.pending,
-    durationMs: DURATION_MS[kind],
+    text,
+    reward,
+    pending,
+    durationMs: celebrationDurationMs(kind, shown),
     confetti: kind === 'day_done' ? CONFETTI_COUNT : 0,
     wiggle: kind === 'young',
   };

@@ -14,7 +14,8 @@ import Animated, {
 import { spacing, Text, useTheme } from '../../../ui';
 import { MemberAvatar } from '../../household/components/MemberAvatar';
 import type { Member } from '../../household/types';
-import type { Celebration } from '../celebration';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PENDING_TEXT, type Celebration } from '../celebration';
 import { Confetti } from './Confetti';
 
 type Props = {
@@ -26,10 +27,13 @@ type Props = {
 };
 
 const AVATAR_SIZE = 140;
+/** «Trykk for å lukke» kommer etter feiringen, så den ikke tar oppmerksomheten. */
+const CLOSE_HINT_DELAY_MS = 1000;
 
 /**
  * Fullskjermsfeiring for barn etter avkrysning (barnets enhet og familieskjermen). Lukkes ved
- * trykk hvor som helst, eller av seg selv etter celebration.durationMs.
+ * trykk hvor som helst, eller av seg selv etter celebration.durationMs (etter tekstlengden, se
+ * celebrationDurationMs). «Trykk for å lukke» tones inn nederst etter et sekund.
  * Animasjon: figuren hopper inn. 5 år eller yngre: vrikk i tillegg. Siste for dagen: konfetti.
  * Med «Reduser bevegelse» står figuren og teksten stille.
  */
@@ -37,6 +41,7 @@ export function CelebrationOverlay({ celebration, member, showName, onHide }: Pr
   const { personColor } = useTheme();
   const color = personColor(member.avatar);
   const reduceMotion = useReducedMotion();
+  const insets = useSafeAreaInsets();
   const { completionId, durationMs, kind, text, reward, pending, confetti, wiggle } = celebration;
 
   // Som i Toast: nedtellingen starter bare på nytt ved en ny avkrysning, ikke ved hver render.
@@ -72,7 +77,7 @@ export function CelebrationOverlay({ celebration, member, showName, onHide }: Pr
     transform: [{ translateY: lift.value }, { scale: scale.value }, { rotate: `${rotate.value}deg` }],
   }));
 
-  const label = [showName ? member.display_name : null, text, reward, pending ? 'Venter på godkjenning' : null]
+  const label = [showName ? member.display_name : null, text, reward, pending ? PENDING_TEXT : null]
     .filter(Boolean)
     .join('. ');
 
@@ -106,8 +111,19 @@ export function CelebrationOverlay({ celebration, member, showName, onHide }: Pr
           <Text variant="jobAmount" color={color.ink} style={styles.center}>{reward}</Text>
         )}
         {pending && (
-          <Text variant="meta" color={color.ink} style={styles.center}>Venter på godkjenning</Text>
+          <Text variant="meta" color={color.ink} style={styles.center}>{PENDING_TEXT}</Text>
         )}
+      </Animated.View>
+
+      {/* Med «Reduser bevegelse» står den der fra start, uten inntoning. */}
+      <Animated.View
+        key={`hint-${completionId}`}
+        entering={reduceMotion ? undefined : FadeIn.delay(CLOSE_HINT_DELAY_MS).duration(400)}
+        style={[styles.closeHint, { bottom: insets.bottom + spacing.section }]}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+      >
+        <Text variant="hint" color={color.ink} style={styles.muted}>Trykk for å lukke</Text>
       </Animated.View>
     </Pressable>
   );
@@ -126,4 +142,7 @@ const styles = StyleSheet.create({
   avatarArea: { width: AVATAR_SIZE * 2, height: AVATAR_SIZE * 1.6, alignItems: 'center', justifyContent: 'center' },
   texts: { alignItems: 'center', gap: spacing.row, maxWidth: 520 },
   center: { textAlign: 'center' },
+  closeHint: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  // Dempet: samme farge som resten, men svakere.
+  muted: { opacity: 0.65 },
 });

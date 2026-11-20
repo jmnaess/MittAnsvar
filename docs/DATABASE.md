@@ -16,7 +16,8 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
     │  └──1 household_subscriptions
     ├──* invites                      feedback_messages (global, les-bare)
     ├──* household_displays           invite_attempts, link_attempts (per auth-bruker, stengt)
-    └──* link_tokens
+    ├──* link_tokens
+    └──* preparedness_items
 
 View: today_tasks (tasks), today_completions (task_completions + tasks), recent_completions (task_completions + tasks), member_balances (members + task_completions + payouts)
 ```
@@ -34,6 +35,7 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | `completion_status` | `pending`, `approved`, `rejected` (steg 10b) |
 | `sewage_type` | `municipal`, `septic_tank`, `mini_treatment_plant` (hjemprofil) |
 | `avatar_mode` | `figure`, `photo` (profilbilder) |
+| `preparedness_status` | `have`, `not_needed` (beredskapslager) |
 
 ### `households`
 | Kolonne | Type | Merknad |
@@ -183,6 +185,20 @@ Indeks `(household_id, member_id, paid_at desc)`. Skrives bare via RPC-en `recor
 **View `member_balances`** (`security_invoker = true`): én rad per barn (et barn ser bare sin egen rad, steg 10a) med `member_id`, `household_id`, `earned_nok` (sum av godkjente `task_completions.reward_nok`), `pending_nok` (sum av ventende, steg 10b), `paid_nok` (sum av `payouts.amount_nok`) og `balance_nok = earned_nok − paid_nok` (det som kan betales ut). Avviste beløp teller ikke. Appen viser `balance_nok + pending_nok` med det som venter i parentes: «35 kr (10 kr venter)» (`rewards/format.ts`). Saldoen lagres ikke, så den kan aldri komme ut av takt med historikken. RLS på de underliggende tabellene gjelder.
 
 Kjent kanttilfelle: en utbetaling, og så en angring innen 10 minutter, kan gi negativ saldo. Det godtas.
+
+### `preparedness_items` (beredskapslager)
+| Kolonne | Type | Merknad |
+|---------|------|---------|
+| household_id | uuid not null → households **on delete cascade** | pk sammen med `item_key` |
+| item_key | text not null | varens nøkkel i appen, f.eks. `water`. Check: `^[a-z_]{1,40}$`. Sjekkes ikke mot en liste, så nyere appversjoner kan legge til varer |
+| status | preparedness_status null | `null` = mangler, `have` = på plass, `not_needed` = trenger vi ikke (telles ikke i «X av Y») |
+| expires_on | date null | valgfri holdbarhetsdato. Check `preparedness_items_expiry_needs_have`: bare når `status = 'have'` (`is not distinct from`, fordi `null = 'have'` gir null, og en check godtar null) |
+
+- **Varelista ligger i appen** (`src/features/preparedness/catalog.ts`): tekst, gruppe, regel og kilde (DSB). Databasen lagrer bare husstandens svar, og bare for varer som er endret. En vare uten rad mangler. Nøklene må derfor aldri endres.
+- **Mengdene** regnes i `preparedness/items.ts` fra husstanden: vann 20 liter per person, mat til alle i en uke, bleier og barnemat for barn under 3 år etter fødselsår (`år nå − birth_year ≤ 2`). Ved vises når hjemprofilen sier peis (eller ikke er svart), «Avtale om overnatting» når den sier nei. DSB oppgir ingen mengde for resten, så appen viser ingen.
+- **Holdbarhet er ikke en oppgave.** En vare som er på plass, med `expires_on` høyst 28 dager fram (eller passert), vises i et eget kort i «I dag» for voksne: «Bytt ut: … (går ut 1. mars)». Trykk åpner varen. Grunnen: felles oppgaver vises på familieskjermen og i barnas «I dag», der barn kan krysse dem av. Det gir ingen push-varsel og ingen historikk for byttene.
+- Appen skriver med `upsert` på primærnøkkelen. Det finnes ingen `delete`-rettighet: et svar fjernes med `status = null`.
+- Kortet øverst i Årshjul viser «X av Y på plass · N går snart ut» og åpner skjermen «Beredskapslager» (`app/(app)/preparedness.tsx`).
 
 ### `task_completions` → §3
 ### `task_templates`, `feedback_messages` → §4
@@ -442,6 +458,8 @@ Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `r
 - **Unntak fra regelen om at justeringer bare endrer malene:** oppgaver laget fra malene fikk ny tittel og beskrivelse der de fortsatt var lik malens gamle tekst, og ny gjentakelse der den fortsatt var lik malens gamle. Neste frist ble det som kom først av den gamle fristen (`due_by`) og 3 måneder fram, så ingen oppgave ble forfalt av migrasjonen.
 - **Årshjulet** viser maler som passer husstanden, og i tillegg maler husstanden allerede har aktive (`yearWheelTemplates`). En aktiv oppgave forsvinner dermed ikke når et svar endres. En oppgave fra en deaktivert mal vises som egen.
 
+**Beredskapslager** (`*_preparedness.sql`, kilde DSB): `preparedness-review` («Gå gjennom beredskapslageret», oktober) og `preparedness-water` («Bytt vannet i beredskapslageret», april), begge månedsoppgaver for alle husstander. DSB sier at rent vann kan lagres lenge, så vannmalen sier ikke at DSB anbefaler å bytte hvert år. Det gir 52 aktive maler.
+
 **Aktivering:** RPC `activate_templates(p_household_id, p_template_ids uuid[], p_member_ids uuid[] default null) returns int` **kopierer** malene til nye `tasks`-rader med `template_id` satt og returnerer antall nye oppgaver.
 - `p_member_ids` (steg 16) har samme lengde som `p_template_ids` og sier hvem hver oppgave tildeles. null = felles, og uten listen blir alle felles som før. En barnemal må tildeles et barn i husstanden, og andre maler må være felles. Ellers `invalid_assignment` (22023). `reward_nok` kopieres bare når et barn får oppgaven.
 - Periodekolonnene kopieres også.
@@ -522,6 +540,7 @@ Merk: Anonyme brukere (barneenheter og familieskjermer) har også rollen `authen
 | household_displays | voksen i husstanden; ikke `auth_user_id` | – (RPC `redeem_link_token`) | – | – (RPC `unlink_display`) |
 | link_attempts | – | – (RPC) | – | – |
 | household_subscriptions | medlem | – (service role) | – | – |
+| preparedness_items | medlem (også barn; ikke familieskjermen) | voksen **og** `household_has_access` | voksen **og** `household_has_access` | – (ingen rettighet; `status = null` i stedet) |
 | task_templates | alle innloggede, `is_active` | – | – | – |
 | feedback_messages | alle innloggede, `is_active` | – | – | – |
 
@@ -689,6 +708,13 @@ Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
     - Ukoblet og eldre enn 24 timer slettes. Ukoblet og ny beholdes, til den passerer 24 timer.
     - Koblet barn (koblingen består), koblet skjerm (raden består), e-postbruker uten kobling og voksen beholdes.
     - Timesjobben finnes. Innloggede kan ikke kjøre funksjonen.
+
+20. Beredskapslager (`preparedness.test.sql`):
+    - En voksen kan legge inn, endre (også med upsert, slik PostgREST gjør det) og fjerne svar med `status = null`. Ingen kan slette rader.
+    - Holdbarhetsdato uten «har» (også med `status` null) og ugyldig nøkkel avvises.
+    - Barnet leser, men kan ikke skrive. En annen husstand, familieskjermen og anon ser ingenting og kan ikke skrive. En vare kan ikke flyttes til en annen husstand.
+    - Utløpt prøvetid: kan lese, ikke skrive. Radene slettes med husstanden.
+    - Begge malene finnes med DSB som kilde, og vannmalen sier ikke «anbefaler».
 
 19. Rettigheter i `private` (`private_function_privileges.test.sql`):
     - `authenticated`, `anon` og `public` har ikke `execute` på hjelpefunksjonene som bare kalles fra `security definer`-RPC-er eller systemjobber.

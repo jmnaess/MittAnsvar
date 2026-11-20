@@ -101,17 +101,18 @@ select tests.login_as('00000000-0000-0000-0000-00000000a001');
 
 -- 25 i startsettet (22 + 3 fra *_adjust_task_templates.sql). Hjemprofilen (*_home_profile_templates.sql)
 -- deaktiverer 2 og legger til 23 (21 årsmaler og 2 intervallmaler). Sesongoppgavene
--- (*_seasonal_tasks.sql) legger til 2, og gjennomgangen (*_template_review.sql) 2:
--- 25 − 2 + 23 + 2 + 2 = 50 aktive. Rutinemalene (steg 16) telles i routine_templates.test.sql.
+-- (*_seasonal_tasks.sql) legger til 2, gjennomgangen (*_template_review.sql) 2 og
+-- beredskapslageret (*_preparedness.sql) 2:
+-- 25 − 2 + 23 + 2 + 2 + 2 = 52 aktive. Rutinemalene (steg 16) telles i routine_templates.test.sql.
 select is((select count(*)::int from public.task_templates
-           where slug not like 'test-%' and slug not like 'routine-%'), 50,
-  '50 aktive maler (startsettet, hjemprofilen, sesongmalene og gjennomgangen)');
+           where slug not like 'test-%' and slug not like 'routine-%'), 52,
+  '52 aktive maler (startsettet, hjemprofilen, sesongmalene, gjennomgangen og beredskapslageret)');
 select is((select count(*)::int from public.task_templates where slug = 'test-inactive'), 0,
   'inaktive maler vises ikke');
 select is((select count(*)::int from public.task_templates
            where slug not like 'test-%' and recurrence_type = 'calendar' and recurrence_unit = 'year'
-             and month_day is null), 40,
-  '40 av malene er månedsoppgaver (43 før tre ble kvartalsvise, røykvarslerne har fast dato)');
+             and month_day is null), 42,
+  '42 av malene er månedsoppgaver (43 før tre ble kvartalsvise, røykvarslerne har fast dato, 2 for beredskapslageret)');
 select ok((select description ilike '%frostsikker utekran%' from public.task_templates
            where slug = 'outdoor-tap-close'),
   'justert forklaring er lagt inn (finnes på slug)');

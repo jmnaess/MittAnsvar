@@ -12,6 +12,7 @@ import { FROM_TASKS } from '../../tasks/tasksSegment';
 import { useHowToSheet, useTaskHowTo } from '../../tasks/components/HowToSheet';
 import { howToForTemplate } from '../../tasks/howTo';
 import type { Task } from '../../tasks/types';
+import { PreparednessCard } from '../../preparedness/components/PreparednessCard';
 import { useActivateTemplates, useTemplates } from '../hooks';
 import {
   activeTemplateIds,
@@ -181,6 +182,7 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
         ListHeaderComponent={
           <View style={styles.header}>
             {header}
+            <PreparednessCard />
             <Text variant="meta" color={colors.textMuted}>
               Årshjulet husker det som bare skjer noen ganger i året. Slå på det som passer, eller
               lag egne med +. Oppgavene dukker opp i «I dag» når det er tid.

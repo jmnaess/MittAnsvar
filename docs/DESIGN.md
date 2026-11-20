@@ -58,6 +58,7 @@ tilgjengelighetstekster. Se [VISJON.md](VISJON.md) for tonen.
 | Til godkjenning | Barnets avkrysninger med lønn som venter på en voksen | |
 | Figur / profilbilde | Den tegnede avataren / et eget bilde | |
 | Familieskjerm | En felles enhet (typisk iPad) som viser dagens oppgaver | «kiosk» |
+| Beredskapslager | Det husstanden trenger for å klare seg selv i en uke, basert på råd fra DSB. Varene er «på plass» eller «trenger vi ikke» | «nødlager», «DSBs liste» |
 | Ta sin del / ansvar | Det appen handler om | «prestasjon», «belønning» |
 
 ## Lyst og mørkt tema

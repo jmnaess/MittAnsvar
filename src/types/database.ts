@@ -263,6 +263,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"preparedness_items": {
+                  Row: {
+                    "expires_on": string | null,"household_id": string,"item_key": string,"status": Database["public"]['Enums']["preparedness_status"] | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "expires_on"?: string | null,"household_id": string,"item_key": string,"status"?: Database["public"]['Enums']["preparedness_status"] | null
+                  }
+                  Update: {
+                    "expires_on"?: string | null,"household_id"?: string,"item_key"?: string,"status"?: Database["public"]['Enums']["preparedness_status"] | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "preparedness_items_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"task_completions": {
                   Row: {
                     "completed_at": string,"completed_by_member_id": string,"completed_on": string,"due_on": string | null,"feedback_message_id": string | null,"household_id": string,"id": string,"recorded_by": string | null,"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_id": string
@@ -616,7 +636,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "audience": "adult"|"child"|"any","avatar_mode": "figure"|"photo","completion_status": "pending"|"approved"|"rejected","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year","sewage_type": "municipal"|"septic_tank"|"mini_treatment_plant"
+            "audience": "adult"|"child"|"any","avatar_mode": "figure"|"photo","completion_status": "pending"|"approved"|"rejected","feedback_tone": "fact"|"humor"|"both","household_type": "single"|"couple"|"family","housing_type": "apartment"|"townhouse"|"house","member_role": "adult"|"child","preparedness_status": "have"|"not_needed","recurrence_type": "once"|"calendar"|"interval"|"job","recurrence_unit": "day"|"week"|"month"|"year","sewage_type": "municipal"|"septic_tank"|"mini_treatment_plant"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -736,7 +756,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "audience": ["adult", "child", "any"],"avatar_mode": ["figure", "photo"],"completion_status": ["pending", "approved", "rejected"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"],"sewage_type": ["municipal", "septic_tank", "mini_treatment_plant"]
+            "audience": ["adult", "child", "any"],"avatar_mode": ["figure", "photo"],"completion_status": ["pending", "approved", "rejected"],"feedback_tone": ["fact", "humor", "both"],"household_type": ["single", "couple", "family"],"housing_type": ["apartment", "townhouse", "house"],"member_role": ["adult", "child"],"preparedness_status": ["have", "not_needed"],"recurrence_type": ["once", "calendar", "interval", "job"],"recurrence_unit": ["day", "week", "month", "year"],"sewage_type": ["municipal", "septic_tank", "mini_treatment_plant"]
           }
         }
 } as const

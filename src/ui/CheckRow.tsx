@@ -14,13 +14,15 @@ type Props = {
   disabled?: boolean;
   /** Satt: (i)-ikon til høyre som åpner «Slik gjør du». Trykk på raden velger som før. */
   onInfoPress?: () => void;
+  /** Tekst til skjermleseren for (i). Utelatt = «Slik gjør du: …». */
+  infoLabel?: string;
 };
 
 /**
  * Rad for å velge ting i en liste (f.eks. forslag som skal legges til). Ligner TaskRow, men
  * avkrysset betyr «valgt», ikke «gjort»: ingen gjennomstreking. Hele raden er ett trykk.
  */
-export function CheckRow({ title, meta, checked, onToggle, disabled, onInfoPress }: Props) {
+export function CheckRow({ title, meta, checked, onToggle, disabled, onInfoPress, infoLabel }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -37,7 +39,7 @@ export function CheckRow({ title, meta, checked, onToggle, disabled, onInfoPress
         <Text variant="rowTitle">{title}</Text>
         {meta ? <Text variant="meta" color={colors.textMuted}>{meta}</Text> : null}
       </View>
-      {onInfoPress && <InfoButton onPress={onInfoPress} title={title} />}
+      {onInfoPress && <InfoButton onPress={onInfoPress} title={title} accessibilityLabel={infoLabel} />}
     </Pressable>
   );
 }

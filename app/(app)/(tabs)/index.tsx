@@ -21,6 +21,7 @@ import {
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
 import { useMemberPhotoLookup, useMembers, useMyHousehold } from '../../../src/features/household/hooks';
 import type { Member } from '../../../src/features/household/types';
+import { ExpiringCard } from '../../../src/features/preparedness/components/ExpiringCard';
 import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
@@ -494,6 +495,8 @@ export default function TodayScreen() {
             />
           )}
           {sections.map(renderSection)}
+          {/* Beredskapslageret: varer som går ut innen fire uker. Bare voksne, bare for alle. */}
+          {isAdult && !focused && <ExpiringCard today={today} />}
           {!focused && !isPending && (
             <UpcomingCard
               upcoming={upcoming}

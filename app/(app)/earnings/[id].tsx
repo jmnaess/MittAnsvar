@@ -92,6 +92,14 @@ export default function EarningsScreen() {
         </View>
       </View>
 
+      {/* Øverst, så det er lett å finne hvor barnets navn endres (raden i Husstand sier det). */}
+      {isAdult && (
+        <Button
+          variant="secondary"
+          title="Endre navn og profil"
+          onPress={() => router.push({ pathname: '/child/[id]', params: { id: child.id } })}
+        />
+      )}
       {isAdult && payable > 0 && (
         <Button title="Registrer utbetaling" onPress={() => setPaying(true)} disabled={payout.isPending} />
       )}
@@ -109,16 +117,6 @@ export default function EarningsScreen() {
       </Section>
 
       {isAdult && <DeviceSection child={child} householdId={householdId} />}
-
-      {isAdult && (
-        <View>
-          <Button
-            variant="secondary"
-            title="Endre profil"
-            onPress={() => router.push({ pathname: '/child/[id]', params: { id: child.id } })}
-          />
-        </View>
-      )}
 
       <PayoutModal
         visible={paying}

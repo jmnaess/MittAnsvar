@@ -78,7 +78,7 @@ export default function AppLayout() {
         />
         <Stack.Screen
           name="member/[id]"
-          options={{ headerShown: true, title: 'Profilbilde', presentation: 'modal' }}
+          options={{ headerShown: true, title: 'Profil', presentation: 'modal' }}
         />
         <Stack.Screen
           name="earnings/[id]"

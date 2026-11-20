@@ -30,6 +30,15 @@ export default function HouseholdScreen() {
   const isAdult = me?.role === 'adult';
   const balanceOf = (memberId: string) => balances?.find((b) => b.member_id === memberId);
 
+  // Synlig hint om hvor navnet endres (bare voksne kan trykke). Barn: via «Opptjent».
+  function memberExtra(member: Member): string[] | undefined {
+    if (member.role === 'child') {
+      const earned = `Opptjent: ${formatBalance(balanceOf(member.id))}${member.auth_user_id ? ' · Egen enhet' : ''}`;
+      return isAdult ? [earned, 'Endre navn og profil'] : [earned];
+    }
+    return isAdult && member.id === me?.id ? ['Endre navn og profilbilde'] : undefined;
+  }
+
   return (
     <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
       <Section title="Medlemmer">
@@ -38,15 +47,13 @@ export default function HouseholdScreen() {
           <MemberRow
             key={member.id}
             member={member}
-            extra={
-              member.role === 'child'
-                ? `Opptjent: ${formatBalance(balanceOf(member.id))}${member.auth_user_id ? ' · Egen enhet' : ''}`
-                : undefined
-            }
+            extra={memberExtra(member)}
             accessibilityHint={
               member.role === 'child'
-                ? 'Se opptjening, registrer utbetaling og koble til enhet'
-                : 'Legg inn eller fjern profilbilde'
+                ? 'Se opptjening, registrer utbetaling, koble til enhet og endre navn og profil'
+                : member.id === me?.id
+                  ? 'Endre navn og profilbilde'
+                  : 'Legg inn eller fjern profilbilde'
             }
             onPress={
               !isAdult

@@ -13,6 +13,7 @@ import {
   setMyAvatar,
   updateChild,
   updateHousehold,
+  updateMemberName,
   type HouseholdChanges,
 } from './api';
 import { useSession } from '../auth/SessionProvider';
@@ -98,6 +99,16 @@ export function useUpdateChild(householdId: string) {
   return useMutation({
     mutationFn: ({ memberId, child }: { memberId: string; child: ChildInput }) =>
       updateChild(memberId, child),
+    onSuccess,
+  });
+}
+
+/** Voksen endrer sitt eget navn (barnets navn endres i barneskjemaet, useUpdateChild). */
+export function useUpdateMemberName(householdId: string) {
+  const onSuccess = useInvalidateMembers(householdId);
+  return useMutation({
+    mutationFn: ({ memberId, displayName }: { memberId: string; displayName: string }) =>
+      updateMemberName(memberId, displayName),
     onSuccess,
   });
 }

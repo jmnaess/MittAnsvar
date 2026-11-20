@@ -4,8 +4,8 @@ import type { Member } from '../types';
 
 type Props = {
   member: Member;
-  /** Ekstra linje, f.eks. «Opptjent: 25 kr» for barn. */
-  extra?: string;
+  /** Ekstra linjer, f.eks. «Opptjent: 25 kr» for barn. */
+  extra?: string[];
   /** Uten onPress vises raden bare (f.eks. voksne, som ikke kan redigeres her). */
   onPress?: () => void;
   /** Hva trykket gjør, for skjermleser. */
@@ -21,7 +21,7 @@ export function MemberRow({ member, extra, onPress, accessibilityHint = 'Endre e
   return (
     <ListRow
       title={member.display_name}
-      meta={[describe(member), extra]}
+      meta={[describe(member), ...(extra ?? [])]}
       left={<MemberAvatar member={member} size={44} />}
       onPress={onPress}
       accessibilityHint={onPress ? accessibilityHint : undefined}

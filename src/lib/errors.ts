@@ -59,6 +59,7 @@ const KNOWN: Record<string, string> = {
   already_linked: 'Barnet har allerede en enhet. Koble fra den først.',
   invalid_avatar: 'Velg en av avatarene.',
   member_not_found: 'Fant ikke profilen din. Logg inn på nytt.',
+  not_own_name: 'Bare den voksne selv kan endre navnet sitt.',
   anonymous_required: 'Denne enheten er logget inn som voksen. Logg ut først.',
   // Familieskjermen
   not_display: 'Denne enheten er ikke en familieskjerm.',

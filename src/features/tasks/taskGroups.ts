@@ -1,6 +1,6 @@
 import { formatDate, formatMonthYear, lastDayOfMonth } from '../../lib/dates';
 import type { Member } from '../household/types';
-import { type Category, CATEGORIES, toCategory } from './categories';
+import { type Category, CATEGORIES, type IconName, toCategory } from './categories';
 import { jobMembers } from './job';
 import { isPostponed } from './postpone';
 import { formatKroner } from './reward';
@@ -17,9 +17,13 @@ export type GroupTask = Pick<
 
 type GroupMember = Pick<Member, 'id' | 'role'>;
 
-export type TaskGroup<T> = { key: string; kind: 'category'; category: Category; tasks: T[] };
+/** En gruppe i Hverdag: én kategori, eller «Ekstrajobber». */
+export type TaskGroup<T> = { key: string; kind: 'category' | 'jobs'; title: string; icon: IconName; tasks: T[] };
 
 const categoryKey = (category: Category) => `category:${category.key}`;
+
+/** Nøkkelen til gruppen «Ekstrajobber» i Hverdag. */
+export const JOBS_GROUP_KEY = 'jobs';
 
 /** Det man søker på: små bokstaver, uten mellomrom i endene. */
 function normalize(text: string): string {
@@ -55,19 +59,32 @@ export function sortByTitle<T extends Pick<Task, 'title'>>(tasks: T[]): T[] {
   return [...tasks].sort((a, b) => a.title.localeCompare(b.title, 'nb-NO'));
 }
 
-/** Én gruppe per kategori som har oppgaver, i fast rekkefølge. */
+/** Én gruppe per kategori som har oppgaver, i fast rekkefølge. Ekstrajobber er ikke med. */
 export function groupByCategory<T extends GroupTask>(tasks: T[]): TaskGroup<T>[] {
+  const regular = tasks.filter((t) => !isJob(t));
   return CATEGORIES.map((category) => ({
     key: categoryKey(category),
     kind: 'category' as const,
-    category,
-    tasks: sortByTitle(tasks.filter((t) => toCategory(t.category).key === category.key)),
+    title: category.label,
+    icon: category.icon,
+    tasks: sortByTitle(regular.filter((t) => toCategory(t.category).key === category.key)),
   })).filter((g) => g.tasks.length > 0);
 }
 
+/**
+ * Gruppene i Hverdag: kategoriene, og «Ekstrajobber» nederst når det finnes jobber.
+ * Faste oppgaver først, ekstrajobber etterpå, som i «I dag» (docs/VISJON.md).
+ */
+export function groupEveryday<T extends GroupTask>(tasks: T[]): TaskGroup<T>[] {
+  const jobs = sortByTitle(tasks.filter(isJob));
+  const groups = groupByCategory(tasks);
+  if (jobs.length === 0) return groups;
+  return [...groups, { key: JOBS_GROUP_KEY, kind: 'jobs', title: 'Ekstrajobber', icon: 'wallet-outline', tasks: jobs }];
+}
+
 /** Gruppen oppgaven havner i. Åpnes når oppgaven lages eller endres. */
-export function groupKeysFor(task: Pick<Task, 'category'>): string[] {
-  return [categoryKey(toCategory(task.category))];
+export function groupKeysFor(task: Pick<Task, 'category' | 'recurrence_type'>): string[] {
+  return [isJob(task) ? JOBS_GROUP_KEY : categoryKey(toCategory(task.category))];
 }
 
 export type OpenGroup<T> = { key: string; group: TaskGroup<T>; open: boolean };

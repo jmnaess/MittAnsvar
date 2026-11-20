@@ -8,6 +8,7 @@ import {
   sameTaskKey,
   filterTasks,
   groupByCategory,
+  groupEveryday,
   groupKeysFor,
   matchesPerson,
   matchesSearch,
@@ -123,10 +124,38 @@ describe('groupByCategory', () => {
   });
 });
 
+describe('groupEveryday', () => {
+  const job = (title: string, job_member_ids: string[] = []) =>
+    task({ title, category: 'kitchen', recurrence_type: 'job', recurrence_unit: null, weekdays: null, job_member_ids });
+
+  it('ekstrajobbene står ikke i kategoriene, men i en egen gruppe nederst', () => {
+    const groups = groupEveryday([task({ title: 'Vaske opp', category: 'kitchen' }), job('Rydde boden'), job('Bære ved')]);
+    expect(groups.map((g) => [g.key, g.kind, g.title])).toEqual([
+      ['category:kitchen', 'category', 'Kjøkken'],
+      ['jobs', 'jobs', 'Ekstrajobber'],
+    ]);
+    expect(titles(groups[0].tasks)).toEqual(['Vaske opp']);
+    expect(titles(groups[1].tasks)).toEqual(['Bære ved', 'Rydde boden']);
+  });
+
+  it('ingen gruppe for ekstrajobber når det ikke finnes noen', () => {
+    expect(groupEveryday([task({ title: 'Vaske opp', category: 'kitchen' })]).map((g) => g.key)).toEqual([
+      'category:kitchen',
+    ]);
+  });
+
+  it('personfilteret: et barn ser ekstrajobbene barnet kan ta', () => {
+    const tasks = [task({ title: 'Mors', assigned_member_id: 'mor' }), job('For alle'), job('Bare Ola', ['ola'])];
+    const groups = groupEveryday(filterTasks(tasks, { query: '', personId: 'leah' }, members));
+    expect(groups.map((g) => g.key)).toEqual(['jobs']);
+    expect(titles(groups[0].tasks)).toEqual(['For alle']);
+  });
+});
+
 describe('groupKeysFor', () => {
-  it('bare kategorien', () => {
+  it('kategorien, eller Ekstrajobber for jobber', () => {
     expect(groupKeysFor(task({ category: 'kitchen', assigned_member_id: 'leah' }))).toEqual(['category:kitchen']);
-    expect(groupKeysFor(task({ recurrence_type: 'job' }))).toEqual(['category:other']);
+    expect(groupKeysFor(task({ recurrence_type: 'job' }))).toEqual(['jobs']);
   });
 });
 

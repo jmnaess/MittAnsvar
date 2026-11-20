@@ -32,7 +32,7 @@ import { FROM_TASKS } from '../tasksSegment';
 import {
   bundleTasks,
   filterTasks,
-  groupByCategory,
+  groupEveryday,
   joinNames,
   type OpenGroup,
   type TaskBundle,
@@ -58,7 +58,7 @@ type Props = {
 
 /**
  * «Hverdag» i «Oppgaver»: oppgavene der taskSection er 'everyday', gruppert etter kategori, med søk
- * og personfilter. Hver gruppe er ett kort med overskriften øverst og oppgavene inni når den er åpen.
+ * og personfilter. Ekstrajobbene står i en egen gruppe nederst (groupEveryday). Hver gruppe er ett kort med overskriften øverst og oppgavene inni når den er åpen.
  * Gruppene er lukket til de åpnes, og enheten husker hvilke som er åpne (openGroups.ts).
  * Mens man søker, er alle grupper med treff åpne.
  * Voksne kan dra en rad mot venstre og trykke «Slett». Oppgaven arkiveres med en gang, uten
@@ -87,7 +87,7 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
   const searching = query.trim() !== '';
   const tasks = (allTasks ?? []).filter((t) => taskSection(t) === 'everyday');
   const filtered = filterTasks(tasks, { query, personId }, members);
-  const items = withOpenState(groupByCategory(filtered), openKeys, searching);
+  const items = withOpenState(groupEveryday(filtered), openKeys, searching);
 
   /** Sletter alle oppgavene i raden. Banneret kan angre alle. */
   async function remove(rowTasks: Task[]) {
@@ -256,18 +256,17 @@ type CategoryHeaderProps = {
   onPress: () => void;
 };
 
-/** Overskriften på et kategorikort: kategoriikon i firkant, navn og antall. */
+/** Overskriften på et gruppekort: ikon i firkant, navn og antall. */
 function CategoryHeader({ item, count, onPress }: CategoryHeaderProps) {
   const { colors } = useTheme();
-  const { category } = item.group;
   return (
     <GroupHeader
-      title={category.label}
+      title={item.group.title}
       count={count}
       open={item.open}
       onPress={onPress}
       left={
-        <IconBadge icon={category.icon} size={34} shape="square" background={colors.iconTint} color={colors.primary} />
+        <IconBadge icon={item.group.icon} size={34} shape="square" background={colors.iconTint} color={colors.primary} />
       }
     />
   );

@@ -132,7 +132,7 @@ Lyst tema (`lightPersonColors`):
 | sheep | `#F0ECF4` | `#4A4258` | `#857A99` |
 | hedgehog | `#F7E6E6` | `#6A3438` | `#A8636A` |
 | squirrel | `#FBE5DC` | `#6E2E17` | `#B0502C` |
-| puffin | `#FFE6E1` | `#7A2A1F` | `#DE5A45` |
+| penguin | `#FFE6E1` | `#7A2A1F` | `#DE5A45` |
 | Felles (og ukjent) | `#F4EFE6` | `#5C4A2A` | primary |
 
 Mørkt tema (`darkPersonColors`): dyp, mettet tint, lys pastell som ink og en lysnet ring.
@@ -156,7 +156,7 @@ Mørkt tema (`darkPersonColors`): dyp, mettet tint, lys pastell som ink og en ly
 | sheep | `#2A2632` | `#D9D2E4` | `#A79CBC` |
 | hedgehog | `#37201F` | `#EDBFC1` | `#CF8A90` |
 | squirrel | `#3A2016` | `#F4BCA4` | `#E07A52` |
-| puffin | `#3E2019` | `#F9B9AD` | `#F07A66` |
+| penguin | `#3E2019` | `#F9B9AD` | `#F07A66` |
 | Felles (og ukjent) | `#2E261D` | `#E8D3AC` | primary |
 
 ### Avrunding og avstand
@@ -342,7 +342,7 @@ tyngdepunktet nær midten og alt innenfor r ≈ 21. Alle skal kjennes igjen i 20
 Ukjente nøkler (f.eks. en eldre app som ser en nyere figur) vises som reven (`avatarArtFor`,
 `FALLBACK_AVATAR`) med de nøytrale Felles-fargene, aldri tomt (`features/household/__tests__/avatars.test.ts`).
 Figurene: bjørn, katt, rev, frosk, kanin, ugle, panda, løve, hund, enhjørning, og de roligere elg, sel, oter,
-grevling og sau (passer også voksne), pinnsvin, ekorn og lunde.
+grevling og sau (passer også voksne), pinnsvin, ekorn og pingvin.
 Voksne bytter egen figur på personskjermen (`app/(app)/member/[id].tsx`, «Figuren din»), som åpnes fra
 «Husstand» eller «Din profil» øverst i Innstillinger. Den lagres med en gang via `set_my_avatar`.
 Barnas figur endres i «Endre barn», og andre voksnes figur kan ikke endres. Tegningene er like i begge temaer: de er

@@ -227,7 +227,7 @@ export const lightPersonColors: Record<string, PersonColor> = {
   sheep: { tint: '#F0ECF4', ink: '#4A4258', ring: '#857A99' },
   hedgehog: { tint: '#F7E6E6', ink: '#6A3438', ring: '#A8636A' },
   squirrel: { tint: '#FBE5DC', ink: '#6E2E17', ring: '#B0502C' },
-  puffin: { tint: '#FFE6E1', ink: '#7A2A1F', ring: '#DE5A45' },
+  penguin: { tint: '#FFE6E1', ink: '#7A2A1F', ring: '#DE5A45' },
 };
 
 /** Mørk variant: dyp, mettet tint, lys pastell som ink og en lysnet ring. */
@@ -249,7 +249,7 @@ export const darkPersonColors: Record<string, PersonColor> = {
   sheep: { tint: '#2A2632', ink: '#D9D2E4', ring: '#A79CBC' },
   hedgehog: { tint: '#37201F', ink: '#EDBFC1', ring: '#CF8A90' },
   squirrel: { tint: '#3A2016', ink: '#F4BCA4', ring: '#E07A52' },
-  puffin: { tint: '#3E2019', ink: '#F9B9AD', ring: '#F07A66' },
+  penguin: { tint: '#3E2019', ink: '#F9B9AD', ring: '#F07A66' },
 };
 
 /** «Felles»-seksjonen, og reserve for ukjente avatarnøkler. */

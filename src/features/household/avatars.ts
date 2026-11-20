@@ -20,7 +20,7 @@ export const AVATARS = {
   sheep: { label: 'Sau' },
   hedgehog: { label: 'Pinnsvin' },
   squirrel: { label: 'Ekorn' },
-  puffin: { label: 'Lunde' },
+  penguin: { label: 'Pingvin' },
 } as const;
 
 export type AvatarKey = keyof typeof AVATARS;

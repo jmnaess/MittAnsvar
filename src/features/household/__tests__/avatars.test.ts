@@ -31,6 +31,13 @@ describe('avatarer', () => {
     expect(avatarArtFor('constructor')).toBe(avatarArt.fox);
   });
 
+  it('pingvinen har erstattet lunden: penguin finnes, puffin vises som reven', () => {
+    expect(AVATAR_KEYS).toContain('penguin');
+    expect(avatarLabel('penguin')).toBe('Pingvin');
+    expect(AVATAR_KEYS).not.toContain('puffin');
+    expect(avatarArtFor('puffin')).toBe(avatarArt.fox);
+  });
+
   it('kjent nøkkel gir sin egen tegning', () => {
     expect(avatarArtFor('elk')).toBe(avatarArt.elk);
     expect(avatarArtFor('fox')).toBe(avatarArt.fox);

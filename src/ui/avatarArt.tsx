@@ -283,24 +283,21 @@ const squirrel = (
   </>
 );
 
-// Forfra (som ugla): svart hette, hvitt ansikt og stort trekantet nebb med gult bånd og lys stripe.
-const puffin = (
+// Forfra (som ugla): svart hette, hvitt ansikt, lite mørkt nebb og gul-oransje kinnflekker (keiserpingvin).
+const penguin = (
   <>
     <Circle cx={24} cy={24} r={24} fill="#FFE1D9" />
     <Path d="M24 13L33 15.5 38.5 22 39 31 34 38 24 40.5 14 38 9 31 9.5 22 15 15.5z" fill="#2F3338" />
     <Path d="M24 19.5L31.5 21 35.5 27 33.5 34.5 24 38 14.5 34.5 12.5 27 16.5 21z" fill="#F2F3F5" />
-    <Path d="M16.8 22.8H20.2L18.5 24z M27.8 22.8H31.2L29.5 24z" fill="#8A9098" />
-    <Eyes y={26.3} left={18.5} right={29.5} />
-    <Path d="M19.5 28.5H28.5L24 39.5z" fill="#E8563F" stroke="#E8563F" strokeWidth={0.8} strokeLinejoin="round" />
-    <Path d="M19.5 28.5H28.5L27.6 30.7H20.4z" fill="#F2B705" />
-    <Path d="M21.3 33H26.7L26.2 34.3H21.8z" fill="#FFE3B0" />
-    <Path d="M22.4 35.5H25.6L24 39.5z" fill="#F28A2E" />
+    <Path d="M10 24.5L14 26.5 15.5 33 11.5 31.5z M38 24.5L34 26.5 32.5 33 36.5 31.5z" fill="#F7B32B" />
+    <Eyes y={27} left={19} right={29} />
+    <Nose y={30.5} w={5} h={3} fill="#2F3338" />
   </>
 );
 
 export const avatarArt: Record<string, ReactElement> = {
   bear, cat, fox, frog, rabbit, owl, panda, lion, dog, unicorn,
-  elk, seal, otter, badger, sheep, hedgehog, squirrel, puffin,
+  elk, seal, otter, badger, sheep, hedgehog, squirrel, penguin,
 };
 
 /** Reserven for en nøkkel appen ikke kjenner (f.eks. en eldre app som ser en nyere figur). */

@@ -283,20 +283,18 @@ const squirrel = (
   </>
 );
 
-// I profil, vendt mot høyre: mørk hette over hode og bakhode, lyst grått kinn og stort stripete nebb.
+// Forfra (som ugla): svart hette, hvitt ansikt og stort trekantet nebb med gult bånd og lys stripe.
 const puffin = (
   <>
     <Circle cx={24} cy={24} r={24} fill="#FFE1D9" />
-    <Circle cx={21.5} cy={24.5} r={14.5} fill="#2F3338" />
-    <Path d="M18 22L28 18 33 20V35.5L26 38 18 34.5 15.5 28z" fill="#ECEEF1" />
-    <Path d="M33 16.5L39 20 43.5 28 39 33.5 33 39z" fill="#E8563F" />
-    <Path d="M33 16.5L35.3 17.8V37.8L33 39z" fill="#9AA0A8" />
-    <Path d="M35.3 17.8L36.9 18.8V36.8L35.3 37.8z" fill="#F2B705" />
-    <Path d="M39.8 22.5L40.4 32.5" stroke="#F2B705" strokeWidth={1.3} strokeLinecap="round" />
-    <Path d="M33 27.8L43.5 28" stroke="#B8402E" strokeWidth={0.9} strokeLinecap="round" />
-    <Path d="M26.6 23.2H29.4L28 24.3z" fill="#6B7078" />
-    <Path d="M26.5 25.6L20.5 28.2 26.8 27.4z" fill="#6B7078" />
-    <Circle cx={28} cy={26.3} r={2} fill={EYE} />
+    <Path d="M24 13L33 15.5 38.5 22 39 31 34 38 24 40.5 14 38 9 31 9.5 22 15 15.5z" fill="#2F3338" />
+    <Path d="M24 19.5L31.5 21 35.5 27 33.5 34.5 24 38 14.5 34.5 12.5 27 16.5 21z" fill="#F2F3F5" />
+    <Path d="M16.8 22.8H20.2L18.5 24z M27.8 22.8H31.2L29.5 24z" fill="#8A9098" />
+    <Eyes y={26.3} left={18.5} right={29.5} />
+    <Path d="M19.5 28.5H28.5L24 39.5z" fill="#E8563F" stroke="#E8563F" strokeWidth={0.8} strokeLinejoin="round" />
+    <Path d="M19.5 28.5H28.5L27.6 30.7H20.4z" fill="#F2B705" />
+    <Path d="M21.3 33H26.7L26.2 34.3H21.8z" fill="#FFE3B0" />
+    <Path d="M22.4 35.5H25.6L24 39.5z" fill="#F28A2E" />
   </>
 );
 

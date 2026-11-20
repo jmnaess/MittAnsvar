@@ -44,3 +44,34 @@ export function householdEditChanges(
     ...(edited.avatar !== saved.avatar ? { avatar: edited.avatar } : {}),
   };
 }
+
+// Fremdriften lagres av onboardingProgress.ts. Her er bare tolkningen, så den kan testes.
+export type OnboardingProgress = { householdId: string; step: OnboardingStep };
+
+const STEPS: readonly OnboardingStep[] = ['household', 'children', 'routines', 'home'];
+
+/** Lagret verdi → fremdrift. Alt som ikke ser riktig ut (eldre format, søppel), gir null. */
+export function parseOnboardingProgress(raw: string | null): OnboardingProgress | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw);
+    if (typeof value?.householdId !== 'string' || !STEPS.includes(value.step)) return null;
+    return { householdId: value.householdId, step: value.step };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Steget oppstarten skal fortsette på, eller null hvis den ikke skal fortsette: ingen fremdrift,
+ * ingen husstand, eller fremdriften gjelder en annen husstand. Et steg som ikke finnes for typen
+ * (barn etter bytte til par), gir første steg etter husstanden.
+ */
+export function resumeStep(
+  progress: OnboardingProgress | null,
+  household: { id: string; type: HouseholdType } | null | undefined,
+): OnboardingStep | null {
+  if (!progress || !household || progress.householdId !== household.id) return null;
+  const steps = onboardingSteps(household.type);
+  return steps.includes(progress.step) ? progress.step : steps[1];
+}

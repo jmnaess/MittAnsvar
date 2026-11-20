@@ -10,6 +10,7 @@ import { useHowToSheet } from '../../tasks/components/HowToSheet';
 import { howToForTemplate } from '../../tasks/howTo';
 import { useTasks } from '../../tasks/hooks';
 import { useActivateTemplates, useTemplates } from '../hooks';
+import { homeFormButtons, homeSuggestionButtons } from '../stepActions';
 import {
   activeTemplateIds,
   groupSuggestions,
@@ -54,6 +55,9 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
   const [error, setError] = useState<string | null>(null);
 
   const ready = !!templates.data && !!tasks.data;
+  // Endret fra det som er lagret? Da lagrer hovedknappen, og «Hopp over» blir liten (lagrer ingenting).
+  const changed = Object.keys(homeProfileChanges(saved, profile)).length > 0;
+  const buttons = homeFormButtons({ isOnboarding, changed });
 
   async function save() {
     if (!templates.data || !tasks.data) return;
@@ -84,6 +88,7 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
       <SuggestionsStep
         householdId={householdId}
         groups={step.groups}
+        isOnboarding={isOnboarding}
         onDone={onDone}
         onBack={isOnboarding ? () => setStep({ kind: 'form' }) : undefined}
       />
@@ -107,13 +112,16 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
       </Text>
       <HomeProfileFields value={profile} onChange={setProfile} disabled={update.isPending} />
       {(error || loadError) && <Message>{error ?? toNorwegianMessage(loadError)}</Message>}
-      <Button
-        title={isOnboarding ? 'Vis forslag' : 'Lagre'}
-        onPress={save}
-        disabled={!ready || update.isPending}
-      />
-      {isOnboarding && (
-        <Button variant="text" title="Hopp over" onPress={onDone} disabled={update.isPending} />
+      <Button title={buttons.primaryTitle} onPress={save} disabled={!ready || update.isPending} />
+      {/* «Hopp over» lagrer ingenting: svarene som ikke er lagret, glemmes. */}
+      {buttons.skipTitle && (
+        <Button
+          variant="text"
+          small={buttons.skipSmall}
+          title={buttons.skipTitle}
+          onPress={onDone}
+          disabled={update.isPending}
+        />
       )}
       {onBack && <Button variant="text" title="Tilbake" onPress={onBack} disabled={update.isPending} />}
       {isOnboarding && <LaterNote />}
@@ -134,12 +142,13 @@ function LaterNote() {
 type SuggestionsStepProps = {
   householdId: string;
   groups: SuggestionGroup[];
+  isOnboarding: boolean;
   onDone: () => void;
   /** Tilbake til spørsmålene (oppstarten). */
   onBack?: () => void;
 };
 
-function SuggestionsStep({ householdId, groups, onDone, onBack }: SuggestionsStepProps) {
+function SuggestionsStep({ householdId, groups, isOnboarding, onDone, onBack }: SuggestionsStepProps) {
   const { colors } = useTheme();
   const activate = useActivateTemplates(householdId);
   const templates = useTemplates();
@@ -151,6 +160,7 @@ function SuggestionsStep({ householdId, groups, onDone, onBack }: SuggestionsSte
   };
   // Alle forslag er valgt fra start.
   const [selected, setSelected] = useState(() => new Set(groups.map((g) => g.key)));
+  const buttons = homeSuggestionButtons({ selectedCount: selected.size, isOnboarding });
 
   function toggle(key: string) {
     setSelected((prev) => {
@@ -188,11 +198,18 @@ function SuggestionsStep({ householdId, groups, onDone, onBack }: SuggestionsSte
       </View>
       {activate.error && <Message>{toNorwegianMessage(activate.error)}</Message>}
       <Button
-        title={selected.size > 0 ? `Legg til (${selected.size})` : 'Legg til'}
+        title={buttons.primaryTitle}
         onPress={add}
         disabled={selected.size === 0 || activate.isPending}
       />
-      <Button variant="text" title="Ikke nå" onPress={onDone} disabled={activate.isPending} />
+      {/* «Hopp over» / «Ikke nå» legger ikke til noen av forslagene. */}
+      <Button
+        variant="text"
+        small={buttons.skipSmall}
+        title={buttons.skipTitle ?? ''}
+        onPress={onDone}
+        disabled={activate.isPending}
+      />
       {onBack && <Button variant="text" title="Tilbake" onPress={onBack} disabled={activate.isPending} />}
       {onBack && <LaterNote />}
       {howToSheet}

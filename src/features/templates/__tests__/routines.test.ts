@@ -13,6 +13,7 @@ import {
   restoreSuggestion,
   routineChoices,
   routineKey,
+  routineSections,
   sharedHeading,
   suggestRoutines,
   tasksForRoutine,
@@ -316,5 +317,34 @@ describe('restoreSuggestion', () => {
     const afterOld = restoreSuggestion(afterYoung, 'old', 'kid', order);
     expect(afterOld.children[0].more.map((t) => t.id)).toEqual(['old']);
     expect(afterOld.children[0].added).toEqual([]);
+  });
+});
+
+describe('routineSections', () => {
+  const templates = [
+    template('bathroom'),
+    template('bed', { audience: 'child', min_age: 3 }),
+  ];
+  const members = [member('adult', 'adult'), member('leah', 'child', 2017), member('iver', 'child', 2019)];
+  const kinds = (sections: ReturnType<typeof routineSections>) =>
+    sections.map((x) => (x.kind === 'child' ? x.child.member.id : 'felles'));
+
+  it('barna først, ett avsnitt per barn i medlemsrekkefølge, så felles', () => {
+    const s = suggestRoutines(templates, household, members, none, YEAR);
+    expect(kinds(routineSections(s))).toEqual(['leah', 'iver', 'felles']);
+  });
+
+  it('felles med bare «Lagt til» vises fortsatt', () => {
+    const active = { templates: new Set(['bathroom']), pairs: new Set<string>() };
+    const sections = routineSections(suggestRoutines(templates, household, members, active, YEAR));
+    const shared = sections.find((x) => x.kind === 'shared');
+    expect(shared && shared.kind === 'shared' && shared.added.map((t) => t.id)).toEqual(['bathroom']);
+  });
+
+  it('uten felles forslag: bare barna. Uten barn: bare felles', () => {
+    const childOnly = suggestRoutines([template('bed', { audience: 'child' })], household, members, none, YEAR);
+    expect(kinds(routineSections(childOnly))).toEqual(['leah', 'iver']);
+    const adultsOnly = suggestRoutines(templates, household, [member('adult', 'adult')], none, YEAR);
+    expect(kinds(routineSections(adultsOnly))).toEqual(['felles']);
   });
 });

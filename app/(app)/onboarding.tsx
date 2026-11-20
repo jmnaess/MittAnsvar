@@ -8,11 +8,13 @@ import { ChildForm } from '../../src/features/household/components/ChildForm';
 import { HouseholdForm } from '../../src/features/household/components/HouseholdForm';
 import { JoinHouseholdForm } from '../../src/features/household/components/JoinHouseholdForm';
 import { MemberRow } from '../../src/features/household/components/MemberRow';
-import { emptyHomeProfile } from '../../src/features/household/homeProfile';
+import { emptyHomeProfile, pickHomeProfile } from '../../src/features/household/homeProfile';
+import { useOnboardingProgress, useSetOnboardingProgress } from '../../src/features/household/onboardingProgress';
 import {
   householdEditChanges,
   nextStep,
   prevStep,
+  resumeStep,
   type OnboardingStep,
 } from '../../src/features/household/onboardingSteps';
 import { HomeProfileFlow } from '../../src/features/templates/components/HomeProfileFlow';
@@ -24,13 +26,14 @@ import {
   useCreateHousehold,
   useDeleteChild,
   useMembers,
+  useMyHousehold,
   useMyMember,
   useSetMyAvatar,
   useUpdateChild,
   useUpdateHousehold,
   useUpdateMemberName,
 } from '../../src/features/household/hooks';
-import type { ChildInput, HomeProfile } from '../../src/features/household/types';
+import type { ChildInput, HomeProfile, Household } from '../../src/features/household/types';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useAccountActions } from '../../src/features/auth/useAccountActions';
 import { setReminderPromptPending } from '../../src/features/notifications/settings';
@@ -43,11 +46,21 @@ import { toNorwegianMessage } from '../../src/lib/errors';
 //           og man kan gå tilbake og rette uten at noe lages to ganger.
 //   join:   skriv inn kode fra en annen voksen, navn og avatar
 // Når vi er ferdige, henter vi husstanden på nytt. Da bytter app/(app)/_layout.tsx til fanene.
+// Går man ut av appen etter at husstanden er opprettet, fortsetter oppstarten på samme steg
+// (fremdriften lagres på enheten, se onboardingProgress.ts). Det som er lagret, leses fra databasen.
 type Mode = 'choose' | 'create' | 'join';
 
 export default function OnboardingScreen() {
   const styles = useStyles();
-  const [mode, setMode] = useState<Mode>('choose');
+  const { session } = useSession();
+  // Begge er hentet før skjermen vises (app/(app)/_layout.tsx venter på dem).
+  const { data: household } = useMyHousehold();
+  const progress = useOnboardingProgress(session?.user.id, true);
+  const [resume] = useState(() => {
+    const step = resumeStep(progress.data ?? null, household);
+    return step && household ? { household, step } : null;
+  });
+  const [mode, setMode] = useState<Mode>(resume ? 'create' : 'choose');
   const back = () => setMode('choose');
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const scrollToTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -60,7 +73,8 @@ export default function OnboardingScreen() {
       >
         <ScrollView ref={scrollRef} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           {mode === 'choose' && <ChooseStep onChoose={setMode} />}
-          {mode === 'create' && <CreateFlow onBack={back} onScrollToTop={scrollToTop} />}
+          {mode === 'create' && resume && <ResumeFlow resume={resume} onScrollToTop={scrollToTop} />}
+          {mode === 'create' && !resume && <CreateFlow onBack={back} onScrollToTop={scrollToTop} />}
           {mode === 'join' && <JoinStep onBack={back} />}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -107,30 +121,70 @@ function AccountFooter() {
 // barna og forslagene leses fra databasen (se onboardingSteps.ts og docs/DESIGN.md).
 type Created = { householdId: string; input: CreateHouseholdInput };
 
-type CreateFlowProps = { onBack: () => void; onScrollToTop: () => void };
+type Resume = { household: Household; step: OnboardingStep };
 
-function CreateFlow({ onBack, onScrollToTop }: CreateFlowProps) {
+/**
+ * Oppstarten fortsetter etter en omstart. Første steg bygges fra husstanden og din egen profil i
+ * databasen, så «Tilbake» dit oppdaterer (aldri oppretter). Venter på medlemmene for navn og figur.
+ */
+function ResumeFlow({ resume, onScrollToTop }: { resume: Resume; onScrollToTop: () => void }) {
+  const { household, step } = resume;
+  const me = useMyMember(household.id);
+  if (!me) return null;
+  const initial: Initial = {
+    step,
+    created: {
+      householdId: household.id,
+      input: {
+        name: household.name,
+        type: household.type,
+        housingType: household.housing_type,
+        displayName: me.display_name,
+        avatar: me.avatar,
+      },
+    },
+    homeProfile: pickHomeProfile(household),
+  };
+  // «Tilbake» fra første steg finnes ikke her: husstanden er alt opprettet.
+  return <CreateFlow initial={initial} onBack={() => {}} onScrollToTop={onScrollToTop} />;
+}
+
+type Initial = { step: OnboardingStep; created: Created; homeProfile: HomeProfile };
+
+type CreateFlowProps = {
+  /** Satt når oppstarten fortsetter etter en omstart (ResumeFlow). */
+  initial?: Initial;
+  onBack: () => void;
+  onScrollToTop: () => void;
+};
+
+function CreateFlow({ initial, onBack, onScrollToTop }: CreateFlowProps) {
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<OnboardingStep>('household');
-  const [created, setCreated] = useState<Created | null>(null);
-  // Hjemprofilen huskes her: husstanden kan ikke hentes på nytt i oppstarten (da vises fanene).
-  const [homeProfile, setHomeProfile] = useState<HomeProfile | null>(null);
+  const [step, setStep] = useState<OnboardingStep>(initial?.step ?? 'household');
+  const [created, setCreated] = useState<Created | null>(initial?.created ?? null);
+  // Hjemprofilen huskes her: husstanden hentes ikke på nytt før oppstarten er ferdig.
+  const [homeProfile, setHomeProfile] = useState<HomeProfile | null>(initial?.homeProfile ?? null);
   const [finishing, setFinishing] = useState(false);
 
   const { session } = useSession();
+  const setProgress = useSetOnboardingProgress(session!.user.id);
 
   async function finish() {
     setFinishing(true);
     // Spør om påminnelser når fanene vises (se ReminderPrompt), ikke ved første oppstart.
     await setReminderPromptPending(session!.user.id, true);
+    // Ferdig (eller hoppet over til slutt): oppstarten skal ikke fortsette neste gang.
+    await setProgress(null).catch(() => {});
     await queryClient.invalidateQueries({ queryKey: householdKeys.mine });
     setFinishing(false); // skjermen er normalt borte nå; dette gjelder hvis hentingen feilet
   }
 
-  function go(to: OnboardingStep | null) {
+  /** Til et steg. Steget lagres på enheten, så oppstarten fortsetter der etter en omstart. */
+  function go(to: OnboardingStep | null, householdId = created?.householdId) {
     if (to === null) return;
     setStep(to);
     onScrollToTop();
+    if (householdId) setProgress({ householdId, step: to }).catch(() => {});
   }
 
   /** Første steg er lagret (opprettet eller endret). Boligtypen følger med til hjemprofilen. */
@@ -139,7 +193,7 @@ function CreateFlow({ onBack, onScrollToTop }: CreateFlowProps) {
     setHomeProfile((prev) =>
       prev ? { ...prev, housing_type: next.input.housingType } : emptyHomeProfile(next.input.housingType),
     );
-    go(nextStep('household', next.input.type));
+    go(nextStep('household', next.input.type), next.householdId);
   }
 
   if (step === 'household' || !created || !homeProfile) {

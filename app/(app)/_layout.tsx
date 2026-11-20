@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -5,6 +6,8 @@ import { signOutLocal } from '../../src/features/auth/api';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useFamilyBoard } from '../../src/features/display/hooks';
 import { useMyHousehold } from '../../src/features/household/hooks';
+import { clearOnboardingProgress, onboardingProgressKey, useOnboardingProgress } from '../../src/features/household/onboardingProgress';
+import { resumeStep } from '../../src/features/household/onboardingSteps';
 import { toNorwegianMessage } from '../../src/lib/errors';
 import { Button, makeStyles, spacing, Text, useTheme } from '../../src/ui';
 // Modalene (Ny oppgave, Opptjent …) får samme header som fanene.
@@ -13,7 +16,7 @@ import { modalScreenOptions } from '../../src/ui/tabOptions';
 // Innloggede skjermer. Innlogging styres av Stack.Protected i app/_layout.tsx.
 // Her avgjør husstanden og typen bruker hva man ser:
 //   voksen uten husstand        → oppstart
-//   voksen med husstand         → fanene
+//   voksen med husstand         → fanene, eller oppstarten hvis den ikke er ferdig (onboardingProgress.ts)
 //   anonym enhet, ikke koblet   → «Koble til» (skann eller tast kode)
 //   barnets enhet, koblet       → barnets faner (bare egne oppgaver, jobber og lønn)
 //   familieskjerm, koblet       → tavla for hele husstanden
@@ -25,10 +28,14 @@ export default function AppLayout() {
   const board = useFamilyBoard(isAnonymous);
   const isDisplay = isAnonymous && !!board.data;
   const isChildDevice = isAnonymous && !isDisplay;
-  const pending = isPending || (isAnonymous && board.isPending);
+  // Fremdriften i oppstarten leses fra enheten før noe vises, så fanene aldri blinker forbi.
+  const progress = useOnboardingProgress(session?.user.id, !isAnonymous);
+  const pending = isPending || (isAnonymous && board.isPending) || (!isAnonymous && progress.isPending);
+  const resuming = !isAnonymous && resumeStep(progress.data ?? null, household) !== null;
   const { colors } = useTheme();
   const styles = useStyles();
   useSignOutWhenUnlinked(isAnonymous, !!household || isDisplay, pending);
+  useClearStaleProgress(session?.user.id, progress.data?.householdId, household?.id);
 
   if (pending) return null;
 
@@ -52,7 +59,7 @@ export default function AppLayout() {
     );
   }
 
-  const isAdultHome = !!household && !isAnonymous;
+  const isAdultHome = !!household && !isAnonymous && !resuming;
 
   return (
     <Stack screenOptions={modalScreenOptions(colors)}>
@@ -117,7 +124,7 @@ export default function AppLayout() {
           options={{ headerShown: true, title: 'Endre oppgave', presentation: 'modal' }}
         />
       </Stack.Protected>
-      <Stack.Protected guard={!household && !isAnonymous}>
+      <Stack.Protected guard={(!household || resuming) && !isAnonymous}>
         <Stack.Screen name="onboarding" />
       </Stack.Protected>
       <Stack.Protected guard={!!household && isChildDevice}>
@@ -148,6 +155,25 @@ function useSignOutWhenUnlinked(isAnonymous: boolean, isLinked: boolean, isPendi
       signOutLocal();
     }
   }, [isAnonymous, isLinked, isPending]);
+}
+
+/**
+ * Fremdrift for en annen husstand enn den man er med i (f.eks. etter at man forlot den og ble med i
+ * en annen), skal ikke gjenopptas. Den slettes. Uten husstand gjør vi ingenting: rett etter at
+ * husstanden er opprettet, er den ikke hentet på nytt ennå.
+ */
+function useClearStaleProgress(
+  userId: string | undefined,
+  progressHouseholdId: string | undefined,
+  householdId: string | undefined,
+) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!userId || !progressHouseholdId || !householdId || progressHouseholdId === householdId) return;
+    clearOnboardingProgress(userId)
+      .then(() => queryClient.setQueryData(onboardingProgressKey(userId), null))
+      .catch(() => {});
+  }, [userId, progressHouseholdId, householdId, queryClient]);
 }
 
 const useStyles = makeStyles(({ colors }) =>

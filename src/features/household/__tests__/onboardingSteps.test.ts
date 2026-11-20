@@ -1,5 +1,12 @@
 import type { CreateHouseholdInput } from '../api';
-import { householdEditChanges, nextStep, onboardingSteps, prevStep } from '../onboardingSteps';
+import {
+  householdEditChanges,
+  nextStep,
+  onboardingSteps,
+  parseOnboardingProgress,
+  prevStep,
+  resumeStep,
+} from '../onboardingSteps';
 
 describe('stegene i oppstarten', () => {
   it('familie har barnesteg, par og enslig ikke', () => {
@@ -51,5 +58,37 @@ describe('householdEditChanges', () => {
       household: { type: 'couple' },
       displayName: 'Kari Anne',
     });
+  });
+});
+
+describe('gjenoppta oppstarten', () => {
+  const family = { id: 'h1', type: 'family' as const };
+
+  it('leser lagret fremdrift og avviser søppel', () => {
+    expect(parseOnboardingProgress('{"householdId":"h1","step":"routines"}')).toEqual({
+      householdId: 'h1',
+      step: 'routines',
+    });
+    expect(parseOnboardingProgress(null)).toBeNull();
+    expect(parseOnboardingProgress('ikke json')).toBeNull();
+    expect(parseOnboardingProgress('{"householdId":"h1","step":"ukjent"}')).toBeNull();
+    expect(parseOnboardingProgress('{"step":"home"}')).toBeNull();
+  });
+
+  it('fortsetter på lagret steg for samme husstand', () => {
+    expect(resumeStep({ householdId: 'h1', step: 'children' }, family)).toBe('children');
+    expect(resumeStep({ householdId: 'h1', step: 'routines' }, family)).toBe('routines');
+    expect(resumeStep({ householdId: 'h1', step: 'home' }, family)).toBe('home');
+    expect(resumeStep({ householdId: 'h1', step: 'household' }, family)).toBe('household');
+  });
+
+  it('ingen fremdrift, ingen husstand eller en annen husstand: ikke gjenoppta', () => {
+    expect(resumeStep(null, family)).toBeNull();
+    expect(resumeStep({ householdId: 'h1', step: 'home' }, null)).toBeNull();
+    expect(resumeStep({ householdId: 'h2', step: 'home' }, family)).toBeNull();
+  });
+
+  it('barnesteget etter bytte til par gir første steg etter husstand', () => {
+    expect(resumeStep({ householdId: 'h1', step: 'children' }, { id: 'h1', type: 'couple' })).toBe('routines');
   });
 });

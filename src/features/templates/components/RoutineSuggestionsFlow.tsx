@@ -33,13 +33,16 @@ import {
   restoreSuggestion,
   routineChoices,
   routineKey,
+  routineSections,
   sharedHeading,
   suggestRoutines,
   tasksForRoutine,
   toActivation,
+  type ChildSuggestions,
   type RoutineRecurrence,
   type RoutineSuggestions,
 } from '../routines';
+import { routineButtons } from '../stepActions';
 import type { SuggestionHousehold } from '../suggest';
 import type { TaskTemplate } from '../types';
 
@@ -131,6 +134,12 @@ function SuggestionList({
   const hasAdded =
     suggestions.sharedAdded.length > 0 || suggestions.children.some((c) => c.added.length > 0);
   const busy = activate.isPending || remove.isPending;
+  const buttons = routineButtons({
+    choiceCount: choices.length,
+    selectedCount: selected.size,
+    isOnboarding,
+    hasAdded,
+  });
 
   function toggle(key: string) {
     setSelected((prev) => {
@@ -197,6 +206,7 @@ function SuggestionList({
         checked={selected.has(key)}
         onToggle={() => toggle(key)}
         disabled={busy}
+        compact
         below={
           <ChoiceChip
             role="button"
@@ -241,6 +251,32 @@ function SuggestionList({
     );
   };
 
+  // Ett avsnitt per barn: forslag som passer alderen, «Vis flere forslag», og det som er lagt til.
+  const childSection = ({ member, age, templates, more, added }: ChildSuggestions) => (
+    <Section
+      key={member.id}
+      title={childHeading(member.display_name, age)}
+      right={<Avatar avatar={member.avatar} photo={photoOf(member)} size={32} />}
+    >
+      {templates.length > 0 && <View style={styles.list}>{templates.map((t) => row(t, member.id))}</View>}
+      {more.length > 0 && (
+        <ShowMoreRow
+          label="Vis flere forslag"
+          accessibilityLabel={`Vis flere forslag til ${member.display_name}`}
+          expanded={expanded.has(member.id)}
+          onPress={() => toggleExpanded(member.id)}
+        />
+      )}
+      {more.length > 0 && expanded.has(member.id) && (
+        <View style={styles.list}>{more.map((t) => row(t, member.id))}</View>
+      )}
+      {added.length > 0 && <View style={styles.list}>{added.map((t) => addedRow(t, member.id))}</View>}
+      {age === null && (
+        <Hint>{`Legg inn fødselsår under Husstand, så får ${member.display_name} forslag som passer alderen.`}</Hint>
+      )}
+    </Section>
+  );
+
   return (
     <>
       {isOnboarding && <Text variant="pageTitle">Hverdagen</Text>}
@@ -251,52 +287,30 @@ function SuggestionList({
 
       {choices.length === 0 && <Message tone="muted">Ingen nye forslag akkurat nå.</Message>}
 
-      {suggestions.shared.length + suggestions.sharedAdded.length > 0 && (
-        <Section {...sharedHeading(householdType)}>
-          <View style={styles.list}>
-            {suggestions.shared.map((t) => row(t, null))}
-            {suggestions.sharedAdded.map((t) => addedRow(t, null))}
-          </View>
-        </Section>
+      {/* Barna først, ett avsnitt per barn, så det felles (routineSections). */}
+      {routineSections(suggestions).map((section) =>
+        section.kind === 'shared' ? (
+          <Section key="shared" {...sharedHeading(householdType)}>
+            <View style={styles.list}>
+              {section.templates.map((t) => row(t, null))}
+              {section.added.map((t) => addedRow(t, null))}
+            </View>
+          </Section>
+        ) : (
+          childSection(section.child)
+        ),
       )}
-
-      {suggestions.children.map(({ member, age, templates, more, added }) => (
-        <Section
-          key={member.id}
-          title={childHeading(member.display_name, age)}
-          right={<Avatar avatar={member.avatar} photo={photoOf(member)} size={32} />}
-        >
-          {templates.length > 0 && <View style={styles.list}>{templates.map((t) => row(t, member.id))}</View>}
-          {more.length > 0 && (
-            <ShowMoreRow
-              label="Vis flere forslag"
-              accessibilityLabel={`Vis flere forslag til ${member.display_name}`}
-              expanded={expanded.has(member.id)}
-              onPress={() => toggleExpanded(member.id)}
-            />
-          )}
-          {more.length > 0 && expanded.has(member.id) && (
-            <View style={styles.list}>{more.map((t) => row(t, member.id))}</View>
-          )}
-          {added.length > 0 && <View style={styles.list}>{added.map((t) => addedRow(t, member.id))}</View>}
-          {age === null && (
-            <Hint>{`Legg inn fødselsår under Husstand, så får ${member.display_name} forslag som passer alderen.`}</Hint>
-          )}
-        </Section>
-      ))}
 
       {activate.error && <Message>{toNorwegianMessage(activate.error)}</Message>}
       {remove.error && <Message>{toNorwegianMessage(remove.error)}</Message>}
       {choices.length > 0 && (
-        <Button
-          title={selected.size > 0 ? `Legg til (${selected.size})` : 'Legg til'}
-          onPress={add}
-          disabled={selected.size === 0 || busy}
-        />
+        <Button title={buttons.primaryTitle} onPress={add} disabled={selected.size === 0 || busy} />
       )}
+      {/* «Hopp over» / «Ikke nå» lagrer ingenting: valgene finnes bare her i skjermen. */}
       <Button
         variant="text"
-        title={doneTitle(choices.length, isOnboarding, hasAdded)}
+        small={buttons.skipSmall}
+        title={buttons.skipTitle ?? ''}
         onPress={onDone}
         disabled={busy}
       />
@@ -329,13 +343,6 @@ function SuggestionList({
   );
 }
 
-/** Uten nye forslag: «Ferdig». Oppstart: «Hopp over», eller «Fortsett» når noe alt er lagt til. */
-function doneTitle(choiceCount: number, isOnboarding: boolean, hasAdded: boolean): string {
-  if (choiceCount === 0) return 'Ferdig';
-  if (!isOnboarding) return 'Ikke nå';
-  return hasAdded ? 'Fortsett' : 'Hopp over';
-}
-
 /** Oppgavens egen hyppighet og lønn: «Hver dag», «Annenhver lørdag · 20 kr». */
 function taskMeta(task: Task): string {
   const when = recurrenceLabel(task);
@@ -343,7 +350,8 @@ function taskMeta(task: Task): string {
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.row },
+  // Tettere enn spacing.row (10): radene er compact (se CheckRow).
+  list: { gap: 6 },
   addedRow: { gap: 2 },
   removeAction: { alignItems: 'flex-end' },
   added: { opacity: 0.7 },

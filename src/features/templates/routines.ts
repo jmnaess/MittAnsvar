@@ -150,6 +150,22 @@ export function defaultSelection(s: RoutineSuggestions): Set<string> {
   ]);
 }
 
+export type RoutineSection =
+  | { kind: 'child'; child: ChildSuggestions }
+  | { kind: 'shared'; templates: TaskTemplate[]; added: TaskTemplate[] };
+
+/**
+ * Rekkefølgen på skjermen: ett avsnitt per barn først, så de felles forslagene. Felles vises bare
+ * når det finnes noe der (nye forslag eller lagt til).
+ */
+export function routineSections(s: RoutineSuggestions): RoutineSection[] {
+  const sections: RoutineSection[] = s.children.map((child) => ({ kind: 'child', child }));
+  if (s.shared.length + s.sharedAdded.length > 0) {
+    sections.push({ kind: 'shared', templates: s.shared, added: s.sharedAdded });
+  }
+  return sections;
+}
+
 /** Overskriften over de felles forslagene. En enslig har ingen å dele med. */
 export function sharedHeading(type: SuggestionHousehold['type']): { title: string; description?: string } {
   return type === 'single'

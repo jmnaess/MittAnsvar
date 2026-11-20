@@ -313,14 +313,20 @@ gruppeoverskriftene. Gjentakelse, ukedager og måneder: samme brikke uten ikon.
 ### «Forslag til hverdagen»
 
 `features/templates/components/RoutineSuggestionsFlow.tsx`, i oppstarten (husstand → barn → hverdagen →
-hjemmet) og som modal fra Innstillinger → «Hjemmet». Seksjonen «Felles» («Forslag til deg» for enslige,
-uten forklaring), så én `Section` per barn med «Leah, 9 år» og avatar 32 til høyre. Hver rad er en
-`CheckRow` med eventuell lønn som meta («20 kr») og hyppigheten som en `ChoiceChip` (`role="button"`, ikon
-`repeat-outline`) under: «Annenhver søndag». Trykk åpner `Sheet` «Hvor ofte?» med `ChoiceChips`: malens hyppighet
+hjemmet) og som modal fra Innstillinger → «Hjemmet». Først én `Section` per barn med «Leah, 9 år» og avatar
+32 til høyre, så «Felles» («Forslag til deg» for enslige, uten forklaring), se `routineSections`. Hver rad er en
+`CheckRow` med `compact` (minst 44 px, 6 px luft, 6 px mellom radene): hyppigheten som en `ChoiceChip`
+(`role="button"`, ikon `repeat-outline`) under tittelen, «Annenhver søndag», og eventuell lønn («20 kr») på samme
+linje. Trykk åpner `Sheet` «Hvor ofte?» med `ChoiceChips`: malens hyppighet
 først (standard), så hver dag, hver uke, annenhver uke og hver måned (`frequencyOptions` i
 `features/templates/routines.ts`). Valget huker av raden og gjelder bare oppgaven som lages, aldri malen. Noen få
 rader er avhuket fra start. Barn uten fødselsår får en `Hint` om å legge det inn. «Legg til (n)», og «Hopp over»
 («Fortsett» når noe alt er lagt til) eller «Ikke nå».
+
+**«Hopp over» / «Ikke nå» lagrer aldri noe fra steget** (hverdagen og Om hjemmet, i oppstarten og i Innstillinger).
+Er noe valgt eller endret, er hovedknappen det som lagrer («Legg til (n)», «Lagre og vis forslag»), og hoppknappen
+blir en liten tekstknapp (`small`). Uten valg er den vanlig størrelse. Titlene står i
+`features/templates/stepActions.ts`.
 Det som er lagt til, står dempet nederst i seksjonen med `Chip` «Lagt til» og oppgavens egen hyppighet (ingen brikke).
 «Fjern» under raden arkiverer oppgaven (historikken blir stående) og gjør forslaget valgbart igjen. I oppstarten skjer
 det uten spørsmål, i Innstillinger etter «Fjerne «…»? Oppgaven forsvinner fra Oppgaver.».
@@ -332,7 +338,13 @@ Hvert steg har «Tilbake» og nederst «Du kan endre dette senere under Innstill
 setning). Ingenting lages to ganger: går man tilbake til første steg, er skjemaet utfylt og «Lagre og fortsett»
 oppdaterer bare det som er endret. Barna leses fra databasen; trykk på et barn endrer eller fjerner det.
 Forslagene regnes ut på nytt fra oppgavene, så det som er lagt til, står som «Lagt til». Hjemprofilen huskes i
-skjermen, fordi husstanden ikke kan hentes på nytt før oppstarten er ferdig (da vises fanene).
+skjermen, og husstanden hentes ikke på nytt før oppstarten er ferdig.
+
+Etter at husstanden er opprettet, lagres steget på enheten (`features/household/onboardingProgress.ts`, nøkkel
+`onboarding.<userId>` med husstandens id). Går man ut av appen, fortsetter oppstarten på samme steg; layouten venter
+på fremdriften før noe vises, så fanene blinker aldri forbi. Første steg bygges da fra databasen. Fremdriften slettes
+når siste steg er ferdig eller hoppet over. På en ny enhet eller etter en reinstallasjon (Android) finnes ingen
+fremdrift, og man havner i fanene; resten finnes under Husstand og Innstillinger.
 
 ## Avatarer
 

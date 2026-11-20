@@ -8,7 +8,8 @@ import { toNorwegianMessage } from '../../../src/lib/errors';
 import { Button, Message, ModalFormScreen, Section, TextField } from '../../../src/ui';
 
 /**
- * En voksen (fra «Husstand»): eget navn når det er deg selv, og profilbilde for alle voksne.
+ * En voksen (fra «Husstand»): eget navn og profilbilde når det er deg selv. En annen voksen:
+ * bare visning av bildet eller figuren (databasen stopper også endringer).
  * Barn endres i «Endre barn». Bare voksne kommer hit (Stack.Protected i app/(app)/_layout.tsx).
  */
 export default function MemberScreen() {
@@ -24,7 +25,7 @@ export default function MemberScreen() {
       {isPending ? null : member ? (
         <>
           {isMe && <OwnNameSection member={member} />}
-          <MemberPhotoSection member={member} />
+          <MemberPhotoSection member={member} readOnly={!isMe} />
         </>
       ) : (
         <Message tone="muted">Fant ikke personen. Den kan være fjernet fra husstanden.</Message>

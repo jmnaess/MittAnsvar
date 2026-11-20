@@ -53,7 +53,7 @@ export default function HouseholdScreen() {
                 ? 'Se opptjening, registrer utbetaling, koble til enhet og endre navn og profil'
                 : member.id === me?.id
                   ? 'Endre navn og profilbilde'
-                  : 'Legg inn eller fjern profilbilde'
+                  : 'Se profilbildet'
             }
             onPress={
               !isAdult

@@ -1,6 +1,6 @@
 // Profilbilder: velge, krympe, laste opp, slette og hente signerte URL-er.
 // Bøtta er privat. RLS på storage.objects avgjør hvem som får lese, laste opp og slette
-// (se supabase/migrations/*_member_photos.sql). Alt her virker i Expo Go.
+// (se supabase/migrations/*_member_photos.sql og *_own_adult_profile.sql). Alt her virker i Expo Go.
 
 import { randomUUID } from 'expo-crypto';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -104,7 +104,7 @@ export async function removeMemberPhoto(member: Member): Promise<void> {
   );
 }
 
-/** Voksen bytter mellom figur og bilde for et medlem. */
+/** Voksen bytter mellom figur og bilde for seg selv eller et barn (ikke for en annen voksen). */
 export async function setMemberAvatarMode(memberId: string, mode: Member['avatar_mode']): Promise<void> {
   unwrap(await supabase.from('members').update({ avatar_mode: mode }).eq('id', memberId));
 }

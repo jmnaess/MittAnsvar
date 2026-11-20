@@ -60,6 +60,7 @@ const KNOWN: Record<string, string> = {
   invalid_avatar: 'Velg en av avatarene.',
   member_not_found: 'Fant ikke profilen din. Logg inn på nytt.',
   not_own_name: 'Bare den voksne selv kan endre navnet sitt.',
+  not_own_profile: 'Bare den voksne selv kan endre profilbildet og figuren sin.',
   anonymous_required: 'Denne enheten er logget inn som voksen. Logg ut først.',
   // Familieskjermen
   not_display: 'Denne enheten er ikke en familieskjerm.',

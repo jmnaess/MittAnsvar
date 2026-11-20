@@ -12,13 +12,18 @@ import { AVATAR_MODE_OPTIONS } from '../photo';
 import type { Member } from '../types';
 import { MemberAvatar } from './MemberAvatar';
 
-type Props = { member: Member };
+type Props = {
+  member: Member;
+  /** En annen voksen: bare visning. Bildet og figuren kan bare den voksne selv endre. */
+  readOnly?: boolean;
+};
 
 /**
  * Profilbilde for et medlem (bare voksne ser denne). Ta eller velg et bilde, bytt mellom figur
  * og bilde, eller fjern bildet. Bildet krympes til 512×512 og lagres uten posisjon (EXIF).
+ * readOnly (en annen voksen): bare bildet eller figuren vises. Databasen stopper også endringer.
  */
-export function MemberPhotoSection({ member }: Props) {
+export function MemberPhotoSection({ member, readOnly = false }: Props) {
   const { personColor } = useTheme();
   const upload = useUploadMemberPhoto(member.household_id);
   const remove = useRemoveMemberPhoto(member.household_id);
@@ -52,6 +57,19 @@ export function MemberPhotoSection({ member }: Props) {
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Fjern', style: 'destructive', onPress: () => remove.mutate(member) },
       ],
+    );
+  }
+
+  if (readOnly) {
+    return (
+      <Section
+        title="Profilbilde"
+        description={`Bare ${member.display_name} kan endre bildet og figuren sin.`}
+      >
+        <View style={styles.preview}>
+          <MemberAvatar member={member} size={100} ring={personColor(member.avatar).ring} />
+        </View>
+      </Section>
     );
   }
 

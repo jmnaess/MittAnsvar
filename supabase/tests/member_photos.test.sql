@@ -100,10 +100,10 @@ select lives_ok($$
     ('member-photos', 'cccccccc-cccc-cccc-cccc-cccccccccccc/cccccccc-0000-0000-0000-000000000004/11111111-1111-1111-1111-111111111111.jpg')
 $$, 'voksen kan laste opp bilde av et barn i egen husstand');
 
-select lives_ok($$
+select throws_ok($$
   insert into storage.objects (bucket_id, name) values
     ('member-photos', 'cccccccc-cccc-cccc-cccc-cccccccccccc/cccccccc-0000-0000-0000-000000000002/22222222-2222-2222-2222-222222222222.jpg')
-$$, 'voksen kan laste opp bilde av en annen voksen i egen husstand');
+$$, '42501', null, 'voksen kan ikke laste opp bilde av en annen voksen (se own_adult_profile.test.sql)');
 
 select lives_ok($$
   insert into storage.objects (bucket_id, name) values
@@ -203,7 +203,7 @@ $$, 'voksen kan sette photo_path og avatar_mode');
 select throws_ok($$
   update public.members
     set photo_path = 'cccccccc-cccc-cccc-cccc-cccccccccccc/cccccccc-0000-0000-0000-000000000004/11111111-1111-1111-1111-111111111111.jpg'
-  where id = 'cccccccc-0000-0000-0000-000000000002'
+  where id = 'cccccccc-0000-0000-0000-000000000003'
 $$, '23514', null, 'photo_path kan ikke peke på en annen persons mappe');
 
 select throws_ok($$
@@ -255,6 +255,9 @@ select is(public.my_photo_folders_to_delete(),
 
 -- En fil som blir liggende igjen etter at personen er slettet, kan ingen lese.
 select tests.logout();
+-- C2 laster opp sitt eget bilde (som superbruker her, C1 kan ikke gjøre det).
+insert into storage.objects (bucket_id, name) values
+  ('member-photos', 'cccccccc-cccc-cccc-cccc-cccccccccccc/cccccccc-0000-0000-0000-000000000002/22222222-2222-2222-2222-222222222222.jpg');
 delete from public.members where id = 'cccccccc-0000-0000-0000-000000000002';
 select tests.login_as('00000000-0000-0000-0000-00000000c001');
 select is(tests.visible('cccccccc-cccc-cccc-cccc-cccccccccccc/cccccccc-0000-0000-0000-000000000002/22222222-2222-2222-2222-222222222222.jpg'),

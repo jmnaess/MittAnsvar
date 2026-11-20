@@ -64,10 +64,10 @@ select is(tests.affected($$update public.members set display_name = 'Nytt barn'
 select throws_ok($$update public.members set display_name = 'Hacket'
                    where id = 'eeeeeeee-0000-0000-0000-000000000002'$$,
   'P0001', 'not_own_name', 'voksen kan ikke endre navnet til en annen voksen');
-select is(tests.affected($$update public.members set avatar = 'bear'
-                           where id = 'eeeeeeee-0000-0000-0000-000000000002'$$), 1,
-  'voksen kan fortsatt endre figuren til en annen voksen');
-select is(tests.affected($$update public.members set display_name = 'Voksen E2', avatar = 'lion'
+select throws_ok($$update public.members set avatar = 'bear'
+                   where id = 'eeeeeeee-0000-0000-0000-000000000002'$$,
+  'P0001', 'not_own_profile', 'voksen kan heller ikke endre figuren til en annen voksen');
+select is(tests.affected($$update public.members set display_name = 'Voksen E2', birth_year = null
                            where id = 'eeeeeeee-0000-0000-0000-000000000002'$$), 1,
   'uendret navn i samme oppdatering stoppes ikke');
 

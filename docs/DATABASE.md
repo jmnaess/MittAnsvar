@@ -496,7 +496,7 @@ Merk: Anonyme brukere (barneenheter og familieskjermer) har også rollen `authen
 | Tabell | SELECT | INSERT | UPDATE | DELETE |
 |--------|--------|--------|--------|--------|
 | households | medlem | – (RPC `create_household`) | voksen; kolonner: `name`, `type`, `housing_type`, `feedback_tone` og hjemprofilen (`has_*`, `sewage_type`) | – (Edge `delete-account`) |
-| members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year`, `photo_path`, `avatar_mode`. Barn: bare egen avatar via RPC `set_my_avatar` og figur/bilde via `set_my_avatar_mode` | voksen, bare `role = 'child'` (appen sletter bildemappen først, se §6) |
+| members | medlem i samme husstand | voksen, bare `role = 'child'` og `auth_user_id is null` | voksen; kolonner: `display_name`, `avatar`, `birth_year`, `photo_path`, `avatar_mode`. På en annen voksen stopper triggeren `members_guard_other_adult_profile` endring av navn (`not_own_name`) og figur, visning og bilde (`not_own_profile`); barna kan alle voksne endre. Barn: bare egen avatar via RPC `set_my_avatar` og figur/bilde via `set_my_avatar_mode` | voksen, bare `role = 'child'` (appen sletter bildemappen først, se §6) |
 | tasks | medlem | voksen **og** `household_has_access` | voksen (inkl. arkivering via `archived_at`) | – (arkiver i stedet) |
 | today_tasks (view) | medlem (via RLS på tasks) | – | – | – |
 | today_completions (view) | som task_completions: voksen alt, barn bare egne | – | – | – |
@@ -661,11 +661,17 @@ Minimum før lansering:
 Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
 
 16. Profilbilder (`member_photos.test.sql`):
-    - Bøtta er privat. Voksne kan laste opp for alle i egen husstand (barn og voksne).
+    - Bøtta er privat. Voksne kan laste opp for seg selv og barna i egen husstand, ikke for en annen voksen.
     - Barn kan ikke laste opp eller slette, heller ikke bilde av seg selv. En annen husstand kan ikke lese, laste opp eller slette. Anon ser ingenting.
     - Stier til et medlem som ikke finnes, et medlem i en annen husstand, filer rett i husstandsmappen og filnavn som ikke er `{uuid}.jpg` avvises.
     - `photo_path` kan ikke peke på en annen persons mappe, og bilde-modus krever bilde. Barn kan ikke endre `photo_path`. `set_my_avatar_mode` endrer bare egen rad og avviser `photo` uten bilde.
     - `my_photo_folders_to_delete` gir riktige mapper for siste voksne, voksen med andre voksne og barn. Bildet av et slettet medlem kan ikke leses.
+
+16b. Eget navn, egen figur og eget bilde for voksne (`own_adult_name.test.sql`, `own_adult_profile.test.sql`):
+    - En voksen kan endre eget navn, figur, `avatar_mode` og `photo_path`, og barnas. På en annen voksen gir navn `not_own_name` og figur/visning/bilde `not_own_profile`. Uendrede verdier stoppes ikke, og uten innlogget bruker gjelder ikke regelen.
+    - Barnet velger fortsatt figur (`set_my_avatar`) og figur/bilde (`set_my_avatar_mode`) selv.
+    - Storage: opplasting og sletting i egen mappe og barnas mapper, ikke i en annen voksens mappe (heller ikke erstatte). Lesing som før.
+    - Service-rollen (Edge `delete-account`) kan fortsatt slette alle bilder i husstanden.
 
 18. Opprydding av anonyme brukere (`anonymous_cleanup.test.sql`):
     - Ukoblet og eldre enn 24 timer slettes. Ukoblet og ny beholdes, til den passerer 24 timer.
@@ -687,9 +693,11 @@ Bøtta `member-photos` er **privat** (`public = false`), tar bare `image/jpeg` o
 | Operasjon | Hvem |
 |-----------|------|
 | SELECT (lese, liste, signere URL) | medlem i husstanden (også barn med enhet). Familieskjerm: bare bilder som vises (`photo_path` og `avatar_mode = 'photo'`) i egen husstand |
-| INSERT (laste opp) | voksen i husstanden, filnavn `{uuid}.jpg` |
-| DELETE | voksen i husstanden |
+| INSERT (laste opp) | voksen i husstanden, i egen mappe eller et barns mappe, filnavn `{uuid}.jpg` |
+| DELETE | voksen i husstanden, i egen mappe eller et barns mappe |
 | UPDATE | ingen (appen laster aldri opp over en fil) |
+
+INSERT og DELETE bruker i tillegg `private.photo_member_writable(name)`: medlemmet i stien er et barn eller den innloggede selv (`*_own_adult_profile.sql`). Edge `delete-account` sletter med service-rollen og går forbi RLS, så sletting av konto og husstand fjerner fortsatt alle bilder.
 
 Alle bruker `private.photo_household(name)`. Den gir husstanden bare når stien har formen `{household_id}/{member_id}/fil` **og** medlemmet finnes i den husstanden. Når medlemmet er slettet, kan ingen lese en fil som eventuelt er blitt liggende igjen.
 

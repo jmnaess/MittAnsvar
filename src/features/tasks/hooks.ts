@@ -50,6 +50,7 @@ export function useUpcomingOccurrences(householdId: string, from: string, to: st
 /**
  * «Kommende»: forekomster fra i morgen og windowDays fram, gruppert med buildUpcoming.
  * memberId: én person (personvisningen, barnets visning), eller null for hele husstanden («Alle»).
+ * includeSharedYear: også felles årshjul-oppgaver (én voksen valgt, se buildUpcoming).
  * enabled false = ingenting hentes ennå, og refetch (dra for å oppdatere) gjør ingenting.
  */
 export function useMemberUpcoming(
@@ -59,8 +60,9 @@ export function useMemberUpcoming(
   {
     windowDays,
     hideFrequent = false,
+    includeSharedYear = false,
     enabled = true,
-  }: { windowDays: number; hideFrequent?: boolean; enabled?: boolean },
+  }: { windowDays: number; hideFrequent?: boolean; includeSharedYear?: boolean; enabled?: boolean },
 ): { upcoming: MemberUpcoming; isPending: boolean; refetch: () => Promise<unknown> } {
   const { from, to } = upcomingWindow(today, windowDays);
   const occurrences = useUpcomingOccurrences(householdId, from, to, enabled);
@@ -71,7 +73,7 @@ export function useMemberUpcoming(
   });
   const upcoming =
     enabled && occurrences.data && tasks.data
-      ? buildUpcoming(occurrences.data, tasks.data, memberId, today, { windowDays, hideFrequent })
+      ? buildUpcoming(occurrences.data, tasks.data, memberId, today, { windowDays, hideFrequent, includeSharedYear })
       : EMPTY_UPCOMING;
   // refetch fra useQuery hopper over enabled, så vi sjekker selv.
   const refetchOccurrences = occurrences.refetch;

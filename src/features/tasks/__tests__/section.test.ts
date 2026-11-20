@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { taskSection } from '../section';
 
 type Fields = Parameters<typeof taskSection>[0];
@@ -52,5 +54,25 @@ describe('taskSection', () => {
 
   it('intervall i år er alltid Årshjul', () => {
     expect(taskSection(r({ recurrence_type: 'interval', recurrence_unit: 'year', recurrence_every: 1 }))).toBe('year');
+  });
+});
+
+// Paritet med databasen: samme liste som get_family_board testes med (felles årshjul-oppgaver i
+// upcoming_tasks). Listen står mellom de to parity-merkene i pgTAP-filen, så den finnes bare ett sted.
+describe('taskSection: paritet med get_family_board', () => {
+  type ParityCase = Fields & { title: string; year_wheel: boolean };
+  const sql = readFileSync(
+    join(__dirname, '../../../../supabase/tests/family_display_shared_year.test.sql'),
+    'utf8',
+  );
+  const [, json] = sql.split('$parity$');
+  const cases: ParityCase[] = JSON.parse(json);
+
+  it('leser alle 14 tilfellene', () => {
+    expect(cases).toHaveLength(14);
+  });
+
+  it.each(cases.map((c) => [c.title, c] as const))('%s', (_title, c) => {
+    expect(taskSection(c)).toBe(c.year_wheel ? 'year' : 'everyday');
   });
 });

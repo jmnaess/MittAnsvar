@@ -20,15 +20,20 @@ export type BoardPersonView = {
   recentDays: RecentDay[];
 };
 
-/** Personvisningen på familieskjermen for én person. */
-export function boardPersonView(board: FamilyBoard, memberId: string): BoardPersonView {
+/**
+ * Personvisningen på familieskjermen for én person. En voksen får også felles årshjul-oppgaver
+ * (i kortet, «Denne måneden» og «Kommende»), et barn aldri.
+ */
+export function boardPersonView(board: FamilyBoard, member: Pick<BoardMember, 'id' | 'role'>): BoardPersonView {
+  const includeShared = member.role === 'adult';
   return {
-    sections: focusSections(boardCards(board), memberId),
-    upcoming: buildUpcoming(board.occurrences ?? [], board.upcoming_tasks ?? [], memberId, board.today, {
+    sections: focusSections(boardCards(board), member.id, { includeShared }),
+    upcoming: buildUpcoming(board.occurrences ?? [], board.upcoming_tasks ?? [], member.id, board.today, {
       windowDays: DISPLAY_UPCOMING_DAYS,
       hideDaily: true,
+      includeSharedYear: includeShared,
     }),
-    recentDays: groupRecentByDay(board.recent ?? [], memberId, board.today),
+    recentDays: groupRecentByDay(board.recent ?? [], member.id, board.today),
   };
 }
 

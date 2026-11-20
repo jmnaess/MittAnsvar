@@ -34,8 +34,11 @@ type Props<T extends UpcomingTask> = {
   emptyText: string;
   /** «Slik gjør du» for raden: en trykkfunksjon, eller undefined = ikke ikon (useHowToSheet). */
   infoPressFor?: (task: T) => (() => void) | undefined;
-  /** Satt i «Alle»: hvem oppgaven er til («Kari» eller «Felles»), etter datoen på raden. */
-  nameOf?: (task: T) => string;
+  /**
+   * Hvem oppgaven er til, etter datoen på raden. «Alle»: «Kari» eller «Felles». Personvisningen:
+   * bare «Felles» (undefined = ingen navn).
+   */
+  nameOf?: (task: T) => string | undefined;
 };
 
 /**
@@ -50,7 +53,10 @@ export function UpcomingCard<T extends UpcomingTask = Task>({
   const { colors } = useTheme();
   const { repeating, groups, nextMonth } = upcoming;
   const empty = repeating.length === 0 && groups.length === 0 && nextMonth.length === 0;
-  const withName = (task: T, meta: string) => (nameOf ? `${meta} · ${nameOf(task)}` : meta);
+  const withName = (task: T, meta: string) => {
+    const name = nameOf?.(task);
+    return name ? `${meta} · ${name}` : meta;
+  };
 
   const reward = (task: T) =>
     (typeof showReward === 'function' ? showReward(task) : showReward) && task.reward_nok ? <Chip label={formatKroner(task.reward_nok)} tone="money" /> : undefined;

@@ -1,4 +1,5 @@
 import { addDays, formatDate, formatWeekRange, isoWeekNumber, lastDayOfMonth, startOfIsoWeek } from '../../lib/dates';
+import { taskSection } from './section';
 import type { Occurrence, Task } from './types';
 
 /**
@@ -113,6 +114,9 @@ function weekTitle(monday: string, today: string): string {
  * (barnets egen visning og «Alle»). hideDaily skjuler bare de daglige av dem (familieskjermen). Månedsoppgaver i neste måned legges i nextMonth, og
  * månedsoppgaver lenger fram utelates (de kommer med når de blir neste måned). Resten
  * grupperes per ISO-uke, sortert på dato og tittel.
+ *
+ * includeSharedYear (én voksen valgt, aldri barn): felles årshjul-oppgaver (uten ansvarlig,
+ * taskSection = 'year') kommer også med.
  */
 export function buildUpcoming<T extends UpcomingTask>(
   occurrences: Pick<Occurrence, 'task_id' | 'due_on'>[],
@@ -123,12 +127,15 @@ export function buildUpcoming<T extends UpcomingTask>(
     windowDays,
     hideFrequent = false,
     hideDaily = false,
-  }: { windowDays: number; hideFrequent?: boolean; hideDaily?: boolean },
+    includeSharedYear = false,
+  }: { windowDays: number; hideFrequent?: boolean; hideDaily?: boolean; includeSharedYear?: boolean },
 ): MemberUpcoming<T> {
+  const isShown = (t: T) =>
+    memberId === null ||
+    t.assigned_member_id === memberId ||
+    (includeSharedYear && t.assigned_member_id === null && taskSection(t) === 'year');
   const taskById = new Map(
-    tasks
-      .filter((t) => t.recurrence_type !== 'job' && (memberId === null || t.assigned_member_id === memberId))
-      .map((t) => [t.id, t]),
+    tasks.filter((t) => t.recurrence_type !== 'job' && isShown(t)).map((t) => [t.id, t]),
   );
   const nextMonth = nextMonthKey(today);
   const monthItems: UpcomingItem<T>[] = [];

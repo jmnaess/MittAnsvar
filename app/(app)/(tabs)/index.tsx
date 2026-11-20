@@ -106,7 +106,9 @@ type PostponedToast = { taskId: string; message: string };
  *
  * Personvisning (én person valgt): personens kort, personens oppgaver «Denne måneden»,
  * «Kommende» (8 uker, sirkelen krysser av den nærmeste forekomsten tidlig, «Neste måned»
- * nederst) og «Gjort siste 3 dager».
+ * nederst) og «Gjort siste 3 dager». Er personen voksen, kommer felles årshjul-oppgaver også med
+ * (merket «Felles»): med frist i dag eller forfalt i kortet, månedsoppgaver i «Denne måneden» og
+ * med dato i «Kommende». Barn ser bare sine egne.
  */
 export default function TodayScreen() {
   const { colors, personColor, sharedColors } = useTheme();
@@ -119,13 +121,17 @@ export default function TodayScreen() {
   const { data: done = [], refetch: refetchDone } = useTodayCompletions(householdId);
   /** Personen som vises alene (trykk i FamilyStrip), eller null for alle. */
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const { data: members = [] } = useMembers(householdId);
+  const focused = members.find((m) => m.id === focusedId);
+  // En voksen valgt: også felles årshjul-oppgaver (i dag, «Denne måneden» og «Kommende»). Aldri barn.
+  const sharedYear = focused?.role === 'adult';
   const today = toIsoDate(new Date());
   // «Kommende»: personen som er valgt, eller hele husstanden uten de hyppige oppgavene.
   const { upcoming, isPending: upcomingPending, refetch: refetchUpcoming } = useMemberUpcoming(
     householdId,
     focusedId,
     today,
-    { windowDays: UPCOMING_DAYS, hideFrequent: focusedId === null },
+    { windowDays: UPCOMING_DAYS, hideFrequent: focusedId === null, includeSharedYear: sharedYear },
   );
   // Aktive oppgaver: en utført rad kan bare endres hvis oppgaven fortsatt finnes.
   const { data: activeTasks = [], refetch: refetchActiveTasks } = useTasks(householdId);
@@ -151,7 +157,6 @@ export default function TodayScreen() {
   );
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
-  const { data: members = [] } = useMembers(householdId);
   const photoOf = useMemberPhotoLookup(householdId);
   const { data: balances = [] } = useBalances(householdId);
   const complete = useCompleteTask(householdId);
@@ -195,13 +200,20 @@ export default function TodayScreen() {
   const me = members.find((m) => m.auth_user_id === session?.user.id);
   const isAdult = me?.role === 'adult';
   // Voksne ser alltid «Ekstrajobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
+  // Personvisning: alle personer får kort, så personens kort finnes selv om det bare får felles
+  // årshjul-oppgaver. Tomme kort fjernes under.
   const allSections = groupTodayByMember(tasks ?? [], members, {
     showEmptyJobs: isAdult && !isPending,
+    showAllMembers: focused !== undefined,
     done,
   });
-  const focused = members.find((m) => m.id === focusedId);
-  // Personvisning: personens kort, og personens egne oppgaver i «Denne måneden».
-  const sections = focused ? focusSections(allSections, focused.id) : allSections;
+  // Personvisning: personens kort og personens oppgaver i «Denne måneden» (voksne: også felles
+  // årshjul-oppgaver, se focusSections).
+  const sections = focused
+    ? focusSections(allSections, focused.id, { includeShared: sharedYear }).filter(
+        (s) => s.data.length > 0 || s.done.length > 0,
+      )
+    : allSections;
   const nothingToDo = !isPending && sections.every((s) => s.data.length === 0 && s.done.length === 0);
 
   const nameOf = (memberId: string | null) => members.find((m) => m.id === memberId)?.display_name;
@@ -380,12 +392,19 @@ export default function TodayScreen() {
     });
   }
 
+  // «Denne måneden»: hvem (eller «Felles»). Personens kort: «Felles» på felles årshjul-oppgaver.
+  function assigneeName(section: TodaySection, task: TodayTask): string | undefined {
+    if (section.key === THIS_MONTH_KEY) return nameOf(task.assigned_member_id) ?? 'Felles';
+    if (section.member && task.assigned_member_id === null) return 'Felles';
+    return undefined;
+  }
+
   function renderRows(section: TodaySection, checkColor: string, muted = false) {
     const open = section.data.map((task) => (
       <TodayTaskRow
         key={task.id}
         task={task}
-        assigneeName={section.key === THIS_MONTH_KEY ? (nameOf(task.assigned_member_id) ?? 'Felles') : undefined}
+        assigneeName={assigneeName(section, task)}
         checkColor={checkColor}
         muted={muted}
         busy={busyId === task.id}
@@ -538,6 +557,7 @@ export default function TodayScreen() {
               <UpcomingCard
                 upcoming={upcoming}
                 showReward={focused.role === 'child'}
+                nameOf={(task) => (task.assigned_member_id === null ? 'Felles' : undefined)}
                 onComplete={handlePress}
                 busyId={busyId}
                 checkColor={personColor(focused.avatar).ring}

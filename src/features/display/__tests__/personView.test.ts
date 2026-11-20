@@ -107,7 +107,7 @@ describe('boardPersonView', () => {
           todayTask('lm', { assigned_member_id: 'l', is_month_task: true }),
         ],
       }),
-      'k',
+      member('k'),
     );
     expect(view.sections.map((s) => s.key)).toEqual(['k', THIS_MONTH_KEY]);
     expect(view.sections[0].data.map((t) => t.id)).toEqual(['k1']);
@@ -115,7 +115,7 @@ describe('boardPersonView', () => {
   });
 
   it('«I dag»: personen får kort også uten oppgaver', () => {
-    const view = boardPersonView(board(), 'l');
+    const view = boardPersonView(board(), member('l'));
     expect(view.sections.map((s) => s.key)).toEqual(['l']);
     expect(view.sections[0].data).toEqual([]);
   });
@@ -140,7 +140,7 @@ describe('boardPersonView', () => {
           { task_id: 'l-annenhver', due_on: '2026-11-26' },
         ],
       }),
-      'k',
+      member('k'),
     );
     expect(view.upcoming.repeating.map((r) => [r.task.id, r.nextOn])).toEqual([['k-uke', '2026-11-26']]);
     const ids = view.upcoming.groups.flatMap((g) => g.items.map((i) => i.task.id));
@@ -158,7 +158,7 @@ describe('boardPersonView', () => {
           due_on: addDays(TODAY, 2 * (i + 1)),
         })),
       }),
-      'k',
+      member('k'),
     );
     expect(view.upcoming.repeating.map((r) => r.task.id)).toEqual(['k-annenhver-dag']);
   });
@@ -166,7 +166,7 @@ describe('boardPersonView', () => {
   it('«Kommende»: tomt når databasen ikke sender personvisningen ennå', () => {
     const view = boardPersonView(
       board({ upcoming_tasks: undefined, occurrences: undefined, recent: undefined }),
-      'k',
+      member('k'),
     );
     expect(view.upcoming.groups).toEqual([]);
     expect(view.recentDays).toEqual([]);
@@ -181,7 +181,7 @@ describe('boardPersonView', () => {
           recent('k-mandag', 'k', '2026-11-16'),
         ],
       }),
-      'k',
+      member('k'),
     );
     expect(view.recentDays.map((d) => d.title)).toEqual(['I går', 'Mandag']);
     expect(view.recentDays.flatMap((d) => d.items.map((c) => c.id))).toEqual(['k-i-går', 'k-mandag']);
@@ -198,5 +198,46 @@ describe('focusedMember', () => {
   it('gir null for «Alle» og for en person som er borte', () => {
     expect(focusedMember(members, null)).toBeNull();
     expect(focusedMember(members, 'slettet')).toBeNull();
+  });
+});
+
+describe('boardPersonView: felles årshjul-oppgaver', () => {
+  const felles = board({
+    tasks: [
+      todayTask('a1', { assigned_member_id: 'a' }),
+      todayTask('felles-uke', { recurrence_type: 'calendar', recurrence_unit: 'week' }),
+      todayTask('felles-årlig-i-dag', { recurrence_type: 'calendar', recurrence_unit: 'year', month: 11, month_day: 19 }),
+      todayTask('felles-halvår-forfalt', { recurrence_unit: 'month', recurrence_every: 6, is_overdue: true }),
+      todayTask('felles-måned', { recurrence_type: 'calendar', recurrence_unit: 'year', month: 11, is_month_task: true }),
+      todayTask('k-måned', { assigned_member_id: 'k', recurrence_type: 'calendar', recurrence_unit: 'year', month: 11, is_month_task: true }),
+    ],
+    upcoming_tasks: [
+      upcomingTask('felles-årlig-snart', { assigned_member_id: null, recurrence_type: 'calendar', recurrence_unit: 'year', month: 11, month_day: 25 }),
+      upcomingTask('felles-uke-snart', { assigned_member_id: null }),
+      upcomingTask('k-uke'),
+    ],
+    occurrences: [
+      { task_id: 'felles-årlig-snart', due_on: '2026-11-25' },
+      { task_id: 'felles-uke-snart', due_on: '2026-11-26' },
+      { task_id: 'k-uke', due_on: '2026-11-26' },
+    ],
+  });
+
+  it('voksen: i kortet (i dag og forfalt), i «Denne måneden» og i «Kommende»', () => {
+    const view = boardPersonView(felles, member('a', 'adult'));
+    expect(view.sections.map((s) => [s.key, s.data.map((t) => t.id)])).toEqual([
+      ['a', ['a1', 'felles-årlig-i-dag', 'felles-halvår-forfalt']],
+      [THIS_MONTH_KEY, ['felles-måned']],
+    ]);
+    expect(view.upcoming.groups.flatMap((g) => g.items.map((i) => i.task.id))).toEqual(['felles-årlig-snart']);
+  });
+
+  it('barn: bare egne, ingen felles', () => {
+    const view = boardPersonView(felles, member('k'));
+    expect(view.sections.map((s) => [s.key, s.data.map((t) => t.id)])).toEqual([
+      ['k', []],
+      [THIS_MONTH_KEY, ['k-måned']],
+    ]);
+    expect(view.upcoming.groups.flatMap((g) => g.items.map((i) => i.task.id))).toEqual(['k-uke']);
   });
 });

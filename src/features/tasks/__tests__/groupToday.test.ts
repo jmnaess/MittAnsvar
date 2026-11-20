@@ -24,6 +24,7 @@ const task = (overrides: Partial<TodayTask>) =>
     assigned_member_id: null,
     is_month_task: false,
     is_overdue: false,
+    season_start_month: null,
     ...overrides,
   }) as TodayTask;
 
@@ -100,5 +101,51 @@ describe('focusSections', () => {
 
   it('gir ingenting for en ukjent person', () => {
     expect(focusSections(all, 'borte')).toEqual([]);
+  });
+});
+
+describe('focusSections: felles årshjul-oppgaver', () => {
+  const kari: Member = { ...leah, id: 'kari', role: 'adult', display_name: 'Kari' };
+  const year = { recurrence_type: 'calendar', recurrence_unit: 'year', recurrence_every: 1 } as const;
+  const all = groupTodayByMember(
+    [
+      task({ id: 'k1', assigned_member_id: 'kari' }),
+      task({ id: 'felles-uke', recurrence_unit: 'week' }),
+      task({ id: 'felles-årlig', ...year }),
+      task({ id: 'felles-sesong', recurrence_unit: 'week', season_start_month: 4 }),
+      task({ id: 'leah-årlig', ...year, assigned_member_id: 'leah' }),
+      task({ id: 'felles-måned', ...year, is_month_task: true }),
+      task({ id: 'leah-måned', ...year, assigned_member_id: 'leah', is_month_task: true }),
+      task({ id: 'kari-måned', ...year, assigned_member_id: 'kari', is_month_task: true }),
+    ],
+    [kari, leah],
+    { showAllMembers: true },
+  );
+
+  it('voksen: felles årshjul i kortet (sist), felles månedsoppgaver i «Denne måneden»', () => {
+    const sections = focusSections(all, 'kari', { includeShared: true });
+    expect(sections.map((s) => [s.key, s.data.map((t) => t.id)])).toEqual([
+      ['kari', ['k1', 'felles-årlig', 'felles-sesong']],
+      [THIS_MONTH_KEY, ['felles-måned', 'kari-måned']],
+    ]);
+  });
+
+  it('uten includeShared (barn): bare egne', () => {
+    const sections = focusSections(all, 'leah');
+    expect(sections.map((s) => [s.key, s.data.map((t) => t.id)])).toEqual([
+      ['leah', ['leah-årlig']],
+      [THIS_MONTH_KEY, ['leah-måned']],
+    ]);
+  });
+
+  it('voksen med bare felles månedsoppgaver får «Denne måneden»', () => {
+    const only = groupTodayByMember([task({ id: 'fm', ...year, is_month_task: true })], [kari], {
+      showAllMembers: true,
+    });
+    const sections = focusSections(only, 'kari', { includeShared: true });
+    expect(sections.map((s) => [s.key, s.data.map((t) => t.id)])).toEqual([
+      ['kari', []],
+      [THIS_MONTH_KEY, ['fm']],
+    ]);
   });
 });

@@ -1,6 +1,7 @@
 import type { TodayCompletion } from '../completions/api';
 import { doneSectionKey, SHARED_KEY } from '../completions/doneToday';
 import type { Member } from '../household/types';
+import { taskSection } from './section';
 import type { TodayTask } from './types';
 
 /** Feltene grupperingen bruker. Familieskjermen får ikke hele raden. */
@@ -89,16 +90,39 @@ export function groupTodayByMember<T extends GroupableTask, M extends Pick<Membe
   );
 }
 
+/** Feltene personvisningen trenger: ansvarlig, og det taskSection bruker. */
+type FocusTask = Pick<
+  TodayTask,
+  'assigned_member_id' | 'recurrence_type' | 'recurrence_unit' | 'recurrence_every' | 'season_start_month'
+>;
+
+/** Felles årshjul-oppgave: uten ansvarlig, og i segmentet «Årshjul» (se section.ts). */
+export function isSharedYearTask(t: FocusTask): boolean {
+  return t.assigned_member_id === null && taskSection(t) === 'year';
+}
+
 /**
  * Personvisning (én person valgt i FamilyStrip): personens kort, og «Denne måneden» med bare
  * personens egne oppgaver (hvis noen). Brukes i voksnes «I dag» og på familieskjermen.
+ *
+ * includeShared (når personen er voksen, aldri barn): felles årshjul-oppgaver kommer også med.
+ * De med frist i dag eller forfalt legges sist i personens kort (fra «Felles»), og felles
+ * månedsoppgaver i «Denne måneden». Personens kort må finnes i all for å få dem (showAllMembers).
  */
-export function focusSections<T extends Pick<TodayTask, 'assigned_member_id'>, M>(
+export function focusSections<T extends FocusTask, M>(
   all: TodaySection<T, M>[],
   memberId: string,
+  { includeShared = false }: { includeShared?: boolean } = {},
 ): TodaySection<T, M>[] {
-  const own = all.filter((s) => s.key === memberId);
+  const ownCard = all.find((s) => s.key === memberId);
+  const sharedYear = includeShared
+    ? (all.find((s) => s.key === SHARED_KEY)?.data.filter(isSharedYearTask) ?? [])
+    : [];
+  const own = ownCard ? [{ ...ownCard, data: [...ownCard.data, ...sharedYear] }] : [];
   const month = all.find((s) => s.key === THIS_MONTH_KEY);
-  const ownMonth = month?.data.filter((t) => t.assigned_member_id === memberId) ?? [];
+  const ownMonth =
+    month?.data.filter(
+      (t) => t.assigned_member_id === memberId || (includeShared && t.assigned_member_id === null),
+    ) ?? [];
   return month && ownMonth.length > 0 ? [...own, { ...month, data: ownMonth }] : own;
 }

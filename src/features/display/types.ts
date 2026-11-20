@@ -54,7 +54,8 @@ export type FamilyBoard = {
   completions: TodayCompletion[];
   /**
    * Personvisningen. Valgfrie: en app som er nyere enn databasen, får dem ikke.
-   * upcoming_tasks: aktive oppgaver med ansvarlig person (ikke jobber og ikke felles).
+   * upcoming_tasks: aktive oppgaver med ansvarlig person, og felles årshjul-oppgaver (ikke jobber,
+   *   ikke andre felles). Felles vises bare når en voksen er valgt (boardPersonView).
    * occurrences: forekomstene deres fra i morgen og 14 dager fram.
    * recent: avkrysninger fra i går og tre dager bakover, uten avviste.
    */

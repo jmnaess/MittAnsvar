@@ -24,7 +24,13 @@ function every(taskId: string, step: number, windowDays = UPCOMING_DAYS): Occurr
 const run = (
   occ: Occurrence[],
   tasks: Task[],
-  opts: { hideFrequent?: boolean; hideDaily?: boolean; windowDays?: number; memberId?: string | null } = {},
+  opts: {
+    hideFrequent?: boolean;
+    hideDaily?: boolean;
+    includeSharedYear?: boolean;
+    windowDays?: number;
+    memberId?: string | null;
+  } = {},
 ) => {
   const { memberId = 'leah', ...rest } = opts;
   return buildUpcoming(occ, tasks, memberId, TODAY, { windowDays: UPCOMING_DAYS, ...rest });
@@ -292,5 +298,51 @@ describe('buildUpcoming: månedsoppgaver (årshjulet)', () => {
     ];
     expect(run(occ, [a, b], { memberId: null }).nextMonth.map((i) => i.task.id)).toEqual(['b', 'a']);
     expect(run(occ, [a, b]).nextMonth).toEqual([]);
+  });
+});
+
+describe('buildUpcoming: årshjul-oppgaver i personvisningen', () => {
+  const year = { recurrence_type: 'calendar', recurrence_unit: 'year', recurrence_every: 1 } as const;
+  const tasks = [
+    task({ id: 'egen-årlig', ...year, month: 12, month_day: 1, season_start_month: null }),
+    task({ id: 'felles-årlig', ...year, month: 12, month_day: 5, assigned_member_id: null, season_start_month: null }),
+    task({ id: 'felles-måned', ...year, month: 12, month_day: null, assigned_member_id: null, season_start_month: null }),
+    task({ id: 'felles-halvår', recurrence_type: 'interval', recurrence_unit: 'month', recurrence_every: 6, assigned_member_id: null, season_start_month: null }),
+    task({ id: 'felles-uke', recurrence_unit: 'week', recurrence_every: 1, assigned_member_id: null, season_start_month: null }),
+    task({ id: 'ola-årlig', ...year, month: 12, month_day: 2, assigned_member_id: 'ola', season_start_month: null }),
+  ];
+  const occ: Occurrence[] = [
+    { task_id: 'egen-årlig', due_on: '2026-12-01' },
+    { task_id: 'felles-årlig', due_on: '2026-12-05' },
+    { task_id: 'felles-måned', due_on: '2026-12-01' },
+    { task_id: 'felles-halvår', due_on: '2026-12-10' },
+    { task_id: 'felles-uke', due_on: '2026-11-26' },
+    { task_id: 'ola-årlig', due_on: '2026-12-02' },
+  ];
+  const ids = (r: ReturnType<typeof run>) => r.groups.flatMap((g) => g.items.map((i) => i.task.id));
+
+  it('egen årlig oppgave med fast dato kommer i «Kommende» (som i dag)', () => {
+    expect(ids(run(occ, tasks))).toEqual(['egen-årlig']);
+  });
+
+  it('includeSharedYear: felles årshjul med dato og «Neste måned», ikke felles hverdag eller andres', () => {
+    const result = run(occ, tasks, { includeSharedYear: true });
+    expect(ids(result)).toEqual(['egen-årlig', 'felles-årlig', 'felles-halvår']);
+    expect(result.nextMonth.map((i) => i.task.id)).toEqual(['felles-måned']);
+  });
+
+  it('uten includeSharedYear (barn): ingen felles', () => {
+    const result = run(occ, tasks);
+    expect(result.nextMonth).toEqual([]);
+  });
+
+  it('«Alle» (memberId null) er uendret: alt er med', () => {
+    expect(ids(run(occ, tasks, { memberId: null }))).toEqual([
+      'felles-uke',
+      'egen-årlig',
+      'ola-årlig',
+      'felles-årlig',
+      'felles-halvår',
+    ]);
   });
 });

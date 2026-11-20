@@ -37,6 +37,8 @@ export function BoardCardView({
   function assigneeName(task: BoardTask) {
     if (card.key === THIS_MONTH_KEY) return nameOf(task.assigned_member_id) ?? 'Felles';
     if (card.key === JOBS_KEY) return describeJobMembers(task.job_member_ids ?? [], members);
+    // Personvisningen for en voksen: felles årshjul-oppgaver i personens kort.
+    if (member && task.assigned_member_id === null) return 'Felles';
     return undefined;
   }
 

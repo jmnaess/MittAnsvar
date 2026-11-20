@@ -122,7 +122,7 @@ function Board({ board }: { board: FamilyBoard }) {
 
   // Personvisning: personens kort, «Kommende» og «Gjort siste 3 dager» side om side når det er plass.
   function personCards(member: NonNullable<typeof focused>) {
-    const view = boardPersonView(board, member.id);
+    const view = boardPersonView(board, member);
     const ring = personColor(member.avatar).ring;
     const cards = view.sections.map(renderCard);
     cards.push(
@@ -130,6 +130,7 @@ function Board({ board }: { board: FamilyBoard }) {
         key="upcoming"
         upcoming={view.upcoming}
         showReward={member.role === 'child'}
+        nameOf={(task) => (task.assigned_member_id === null ? 'Felles' : undefined)}
         emptyText="Ingenting planlagt de neste to ukene."
         infoPressFor={infoPressFor}
       />,

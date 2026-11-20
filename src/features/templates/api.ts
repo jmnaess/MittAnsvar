@@ -32,8 +32,8 @@ export async function activateTemplates(
 }
 
 /**
- * Ny hyppighet på oppgaven som nettopp ble laget fra en rutinemal («Forslag til hverdagen»).
- * Treffer den aktive oppgaven med malen og den ansvarlige. Felles = assigned_member_id is null
+ * Ny hyppighet på oppgaven som nettopp ble laget fra en rutinemal («Forslag til hverdagen»):
+ * fast kalender eller intervall fra «Annet …». Aldri årlig eller med periode. Treffer den aktive oppgaven med malen og den ansvarlige. Felles = assigned_member_id is null
  * (i SQL er «= null» aldri sant). Triggeren tasks_set_defaults regner ut ny frist.
  * Trygg å kjøre på nytt: samme verdier gir samme resultat.
  */
@@ -45,7 +45,7 @@ export async function setRoutineRecurrence(
 ): Promise<void> {
   const query = supabase
     .from('tasks')
-    .update({ recurrence_type: 'calendar', month: null, ...recurrence })
+    .update({ month: null, season_start_month: null, season_end_month: null, ...recurrence })
     .eq('household_id', householdId)
     .eq('template_id', templateId)
     .is('archived_at', null);

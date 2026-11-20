@@ -317,9 +317,12 @@ hjemmet) og som modal fra Innstillinger → «Hjemmet». Først én `Section` pe
 32 til høyre, så «Felles» («Forslag til deg» for enslige, uten forklaring), se `routineSections`. Hver rad er en
 `CheckRow` med `compact` (minst 44 px, 6 px luft, 6 px mellom radene): hyppigheten som en `ChoiceChip`
 (`role="button"`, ikon `repeat-outline`) under tittelen, «Annenhver søndag», og eventuell lønn («20 kr») på samme
-linje. Trykk åpner `Sheet` «Hvor ofte?» med `ChoiceChips`: malens hyppighet
-først (standard), så hver dag, hver uke, annenhver uke og hver måned (`frequencyOptions` i
-`features/templates/routines.ts`). Valget huker av raden og gjelder bare oppgaven som lages, aldri malen. Noen få
+linje. Trykk åpner `FrequencySheet` «Hvor ofte?» med `ChoiceChips`: malens hyppighet
+først (standard), så trinnene ved siden av på stigen Hver dag → 2× i uka → Hver uke → Annenhver uke → Hver måned
+(ytterst de to nærmeste), så «Annet …» (`frequencyOptions` i `features/templates/routines.ts`). En ukentlig mal får
+altså 2× i uka og annenhver uke, en månedlig mal hver uke og annenhver uke, aldri «Hver dag». «Annet …» viser
+`RecurrencePicker` med `repeatOnly` (fast dag eller etter sist utført, ikke årlig eller periode) og «Bruk». Valget
+vises på brikken, huker av raden og gjelder bare oppgaven som lages, aldri malen. Noen få
 rader er avhuket fra start. Barn uten fødselsår får en `Hint` om å legge det inn. «Legg til (n)», og «Hopp over»
 («Fortsett» når noe alt er lagt til) eller «Ikke nå».
 

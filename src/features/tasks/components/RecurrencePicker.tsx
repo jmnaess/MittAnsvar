@@ -27,6 +27,11 @@ type Props = {
   /** Enhetens dato, 'YYYY-MM-DD'. I dag og I morgen regnes fra den. */
   today: string;
   disabled?: boolean;
+  /**
+   * Bare gjentakelse som en rutine kan ha («Annet …» i Forslag til hverdagen): ingen «Når?»,
+   * ikke «Én gang i året» og ikke «Bare deler av året». value.when må være 'repeat'.
+   */
+  repeatOnly?: boolean;
 };
 
 const WHEN_OPTIONS: { value: WhenChoice; label: string }[] = [
@@ -48,6 +53,9 @@ const CALENDAR_UNIT_OPTIONS: { value: CalendarUnit; label: string }[] = [
   { value: 'month', label: 'Dato i måneden' },
   { value: 'year', label: 'Én gang i året' },
 ];
+
+/** Rutiner er aldri årlige: de hører til årshjulet. */
+const ROUTINE_CALENDAR_UNIT_OPTIONS = CALENDAR_UNIT_OPTIONS.filter((o) => o.value !== 'year');
 
 const WEEKDAY_OPTIONS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].map((label, i) => ({
   value: i + 1,
@@ -73,7 +81,7 @@ const INTERVAL_UNIT_OPTIONS: { value: IntervalUnit; label: string }[] = [
  * i kalenderen eller et intervall etter sist utført. Gjentakelsen kan begrenses til deler av
  * året (ikke årlige oppgaver). Ekstrajobber har sitt eget skjema.
  */
-export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
+export function RecurrencePicker({ value, onChange, today, disabled, repeatOnly }: Props) {
   const { colors } = useTheme();
   const set = (changes: Partial<RecurrenceForm>) => onChange({ ...value, ...changes });
   const digitsOnly = (text: string) => text.replace(/\D/g, '');
@@ -82,13 +90,15 @@ export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
 
   return (
     <View style={styles.wrapper}>
-      <ChoiceChips
-        label="Når?"
-        options={WHEN_OPTIONS}
-        value={value.when}
-        onChange={(when) => set({ when })}
-        disabled={disabled}
-      />
+      {!repeatOnly && (
+        <ChoiceChips
+          label="Når?"
+          options={WHEN_OPTIONS}
+          value={value.when}
+          onChange={(when) => set({ when })}
+          disabled={disabled}
+        />
+      )}
 
       {value.when === 'date' && (
         <DateField
@@ -112,7 +122,7 @@ export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
       {repeats && value.mode === 'calendar' && (
         <>
           <ChoiceChips
-            options={CALENDAR_UNIT_OPTIONS}
+            options={repeatOnly ? ROUTINE_CALENDAR_UNIT_OPTIONS : CALENDAR_UNIT_OPTIONS}
             value={value.calendarUnit}
             onChange={(calendarUnit) => set({ calendarUnit })}
             disabled={disabled}
@@ -192,7 +202,7 @@ export function RecurrencePicker({ value, onChange, today, disabled }: Props) {
         </>
       )}
 
-      {repeats && canBeSeasonal(value) && (
+      {repeats && !repeatOnly && canBeSeasonal(value) && (
         <>
           <Switch
             label="Bare deler av året"

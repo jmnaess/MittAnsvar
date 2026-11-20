@@ -6,12 +6,10 @@ import {
   CheckRow,
   Chip,
   ChoiceChip,
-  ChoiceChips,
   Hint,
   ListRow,
   Message,
   Section,
-  Sheet,
   ShowMoreRow,
   spacing,
   Text,
@@ -27,7 +25,6 @@ import {
   childHeading,
   defaultSelection,
   frequencyKey,
-  frequencyOptions,
   recurrenceLabel,
   recurrenceOverrides,
   restoreSuggestion,
@@ -43,6 +40,7 @@ import {
   type RoutineSuggestions,
 } from '../routines';
 import { routineButtons } from '../stepActions';
+import { FrequencySheet } from './FrequencySheet';
 import type { SuggestionHousehold } from '../suggest';
 import type { TaskTemplate } from '../types';
 
@@ -60,7 +58,7 @@ type Props = {
  * «Forslag til hverdagen»: felles rutiner og rutiner per barn. Forslagene som passer alderen
  * vises først, resten under «Vis flere forslag», sortert etter alder. Noen få av de som passer
  * alderen er avhuket fra start (suggested_by_default). Hyppigheten kan endres per rad før den
- * legges til («Hvor ofte?»); malen er standard. «Legg til» lager oppgavene via activate_templates:
+ * legges til («Hvor ofte?», med «Annet …» for egen gjentakelse); malen er standard. «Legg til» lager oppgavene via activate_templates:
  * barnemaler tildeles barnet (med lønnsforslaget), resten blir felles. Det som er lagt til, vises
  * dempet nederst i seksjonen, merket «Lagt til», med oppgavens egen hyppighet. «Fjern» arkiverer
  * oppgaven og gjør forslaget valgbart igjen (i Innstillinger etter et spørsmål).
@@ -166,14 +164,12 @@ function SuggestionList({
     );
   }
 
-  /** Valg i «Hvor ofte?»: malens hyppighet fjerner endringen. Raden blir avhuket. */
-  function chooseFrequency(target: FrequencyTarget, optionKey: string) {
-    const option = frequencyOptions(target.template).find((o) => o.key === optionKey);
-    if (!option) return;
+  /** Valg i «Hvor ofte?» eller «Annet …»: malens hyppighet fjerner endringen. Raden blir avhuket. */
+  function chooseFrequency(target: FrequencyTarget, recurrence: RoutineRecurrence) {
     setFrequency((prev) => {
       const next = new Map(prev);
-      if (option.key === frequencyKey(target.template)) next.delete(target.key);
-      else next.set(target.key, option.recurrence);
+      if (frequencyKey(recurrence) === frequencyKey(target.template)) next.delete(target.key);
+      else next.set(target.key, recurrence);
       return next;
     });
     setSelected((prev) => new Set(prev).add(target.key));
@@ -320,24 +316,12 @@ function SuggestionList({
         </Text>
       )}
 
-      <Sheet
-        visible={frequencyTarget !== null}
-        title="Hvor ofte?"
+      <FrequencySheet
+        template={frequencyTarget?.template ?? null}
+        current={frequencyTarget ? (frequency.get(frequencyTarget.key) ?? frequencyTarget.template) : null}
+        onChoose={(recurrence) => frequencyTarget && chooseFrequency(frequencyTarget, recurrence)}
         onClose={() => setFrequencyTarget(null)}
-      >
-        {frequencyTarget && (
-          <>
-            <Text>{frequencyTarget.template.title}</Text>
-            <ChoiceChips
-              options={frequencyOptions(frequencyTarget.template).map((o) => ({ value: o.key, label: o.label }))}
-              value={frequencyKey(frequency.get(frequencyTarget.key) ?? frequencyTarget.template)}
-              onChange={(optionKey) => chooseFrequency(frequencyTarget, optionKey)}
-            />
-            <Hint>Det første valget er forslaget. Endringen gjelder bare denne oppgaven.</Hint>
-            <Button variant="text" title="Lukk" onPress={() => setFrequencyTarget(null)} />
-          </>
-        )}
-      </Sheet>
+      />
     </>
   );
 }

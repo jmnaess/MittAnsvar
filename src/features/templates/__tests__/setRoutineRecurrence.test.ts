@@ -18,7 +18,7 @@ jest.mock('../../../lib/supabase', () => {
 
 import { setRoutineRecurrence } from '../api';
 
-const weekly = { recurrence_unit: 'week' as const, recurrence_every: 2, weekdays: [7], month_day: null };
+const weekly = { recurrence_type: 'calendar' as const, recurrence_unit: 'week' as const, recurrence_every: 2, weekdays: [7], month_day: null };
 
 beforeEach(() => {
   mockCalls.length = 0;
@@ -40,10 +40,25 @@ it('bare aktive oppgaver fra malen i husstanden, med ny gjentakelse', async () =
   expect(mockCalls).toEqual(
     expect.arrayContaining([
       ['from', 'tasks'],
-      ['update', { recurrence_type: 'calendar', month: null, ...weekly }],
+      ['update', { month: null, season_start_month: null, season_end_month: null, ...weekly }],
       ['eq', 'household_id', 'h1'],
       ['eq', 'template_id', 't1'],
       ['is', 'archived_at', null],
     ]),
   );
+});
+
+it('intervall fra «Annet …»: recurrence_type fra endringen, ukedager og dato tømmes', async () => {
+  const interval = {
+    recurrence_type: 'interval' as const,
+    recurrence_unit: 'day' as const,
+    recurrence_every: 3,
+    weekdays: null,
+    month_day: null,
+  };
+  await setRoutineRecurrence('h1', 't1', null, interval);
+  expect(mockCalls).toContainEqual([
+    'update',
+    { month: null, season_start_month: null, season_end_month: null, ...interval },
+  ]);
 });

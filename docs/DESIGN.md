@@ -237,7 +237,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `ChoiceChip` | den eneste valgbrikken i appen: høyde 32 (+ hitSlop 6 over og under = 44), radius 14, 1 px `border` på `surface`, tekst `label`. Valgt = fylt `primary` med `onPrimary`. Valgfritt `left` (avatar 20) eller `icon` (Ionicons 16, `textMuted`, `onPrimary` når valgt). `role="button"` når brikken åpner noe i stedet for å velge (hyppigheten i «Forslag til hverdagen») |
 | `ChoiceChips`, `MultiChoiceChips` | ett eller flere valg med `ChoiceChip`, bryter linje (`flexWrap`, gap 6) så alle valg synes. Brukes i alle skjemaer |
 | `Switch` | bryter i primary med lys tommel (`switchThumb`), med valgfri etikett |
-| `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser |
+| `Sheet` | boks over mørk bakgrunn, til korte valg og bekreftelser. Flytter seg opp over tastaturet (`sheetLayout.ts`). Ark med tekstfelt legger knappene i `footer`: de står alltid synlige, innholdet over ruller, og feltet som skrives i, rulles fram (`FrequencySheet`, `PayoutModal`) |
 | `HowToSheet` / `HowToContent` | (`features/tasks/components/HowToSheet.tsx`) «Slik gjør du»: beskrivelsen og «Kilde: …» (lenke når malen har URL). `useHowToSheet()` gir arket og `infoPress(howTo)`. Hvem som får ikon, står i `features/tasks/howTo.ts`: maler og oppgaver fra årshjul, hjemprofil, intervall og sesong, og oppgaver uten mal som har beskrivelse. Rutiner («Re opp senga») får ikke ikon. Redigeringsskjermen viser beskrivelsen øverst for alle |
 | `ModalFormScreen` | skjema som modal, med Avbryt og Lagre i headeren |
 | `SwipeToDelete` | dra raden mot venstre: kort sveip viser «Slett», langt sveip (forbi 55 % av raden) sletter med en gang, som i Mail |
@@ -319,8 +319,8 @@ hjemmet) og som modal fra Innstillinger → «Hjemmet». Først én `Section` pe
 (`role="button"`, ikon `repeat-outline`) under tittelen, «Annenhver søndag», og eventuell lønn («20 kr») på samme
 linje. Trykk åpner `FrequencySheet` «Hvor ofte?»: `RecurrencePicker` med `repeatOnly` (fast dag eller etter
 sist utført, ikke engangs, årlig eller periode), forhåndsutfylt med det som er valgt på raden (malens hyppighet
-som standard, `routineForm` i `features/templates/routines.ts`), og «Bruk» / «Avbryt». Velgeren ruller, så
-knappene alltid er synlige på små telefoner. Valget
+som standard, `routineForm` i `features/templates/routines.ts`), og «Bruk» / «Avbryt» i `footer`, så de alltid
+synes, også med tastaturet oppe. Valget
 vises på brikken, huker av raden og gjelder bare oppgaven som lages, aldri malen. Noen få
 rader er avhuket fra start. Barn uten fødselsår får en `Hint` om å legge det inn. «Legg til (n)», og «Hopp over»
 («Fortsett» når noe alt er lagt til) eller «Ikke nå».

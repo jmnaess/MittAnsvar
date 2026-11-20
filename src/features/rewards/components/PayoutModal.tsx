@@ -15,7 +15,10 @@ type Props = {
   onClose: () => void;
 };
 
-/** «Registrer utbetaling»: beløp (forhåndsutfylt med saldoen), så en bekreftelse. */
+/**
+ * «Registrer utbetaling»: beløp (forhåndsutfylt med saldoen), så en bekreftelse. Knappene er
+ * footer i Sheet, så de synes over tastaturet.
+ */
 export function PayoutModal({ visible, childName, balance, pending = 0, saving, onConfirm, onClose }: Props) {
   const [amount, setAmount] = useState(String(balance));
 
@@ -35,7 +38,17 @@ export function PayoutModal({ visible, childName, balance, pending = 0, saving, 
   }
 
   return (
-    <Sheet visible={visible} title={`Utbetaling til ${childName}`} onClose={onClose}>
+    <Sheet
+      visible={visible}
+      title={`Utbetaling til ${childName}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Button title="Registrer utbetaling" onPress={confirm} disabled={!valid || saving} />
+          <Button variant="text" title="Avbryt" onPress={onClose} />
+        </>
+      }
+    >
       <TextField
         label="Beløp (kr)"
         value={amount}
@@ -52,8 +65,6 @@ export function PayoutModal({ visible, childName, balance, pending = 0, saving, 
       {pending > 0 && (
         <Hint>{`${formatKroner(pending)} venter på godkjenning og kan ikke betales ut ennå.`}</Hint>
       )}
-      <Button title="Registrer utbetaling" onPress={confirm} disabled={!valid || saving} />
-      <Button variant="text" title="Avbryt" onPress={onClose} />
     </Sheet>
   );
 }

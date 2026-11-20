@@ -5,6 +5,7 @@ import { jobColumns } from '../jobGrid';
 import { parsePreference, resolveScheme } from '../appearance';
 import { darkColors, lightColors, themes, type Theme } from '../theme';
 import { waitingText } from '../waitingText';
+import { keyboardOverlap, sheetFrame } from '../sheetLayout';
 
 describe('waitingText', () => {
   it('lister opptil tre navn og teller resten', () => {
@@ -167,5 +168,40 @@ describe('utseende', () => {
     expect(resolveScheme('system', 'dark')).toBe('dark');
     expect(resolveScheme('system', 'light')).toBe('light');
     expect(resolveScheme('system', null)).toBe('light');
+  });
+});
+
+describe('sheetFrame', () => {
+  const base = { insetTop: 47, insetBottom: 34, padding: 20 };
+
+  it('uten tastatur: luft og safe area rundt, høyst 85 % av høyden', () => {
+    expect(sheetFrame({ ...base, height: 900, keyboardTop: null })).toEqual({
+      paddingTop: 67,
+      paddingBottom: 54,
+      maxHeight: 765,
+    });
+    // Lav skjerm: plassen mellom luften styrer, ikke 85 %.
+    expect(sheetFrame({ ...base, height: 800, keyboardTop: null }).maxHeight).toBe(800 - 67 - 54);
+  });
+
+  it('tastaturet oppe: arket står over tastaturet og krymper', () => {
+    // Liten telefon (iPhone SE): 667 høy, tastaturet starter på 667 − 260.
+    const frame = sheetFrame({ ...base, insetTop: 20, insetBottom: 0, height: 667, keyboardTop: 407 });
+    expect(frame.paddingBottom).toBe(20 + 260);
+    expect(frame.maxHeight).toBe(667 - 40 - 280);
+  });
+
+  it('Android som allerede har gjort vinduet mindre: ingen ekstra luft for tastaturet', () => {
+    expect(keyboardOverlap(400, 400)).toBe(0);
+    expect(sheetFrame({ ...base, height: 400, keyboardTop: 400 }).paddingBottom).toBe(54);
+  });
+
+  it('før bakgrunnen er målt: ingen maxHeight', () => {
+    expect(sheetFrame({ ...base, height: 0, keyboardTop: 300 }).maxHeight).toBeUndefined();
+    expect(keyboardOverlap(0, 300)).toBe(0);
+  });
+
+  it('aldri negativ høyde', () => {
+    expect(sheetFrame({ ...base, height: 300, keyboardTop: 0 }).maxHeight).toBe(0);
   });
 });

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Hint, Switch, TextField } from '../../../ui';
+import { Hint, Switch, Text, TextField, useTheme } from '../../../ui';
 import type { Member } from '../../household/types';
 import { type CategoryKey, toCategory } from '../categories';
 import { toJobInput } from '../job';
@@ -45,8 +45,12 @@ type Props = { form: JobFormState; members: Member[]; disabled?: boolean };
  * Det fulle oppgaveskjemaet (TaskForm) kan også lage jobber.
  */
 export function JobFields({ form, members, disabled }: Props) {
+  const { colors } = useTheme();
   return (
     <View style={styles.form}>
+      <Text variant="meta" color={colors.textMuted}>
+        Noe utenom det faste. Alle barna ser samme ekstrajobb og samme beløp.
+      </Text>
       <TextField
         label="Hva skal gjøres?"
         value={form.title}

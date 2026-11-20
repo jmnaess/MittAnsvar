@@ -177,9 +177,8 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
         <View style={styles.header}>
           {header}
           <Text variant="meta" color={colors.textMuted}>
-            Faste oppgaver gjennom året. Slå på det som passer, eller lag egne med +. Oppgaver
-            med måned dukker opp under «Denne måneden» i «I dag» når måneden kommer. De med jevne
-            mellomrom kommer i «I dag» når det er på tide igjen.
+            Årshjulet husker det som bare skjer noen ganger i året. Slå på det som passer, eller
+            lag egne med +. Oppgavene dukker opp i «I dag» når det er tid.
           </Text>
           {isAdult && notActive.length > 0 && (
             <Button

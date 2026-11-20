@@ -122,8 +122,8 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
     <>
       {isOnboarding && <Text variant="pageTitle">Hverdagen</Text>}
       <Text>
-        Forslag til faste oppgaver i hjemmet. Barna får forslag som passer alderen. Huk av det dere
-        vil ha, og endre eller fordel etterpå.
+        Her er forslag til faste oppgaver, og barna får forslag som passer alderen. Huk av det dere
+        vil ha. Dere kan endre og fordele etterpå.
       </Text>
 
       {choices.length === 0 && <Message tone="muted">Ingen nye forslag akkurat nå.</Message>}

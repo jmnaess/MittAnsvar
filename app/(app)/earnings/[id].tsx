@@ -108,7 +108,7 @@ export default function EarningsScreen() {
 
       <Section title="Siste">
         {!isPending && history?.length === 0 && (
-          <Message tone="muted">Ingen oppgaver med lønn ennå. Lønn setter du i oppgaveskjemaet.</Message>
+          <Message tone="muted">Ingenting tjent ennå. Legg ut en ekstrajobb under «I dag», eller sett lønn på en oppgave.</Message>
         )}
         {changeStatus.error && <Message>{toNorwegianMessage(changeStatus.error)}</Message>}
         {history?.map((event) => (

@@ -80,6 +80,7 @@ export default function SignInScreen() {
         <View style={styles.brand}>
           <AvatarStack people={['fox', 'cat', 'bear', 'frog'].map((avatar) => ({ avatar }))} size={48} />
           <Text variant="pageTitle" style={styles.center}>MittAnsvar</Text>
+          <Text variant="meta" color={colors.textMuted} style={styles.center}>Alle tar sin del.</Text>
         </View>
 
         {step === 'email' ? (

@@ -224,7 +224,10 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange }:
               text="Oppgavene dere har, står i Årshjul. Trykk + for å lage en hverdagsoppgave."
             />
           ) : (
-            <EmptyState title="Ingen oppgaver ennå" text="Trykk + for å lage den første." />
+            <EmptyState
+              title="Ingen oppgaver ennå"
+              text="Trykk + og legg inn det som gjøres hver uke. Da slipper dere å huske alt."
+            />
           )
         }
         renderItem={renderItem}

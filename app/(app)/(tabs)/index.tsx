@@ -485,7 +485,7 @@ export default function TodayScreen() {
           {nothingToDo && (
             <EmptyState
               title={focused ? `Ingenting på ${focused.display_name} i dag 🎉` : 'Ingenting å gjøre i dag 🎉'}
-              text={focused ? 'Trykk på navnet igjen for å se alle.' : 'Nye oppgaver lager du under «Oppgaver».'}
+              text={focused ? 'Trykk på navnet igjen for å se alle.' : 'Legg inn oppgaver under «Oppgaver», så ser alle hva som er deres.'}
             />
           )}
           {sections.map(renderSection)}

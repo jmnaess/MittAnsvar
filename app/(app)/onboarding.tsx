@@ -61,8 +61,10 @@ function ChooseStep({ onChoose }: { onChoose: (mode: Mode) => void }) {
       <AvatarStack people={['fox', 'cat', 'bear', 'frog', 'rabbit'].map((avatar) => ({ avatar }))} size={48} max={5} />
       <Text variant="pageTitle">Velkommen!</Text>
       <Text>
-        Lag en ny husstand, eller bli med i en som en annen voksen allerede har laget.
+        Her ser alle hva som er deres ansvar i dag. Barna lærer å ta sin del, og dere voksne slipper
+        å huske alt selv.
       </Text>
+      <Text>Lag en ny husstand, eller bli med i en som en annen voksen har laget.</Text>
       <Button title="Opprett husstand" onPress={() => onChoose('create')} />
       <Button variant="secondary" title="Bli med i en husstand" onPress={() => onChoose('join')} />
       <AccountFooter />
@@ -226,8 +228,8 @@ function ChildrenStep({ householdId, finishing, onAdded, onDone }: ChildrenStepP
     <>
       <Text variant="pageTitle">Legg til barn</Text>
       <Text>
-        Barn får en profil med fornavn og avatar, ingen e-post eller konto. Du kan også gjøre dette
-        senere i Innstillinger.
+        Barna får egne oppgaver og lærer å ta sin del hjemme. De får en profil med fornavn og figur,
+        uten e-post eller konto. Du kan også legge dem til senere under Husstand.
       </Text>
 
       {children.length > 0 && (

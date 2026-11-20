@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import { Button, Sheet } from '../../../ui';
+import { Button, Sheet, Text, useTheme } from '../../../ui';
 
 type Props = {
   visible: boolean;
@@ -15,6 +15,8 @@ type Props = {
  * Begge kan lages begge steder.
  */
 export function NewTaskSheet({ visible, onClose, taskLabel, taskHref }: Props) {
+  const { colors } = useTheme();
+
   function go(href: Href) {
     onClose();
     router.push(href);
@@ -22,6 +24,9 @@ export function NewTaskSheet({ visible, onClose, taskLabel, taskHref }: Props) {
 
   return (
     <Sheet visible={visible} title="Hva vil du lage?" onClose={onClose}>
+      <Text variant="meta" color={colors.textMuted}>
+        Oppgave: noe som er noens faste ansvar. Ekstrajobb: noe ekstra barna kan ta, gjerne med lønn.
+      </Text>
       <Button title={taskLabel} onPress={() => go(taskHref)} />
       <Button variant="secondary" title="Ekstrajobb" onPress={() => go('/job/new')} />
       <Button variant="secondary" title="Avbryt" onPress={onClose} />

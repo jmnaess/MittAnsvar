@@ -21,7 +21,7 @@ export function FeedbackToast({ title, message, reward, ...rest }: Props) {
     <Toast {...rest} visibleMs={6000}>
       <Text variant="meta" color={colors.toastMuted}>✓ {title}</Text>
       {reward && <Text variant="rowTitle" color={colors.toastAction}>{reward}</Text>}
-      <Text color={colors.toastText}>{message ?? 'Bra jobbet!'}</Text>
+      <Text color={colors.toastText}>{message ?? 'Godt gjort!'}</Text>
     </Toast>
   );
 }

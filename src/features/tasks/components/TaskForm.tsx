@@ -200,7 +200,7 @@ export function TaskFields({ form, members, canSetReward, showWhen = true, disab
           <Hint error={form.rewardInvalid}>
             {form.rewardInvalid
               ? `Lønnen må være mellom 1 og ${MAX_REWARD_NOK} kr.`
-              : 'Barn får beløpet når de gjør oppgaven. Voksne får ikke lønn.'}
+              : 'Valgfritt. Barnet får beløpet når oppgaven er gjort. Voksne får ikke lønn.'}
           </Hint>
         </>
       )}

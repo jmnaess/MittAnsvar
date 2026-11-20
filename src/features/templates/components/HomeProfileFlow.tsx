@@ -86,7 +86,7 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
     <>
       {isOnboarding && <Text variant="pageTitle">Om hjemmet</Text>}
       <Text>
-        Noen få spørsmål om boligen, så foreslår vi vedlikehold som passer i årshjulet.
+        Noen få spørsmål om boligen, så husker årshjulet vedlikeholdet for dere.
         {isOnboarding && ' Du kan endre svarene senere i Innstillinger.'}
       </Text>
       <HomeProfileFields value={profile} onChange={setProfile} disabled={update.isPending} />

@@ -7,6 +7,9 @@ i mørkt er bakgrunnen varm mørkebrun (ikke kald grå/svart) og teksten lyse pa
 Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importeres fra
 `src/ui` (`import { Card, Text } from '../src/ui'`).
 
+Tekst og nye funksjoner følger [VISJON.md](VISJON.md): «Alle tar sin del.» Bruk ordene i
+[ordlisten](#ordliste).
+
 ## Regler
 
 - All ny UI bruker komponentene i `src/ui` og tokenene i `theme.ts`. Ingen hardkodede farger,
@@ -30,6 +33,32 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
   navn eller rolle.
 - QR-koden er alltid mørk på lys (`qrInk`/`qrBg`) med lys kant, også i mørkt tema: mange skannere
   leser ikke invertert QR.
+
+## Ordliste
+
+Samme ting heter det samme overalt: i skjermer, tomtilstander, feilmeldinger og
+tilgjengelighetstekster. Se [VISJON.md](VISJON.md) for tonen.
+
+| Ord | Betyr | Ikke |
+|---|---|---|
+| Husstand | Alle som bor sammen og deler appen | «familie» i appen (familier er målgruppen, men ikke ordet i modellen) |
+| Voksen / barn | Rollene. Voksne har konto, barn har profil | «forelder», «bruker» |
+| Oppgave | Noe som er noens faste ansvar (eller felles), med eller uten lønn | «gjøremål», «jobb» |
+| Ekstrajobb / Ekstrajobber | Noe utenom det faste som barna kan ta, gjerne med lønn. Ingen dato | «ledig jobb», «jobb» alene |
+| Hverdag | Segmentet i «Oppgaver» med de faste, korte oppgavene og ekstrajobbene | |
+| Årshjul | Det som skjer noen ganger i året: vedlikehold, sesong, lange intervaller | «vedlikeholdsplan» |
+| I dag | Fanen med det som skal gjøres i dag | |
+| Denne måneden | Månedsoppgaver fra årshjulet som kan gjøres når som helst i måneden | |
+| Kommende | Det som kommer de neste ukene | |
+| Felles | Hvem som helst i husstanden kan gjøre den | «alle» |
+| Alle barna | En ekstrajobb alle barna kan ta | |
+| Lønn | Beløpet i hele kroner på en oppgave eller ekstrajobb. Bare barn får lønn | «belønning», «poeng» |
+| Opptjent / saldo | Det et barn har tjent minus utbetalinger | |
+| Utbetaling | Når en voksen registrerer at pengene er gitt | |
+| Til godkjenning | Barnets avkrysninger med lønn som venter på en voksen | |
+| Figur / profilbilde | Den tegnede avataren / et eget bilde | |
+| Familieskjerm | En felles enhet (typisk iPad) som viser dagens oppgaver | «kiosk» |
+| Ta sin del / ansvar | Det appen handler om | «prestasjon», «belønning» |
 
 ## Lyst og mørkt tema
 
@@ -59,7 +88,7 @@ Alt ligger i `src/ui/`. Tokenene er i `src/ui/theme.ts`, og komponentene importe
 | sun / sunSoft | `#F2B705` / `#FFF4D1` | `#F2B705` / `#3A2F14` | godkjenningsbanner, framheving |
 | moneyBg / moneyText | `#FFF1C2` / `#6E4D00` | `#3D3112` / `#F4C95D` | lønn |
 | overdueBg / overdueText | `#FDE4E1` / `#A3271A` | `#43201A` / `#FFA294` | forfalt |
-| jobBg / jobAmount / jobSub | `#E3F3F1` / `#0E4F4F` / `#33504D` | `#173230` / `#93DCD5` / `#B8D4CF` | ledige jobber |
+| jobBg / jobAmount / jobSub | `#E3F3F1` / `#0E4F4F` / `#33504D` | `#173230` / `#93DCD5` / `#B8D4CF` | ekstrajobber |
 | segmentBg / segmentSelected | `#F2ECE2` / `#FFFFFF` | `#231D17` / `#3A3128` | segmentert kontroll og valgt segment |
 | iconTint | `#E3F3F1` | `#173230` | flaten bak kategoriikoner i «Oppgaver» |
 | danger | `#A3271A` | `#FF9585` | feilmeldinger, «Slett»-knapper |
@@ -174,7 +203,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `AvatarStack` | overlappende avatarer (−10 px fra 32 og opp, ca. 30 % av størrelsen under). Flere enn `max`: en rund «+N» i `surfaceMuted` til slutt |
 | `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle. Opptil seks: én rad, ringen (maks 56 px) regnes ut fra antall og skjermbredde (`familyStripLayout.ts`). Sju eller flere: raden kan sveipes og falmer mot høyre. Navn: «Leah», «John M.», uten «…» |
 | `ApprovalBanner` | gult banner: hvem som venter, antall og sum, knappen «Se» |
-| `JobCard` / `JobGrid` | ledige jobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
+| `JobCard` / `JobGrid` | ekstrajobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
 | `ListRow` | rad i lister (Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil |
@@ -205,7 +234,7 @@ Egen topp (ingen navigasjonsheader): «Oppgaver» (`screenTitle`), en rund + (`I
 `secureStorage`). `/tasks?view=year` velger Årshjul, og den gamle ruten `/year` sender dit.
 Hvilket segment en oppgave står i, avgjør `taskSection` i `features/tasks/section.ts`: Årshjul for årlige
 oppgaver, sesongoppgaver og intervaller på minst ca. 3 måneder (90 dager, 13 uker, 3 måneder eller år).
-Alt annet står i Hverdag, også engangsoppgaver langt fram og ledige jobber.
+Alt annet står i Hverdag, også engangsoppgaver langt fram og ekstrajobber.
 Etter lagring i et skjema som er åpnet fra «Oppgaver» (parameteren `from=tasks`, `FROM_TASKS`) byttes det
 til segmentet oppgaven havnet i. I Årshjul rulles det til måneden, én gang. Var det et annet segment, vises
 `NoticeToast` («Lagt i Årshjul» / «Lagt i Hverdag»). Skjemaer åpnet fra «I dag» rører ikke «Oppgaver».
@@ -221,6 +250,10 @@ ett `GroupCard` med 10 px mellom kortene. Ikonet i overskriften er `IconBadge sh
 `iconTint`/`primary`. Gruppene er lukket til de åpnes; enheten husker hvilke som er åpne
 (`features/tasks/openGroups.ts`, `secureStorage`). Gruppen en oppgave havner i, åpnes når den lages eller
 endres. Under søk er alle grupper med treff åpne. Kategoriene og ikonene står i `features/tasks/categories.ts`.
+Ekstrajobbene står ikke i kategorigruppene, men i en egen gruppe «Ekstrajobber» (ikon `wallet-outline`)
+nederst, etter kategoriene (`groupEveryday` i `features/tasks/taskGroups.ts`). Samme rekkefølge som i «I dag»:
+faste oppgaver først, ekstrajobber etterpå. Gruppen vises bare når den har treff, og søk og personfilter virker
+som ellers (filteret på et barn viser ekstrajobbene barnet kan ta).
 Raden (`features/tasks/components/TaskRow.tsx`) er kompakt, uten ikon til venstre og uten pil: tittel og
 undertittel «Hver torsdag · neste tor. 21. nov.» (engangs: bare datoen). Til høyre: «Forfalt» som
 `Chip tone="overdue"` (aldri i undertittelen), lønn som `Chip tone="money"`, og avatarene (24 px, overlappende)

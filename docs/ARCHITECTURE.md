@@ -63,7 +63,7 @@ app/                          # expo-router: kun skjermer, tynne
   sign-in.tsx
   (app)/_layout.tsx               # uten husstand → onboarding, med husstand → fanene
   (app)/onboarding.tsx            # velg: opprett (husstand → barn) eller bli med (kode, navn, avatar); forslag senere
-  (app)/(tabs)/index.tsx          # «I dag»: øverst «Til godkjenning», nederst «Ledige jobber»
+  (app)/(tabs)/index.tsx          # «I dag»: øverst «Til godkjenning», nederst «Ekstrajobber»
   (app)/(tabs)/tasks.tsx          # «Oppgaver»: segmentene Hverdag (finn og endre, sveip for «Slett») og Årshjul
                                   #   (jan–des + «Med jevne mellomrom», maler med brytere, egne oppgaver, «+»)
   (app)/year.tsx                  # gammel rute: sender til /tasks?view=year
@@ -75,12 +75,12 @@ app/                          # expo-router: kun skjermer, tynne
   (app)/earnings/[id].tsx         # barnets side: saldo, historikk, «Registrer utbetaling», koble til / fra enhet
   (app)/child/link/[id].tsx       # QR-kode og kode for barnets enhet (steg 10a)
   (app)/link-device.tsx           # barnets enhet, ikke koblet: skann QR eller tast kode
-  (app)/(child)/index.tsx         # barnets enhet: «Mine oppgaver i dag» og «Ledige jobber»
+  (app)/(child)/index.tsx         # barnets enhet: «Mine oppgaver i dag» og «Ekstrajobber»
   (app)/(child)/my-earnings.tsx   # barnets enhet: «Min lønn»
   (app)/(child)/my-settings.tsx   # barnets enhet: navn, avatar, «Logg ut av denne enheten»
   (app)/task/[id].tsx
   (app)/task/new.tsx
-  (app)/job/new.tsx               # «Ny ledig jobb» (kort skjema) fra «+» i «I dag»
+  (app)/job/new.tsx               # «Ny ekstrajobb» (kort skjema) fra «+» i «I dag»
   (app)/job/[id].tsx              # endre jobb (langt trykk i «I dag», eller «Endre oppgave»)
   (app)/(display)/index.tsx       # familieskjermen: «I dag» for hele husstanden
   (app)/display/link.tsx          # QR-kode og kode for familieskjermen
@@ -122,7 +122,7 @@ supabase/
   tests/complete_task.test.sql    # pgTAP: avkrysning, angring, tone, tidssone
   tests/invites.test.sql          # pgTAP: invitasjon av voksen, sperre, RLS
   tests/upcoming_occurrences.test.sql # pgTAP: fremtidige forekomster (påminnelser, senere årshjul)
-  tests/rewards.test.sql          # pgTAP: lønn, utbetalinger, saldo, ledige jobber
+  tests/rewards.test.sql          # pgTAP: lønn, utbetalinger, saldo, ekstrajobber
   tests/job_members.test.sql      # pgTAP: jobber for utvalgte barn
   tests/child_devices.test.sql    # pgTAP: barnets enhet, kode, frakobling, hva barn ser og kan krysse av
   tests/child_settings.test.sql   # pgTAP: barnets avatar og utlogging (kobler fra seg selv)
@@ -134,7 +134,7 @@ Hver `feature` eier sine egne API-kall og hooks. Skjermene i `app/` setter bare 
 
 ---
 
-**Rekkefølgen i «I dag».** Alle: ett kort per person, «Felles», «Ledige jobber», «Denne måneden» (årshjulets månedsoppgaver, nederst fordi de kan gjøres når som helst i måneden) og «Kommende» for hele husstanden: 8 uker, uten daglige og ukentlige oppgaver (de står allerede i «I dag»), med navn eller «Felles» på raden. Personvisning: personens kort, personens egne oppgaver i «Denne måneden», «Kommende» for personen og «Gjort siste 3 dager». «Kommende» viser månedsoppgaver for neste måned samlet under «Neste måned (desember)» i stedet for på den 1., og utelater måneder lenger fram (`buildUpcoming` i `upcoming.ts`).
+**Rekkefølgen i «I dag».** Alle: ett kort per person, «Felles», «Ekstrajobber», «Denne måneden» (årshjulets månedsoppgaver, nederst fordi de kan gjøres når som helst i måneden) og «Kommende» for hele husstanden: 8 uker, uten daglige og ukentlige oppgaver (de står allerede i «I dag»), med navn eller «Felles» på raden. Personvisning: personens kort, personens egne oppgaver i «Denne måneden», «Kommende» for personen og «Gjort siste 3 dager». «Kommende» viser månedsoppgaver for neste måned samlet under «Neste måned (desember)» i stedet for på den 1., og utelater måneder lenger fram (`buildUpcoming` i `upcoming.ts`).
 
 **Radene i «I dag» og personvisningen (voksne).** Sirkelen krysser av. Langt trykk på raden åpner alltid samme meny (`TaskRowMenu`). Vanlig trykk gjør radens hovedhandling: åpen oppgave og nærmeste forekomst i «Kommende» gir «Hvem gjorde …?», og utført i dag gir «Endre hvem som gjorde det». Rader uten hovedhandling (senere forekomster, «Gjort siste 3 dager», eller når det ikke er noen å velge) åpner menyen også ved trykk. `rowActions.ts` bestemmer valgene i menyen: åpen oppgave gir Utsett til … / Velg hvem som gjorde det / Endre oppgave / Avbryt, «Kommende» gir Utsett til … / Velg hvem som gjorde det (begge bare for nærmeste forekomst, som kan krysses av tidlig) / Endre oppgave / Avbryt, utført i dag gir Ikke gjort / Endre hvem som gjorde det / Endre oppgave / Avbryt, og «Gjort siste 3 dager» gir Endre oppgave / Avbryt. Valg som ikke gir mening skjules: «Velg hvem» når husstanden har én person, «Endre hvem» når det ikke finnes andre å flytte til, og «Endre oppgave» når oppgaven ikke lenger er aktiv. Barnets enhet og familieskjermen har ingen meny.
 
@@ -153,7 +153,7 @@ Hver `feature` eier sine egne API-kall og hooks. Skjermene i `app/` setter bare 
    - Ett barn har én enhet. Er barnet koblet, vises «Koble fra» i stedet (`already_linked` fra databasen).
 2. **Barnets enhet:** Barnet trykker «Jeg er et barn» på innloggingsskjermen. Appen kaller `supabase.auth.signInAnonymously()`. Anonym bruker uten husstand får skjermen «Koble til» (`app/(app)/link-device.tsx`): skann med `expo-camera` eller tast inn koden. «Avbryt» logger ut.
 3. **`redeem_link_token(code)`** er en `security definer`-funksjon. Den sjekker hash, utløpstid og om koden er brukt, og godtar bare anonyme brukere. Så setter den `members.auth_user_id = auth.uid()` og markerer koden som brukt. Feil kode gir samme svar som utløpt og brukt (`link_invalid`). Maks 5 feil per 15 minutter.
-4. Etter dette gir RLS barnets anonyme bruker tilgang som `child` i husstanden. Appen viser barnets egne faner (`app/(app)/(child)/`): «I dag» med «Mine oppgaver i dag» (egne og felles) og «Ledige jobber» (for alle barna eller for barnet), «Min lønn», og «Innstillinger» med navnet (bare visning), ny avatar (`set_my_avatar`) og «Logg ut av denne enheten». Ingen redigering av oppgaver eller husstanden, ingen påminnelser.
+4. Etter dette gir RLS barnets anonyme bruker tilgang som `child` i husstanden. Appen viser barnets egne faner (`app/(app)/(child)/`): «I dag» med «Mine oppgaver i dag» (egne og felles) og «Ekstrajobber» (for alle barna eller for barnet), «Min lønn», og «Innstillinger» med navnet (bare visning), ny avatar (`set_my_avatar`) og «Logg ut av denne enheten». Ingen redigering av oppgaver eller husstanden, ingen påminnelser.
 5. **Hva databasen håndhever for barn:** krysse av bare egne og felles oppgaver og jobber som gjelder barnet (`complete_task`), se bare egne avkrysninger, utbetalinger og egen saldo (RLS og `member_balances`). Barnet kan fortsatt lese hele husstandens oppgaveliste (beslutning 7), men appen viser bare det barnet kan krysse av.
 6. **Frakobling** (tapt mobil, nytt nettbrett): «Koble fra» på barnets side kaller `unlink_member_device(member_id)`. Den setter `auth_user_id = null` og sletter den anonyme brukeren i `auth.users`, med sesjoner og refresh-token. Barnets app ser at husstanden er borte og logger ut lokalt. Senest når tokenet skal fornyes, er sesjonen uansett ugyldig. Historikk og saldo beholdes på barneprofilen.
 7. **Utlogging fra barnets enhet:** «Logg ut av denne enheten» (med bekreftelse: «Du blir logget ut, og en voksen må koble til enheten på nytt.») kaller `unlink_my_device()`, som gjør det samme som frakobling for barnet selv, og logger så ut lokalt.
@@ -179,7 +179,7 @@ En egen enhet, typisk en iPad på kjøkkenet, som viser «I dag» for hele husst
 
 1. **Kobling:** «Husstand» → «Legg til familieskjerm» (`app/(app)/display/link.tsx`) kaller `create_display_link_token`. På nettbrettet: «Sett opp familieskjerm» gir anonym innlogging og samme «Koble til»-skjerm som for barn. `redeem_link_token` ser at koden ikke har `member_id`, og lager en rad i `household_displays`.
 2. **Ikke et medlem:** alle innloggede er samme Postgres-rolle, så kolonnerettigheter kan ikke skille skjermen fra andre. Skjermen har derfor ingen rad i `members`. Alle policyer er stengt for den, og den leser bare via `get_family_board`.
-3. **Visning** (`app/(app)/(display)/index.tsx`): ett kort per person, så «Felles», «Ledige jobber» og «Denne måneden». Kolonnene følger vindusbredden. Kortene fordeles etter rekkefølge, så de ikke flytter seg under avkrysning.
+3. **Visning** (`app/(app)/(display)/index.tsx`): ett kort per person, så «Felles», «Ekstrajobber» og «Denne måneden». Kolonnene følger vindusbredden. Kortene fordeles etter rekkefølge, så de ikke flytter seg under avkrysning.
    **Personvisning:** familieraden (`FamilyStrip`) øverst. Trykk på en person gir personens kort i dag (avkrysning som før), personens egne oppgaver i «Denne måneden», «Kommende» og «Gjort siste 3 dager» (`personView.ts`). «Kommende» viser 2 uker. Ukentlige og andre hyppige oppgaver vises én gang («Hver uke · neste …»), men ikke daglige. «Kommende» og «Gjort» er bare visning, uten avkrysning, utsettelse eller meny. Trykk igjen, «Vis alle», midnatt eller 2 minutter uten berøring (`idle.ts`, `useIdleReset.ts`) gir alle igjen.
 4. **Avkrysning:** oppgave med ansvarlig krysses av for den personen med ett trykk. Felles oppgaver og jobber gir «Hvem gjorde det?». Lønn blir «venter» som på barnets enhet. Skjermen kan angre det den selv registrerte, innen 10 minutter.
 5. **Ingen beløp summert:** barn ser bare sin egen saldo, så skjermen viser ikke «X kr tjent». Beløpet på selve oppgaven vises.
@@ -252,7 +252,7 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 6 | *Gjort:* invitere voksen nr. 2 (se steg 14). Gjenstår: historikk per oppgave | |
 | 7 | *Gjort:* årshjul med maler. `task_templates` med 25 maler, `activate_templates`, månedsoppgaver (frist = måned, se [DATABASE.md §2](DATABASE.md#månedsoppgaver-steg-7)), fanen «Årshjul» med brytere og «Velg anbefalte», «Denne måneden» i «I dag» | Mal aktiveres, vises i «Denne måneden» uten å være forfalt, og neste frist blir samme måned neste år |
 | 8 | *Gjort:* lokale påminnelser (se steg 13 og §9). Gjenstår: egen familie tar appen i bruk hjemme | Familien har brukt appen daglig i minst én uke, og funnene er notert og prioritert |
-| 9 | Lønn per oppgave og jobbtavle (se §10). `tasks.reward_nok`, beløpet kopieres til `task_completions.reward_nok`, `payouts`, `record_payout`, `member_balances`, `recurrence_type = 'job'` med `job_repeats`. Skjema: «Lønn (kr)» og «Ledig jobb», «Ledige jobber» i «I dag», saldo og utbetaling under «Husstand» | `npm run db:test` er grønn. På mobilen: 10 kr på en oppgave gir «+10 kr» og saldo, en engangsjobb forsvinner, en gjentakende jobb blir stående, angring trekker fra, og utbetaling gir saldo 0 |
+| 9 | Lønn per oppgave og jobbtavle (se §10). `tasks.reward_nok`, beløpet kopieres til `task_completions.reward_nok`, `payouts`, `record_payout`, `member_balances`, `recurrence_type = 'job'` med `job_repeats`. Skjema: «Lønn (kr)» og «Ledig jobb», «Ledige jobber» i «I dag» (heter «Ekstrajobb»/«Ekstrajobber» fra steg 20), saldo og utbetaling under «Husstand» | `npm run db:test` er grønn. På mobilen: 10 kr på en oppgave gir «+10 kr» og saldo, en engangsjobb forsvinner, en gjentakende jobb blir stående, angring trekker fra, og utbetaling gir saldo 0 |
 | 10a | Barnas egen enhet (tidligere steg 16, se §3): anonym innlogging, `link_tokens` med kort kode og QR, `redeem_link_token`, frakobling som sletter den anonyme brukeren, barnets faner («I dag», «Min lønn»), innstramming av hva barn ser og kan krysse av | Et barn kobler til med QR på sin enhet, ser sine oppgaver og jobber, krysser av og ser sin egen saldo |
 | 10b | Godkjenning av lønn (se §10): `task_completions.status`, «Til godkjenning» i «I dag», godkjent saldo for utbetaling | Barnets avkrysning med lønn «venter», en voksen godkjenner én og avviser én, den avviste er tilbake hos barnet og pengene er trukket, og utbetaling tillater bare godkjent beløp |
 | 11 | *Gjort:* årshjulet viser også egne årlige oppgaver (én gang i året i en bestemt måned, ikke fra mal), merket «Egen». Gruppert på `tasks.month`, så `get_upcoming_occurrences` trengs ikke her. «+» øverst til høyre (voksne) åpner «Ny årlig oppgave»: tittel, ansvarlig, lønn og flere måneder, som blir én månedsoppgave per måned i ett insert-kall | Egne og malbaserte oppgaver vises i samme 12 måneder |
@@ -264,6 +264,9 @@ Hvert steg tar 3–6 timer og kan testes på mobil før neste starter. Med 5–1
 | 17 | Sletting av konto og barneprofil + personvernerklæring | Alt forsvinner fra databasen |
 | 18 | EAS development build, RevenueCat, webhook, `household_subscriptions`, betalingsmur | Testkjøp i sandbox gir tilgang |
 | 19 | Lukket beta (TestFlight / intern testing) | 5–10 husstander bruker appen |
+| 20 | *Gjort:* fase 1 av visjonen ([VISJON.md](VISJON.md)): «Ledige jobber» heter «Ekstrajobber», egen gruppe «Ekstrajobber» nederst i Hverdag, ordliste i DESIGN.md, tekstene i oppstart, tomtilstander, tilbakemeldinger og lønn i tråd med visjonen | Ordet «ledig jobb» finnes ikke i appen, og jobbene står ikke i kategorigruppene |
+| 21 | Fase 2: «Ting vi tar vare på»: bil (flere), båt, campingvogn/bobil, tilhenger/moped/annet, med egne årshjulsmaler. Henger sammen med «Gjenstår: rutiner for bil» i steg 16. Ikke planlagt i detalj | Husstanden kan legge inn tingene sine og får årshjulsoppgaver for hver |
+| 22 | Fase 3: oversikt for de voksne, f.eks. ukentlig oppsummering («Denne uka: 23 oppgaver gjort, 140 kr tjent, 2 vedlikeholdsoppgaver tatt»). Ikke planlagt i detalj | De voksne ser hvordan uka gikk uten å telle selv |
 
 ---
 
@@ -365,7 +368,7 @@ Denne måneden: Rense takrenner
 
 ---
 
-## 10. Lønn og ledige jobber (steg 9)
+## 10. Lønn og ekstrajobber (steg 9)
 
 Barn kan tjene penger på oppgaver. Appen holder bare regnskapet. Selve betalingen gjør familien selv. Datamodell: [DATABASE.md §1–3](DATABASE.md#3-task_completions-og-historikk).
 
@@ -380,10 +383,10 @@ Barn kan tjene penger på oppgaver. Appen holder bare regnskapet. Selve betaling
 - En voksen trykker på en oppgave med lønn som er tildelt et barn: velgeren viser barnet (forhåndsvalgt) og «meg», og «Kryss av» bekrefter. Ellers kunne barnet fått betalt for noe en voksen gjorde.
 - Jobb for flere barn (eller alle): velg hvilket av dem som gjorde den. Jobb for ett barn: som en oppgave tildelt barnet. Et barn på egen enhet krysser av for seg selv.
 
-**Ledige jobber**
+**Ekstrajobber** (het «Ledige jobber» før steg 20)
 - `recurrence_type = 'job'`: ingen dato, `next_due_on` er alltid `null`. Jobben blir aldri forfalt og er ikke med i påminnelsene.
 - Engangsjobb: arkiveres når den er gjort, og angring legger den tilbake. Gjentakende jobb («Kan gjøres flere ganger»): blir stående.
-- For alle barna, ett barn eller flere utvalgte barn (`tasks.job_member_ids`, tom = alle). Vises nederst i «I dag» under «Ledige jobber», med beløp og «Leah og Ola» / «Alle barna».
+- For alle barna, ett barn eller flere utvalgte barn (`tasks.job_member_ids`, tom = alle). Vises nederst i «I dag» under «Ekstrajobber», med beløp, og som egen gruppe nederst i Oppgaver → Hverdag og «Leah og Ola» / «Alle barna».
 - Voksne legger ut jobber med «+» øverst i «I dag» (kort skjema: hva, lønn, for hvem, «Kan gjøres flere ganger») og endrer dem med langt trykk. Seksjonen vises alltid for voksne, også tom. Barn ser den bare når det finnes jobber. Det fulle oppgaveskjemaet kan også lage jobber.
 
 **Utbetaling.** Trykk på et barn under «Husstand» åpner `earnings/[id]`: saldo, de siste 20 avkrysningene med lønn og utbetalinger, og «Registrer utbetaling». Beløpet er forhåndsutfylt med den godkjente saldoen, kan endres, og må bekreftes. `record_payout` avviser beløp over godkjent saldo.

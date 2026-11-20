@@ -162,7 +162,7 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 
 **Daglige oppgaver blir aldri forfalt** (`20261123100000_daily_never_overdue.sql`). Daglig (`private.is_daily`, i appen `isDailyRecurrence`) er hver dag (fast kalender eller 1 dag etter sist), eller hver uke på minst alle hverdagene. En glemt daglig oppgave starter bare på nytt: `next_due_on` blir stående på den glemte dagen, men `is_overdue` er `false`, og avkrysning gir riktig neste frist fordi `compute_next_due` bruker `greatest(next_due_on, completed_on)`. Ukentlige og sjeldnere oppgaver kan fortsatt bli forfalt.
 
-«I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden», og jobber i «Ledige jobber».
+«I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden», og jobber i «Ekstrajobber».
 
 **View `today_completions`** (`security_invoker = true`, så RLS på `task_completions` og `tasks` gjelder): dagens avkrysninger (`completed_on = private.household_today(household_id)`), uten avviste. Med tittel, `assigned_member_id`, `recurrence_type` og `job_member_ids` (hvem en jobb kan flyttes til) fra oppgaven, også når oppgaven er arkivert (en ledig jobb som er gjort). `is_latest`: ingen nyere avkrysning på samme oppgave, samme regel som `undo_completion`. «I dag» viser radene som utført nederst i hvert kort. Appen angrer ved trykk bare når `is_latest`, innen 10 minutter, og for barn bare det de selv registrerte (`recorded_by`); serveren sjekker det samme i `undo_completion`. Voksne kan i tillegg rette hele dagen: trykk på sirkelen gir «Merke som ikke gjort?» (`remove_completion`), trykk på raden gir «Endre hvem som gjorde det» (`reassign_completion`), og langt trykk gir valg mellom «Ikke gjort» og «Endre hvem som gjorde det». Testes i `today_completions.test.sql`.
 
@@ -230,13 +230,13 @@ Check-constraints håndhever tabellen over, slik at ugyldige kombinasjoner ikke 
 | Rense takrenner i oktober | calendar, year, every 1, month 10, month_day null (= **månedsoppgave**, se under) |
 | Rense sluk 3 mnd etter sist | interval, month, every 3 |
 | Bytte batteri i røykvarsler | calendar, year, every 1, month 12, month_day 1 |
-| Henge opp vask (ledig jobb, én gang) | job, job_repeats false |
-| Tømme oppvaskmaskinen (ledig jobb, igjen og igjen) | job, job_repeats true |
-| Rydde boden (ledig jobb for Leah og Ola) | job, job_member_ids `{leah, ola}` |
+| Henge opp vask (ekstrajobb, én gang) | job, job_repeats false |
+| Tømme oppvaskmaskinen (ekstrajobb, igjen og igjen) | job, job_repeats true |
+| Rydde boden (ekstrajobb for Leah og Ola) | job, job_member_ids `{leah, ola}` |
 | Klippe plenen, mai–sep | interval, week, every 1, season 5–9 |
 | Rense varmepumpefilter, okt–apr | interval, week, every 8, season 10–4 |
 
-### Ledige jobber (steg 9)
+### Ekstrajobber (steg 9)
 En jobb er en oppgave **uten dato**. Den minste endringen var én ny enum-verdi og én boolsk kolonne:
 - Ingen gjentakelseskolonner (som `once`). `first_due` og `compute_next_due` gir `null`, så `next_due_on` er alltid `null`.
 - Derfor er jobber automatisk utenfor `get_upcoming_occurrences` (som hopper over `next_due_on null`), påminnelsene og årshjulet. De blir heller aldri forfalt.

@@ -1,5 +1,7 @@
 # MittAnsvar
-A family responsibility and household task management app for parents and children.
+App for husstander der alle tar sin del: daglige oppgaver, ekstrajobber med lønn og et årshjul for vedlikehold.
+
+**Visjon og rettesnor for tekst og nye funksjoner:** [docs/VISJON.md](docs/VISJON.md).
 
 ## Misbruksvern for anonym innlogging (20. november 2026)
 

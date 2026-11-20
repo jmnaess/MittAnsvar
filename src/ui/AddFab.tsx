@@ -44,7 +44,9 @@ const FADE_MS = 150;
 /** Minste trykkflate. */
 const ROW_HEIGHT = 44;
 /** Luft rundt valgene i kortet. */
-const MENU_PADDING = 6;
+const MENU_PADDING = 4;
+/** Innrykk i hver rad (ikon og tekst). */
+const ROW_PADDING = 8;
 
 /**
  * Flytende pluss nede til høyre, over fanelinjen. Legg den sist i skjermens rot-View.
@@ -268,15 +270,15 @@ const useStyles = makeStyles(({ colors, shadow }) =>
       justifyContent: 'center',
       padding: MENU_PADDING,
       paddingRight: fab.size,
-      gap: 2,
     },
     row: {
       minHeight: ROW_HEIGHT,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      paddingHorizontal: spacing.row,
-      borderRadius: radius.row,
+      gap: 10,
+      paddingHorizontal: ROW_PADDING,
+      // Kortets runding minus luften, så trykkmarkeringen følger hjørnene.
+      borderRadius: radius.section - MENU_PADDING,
     },
     close: {
       position: 'absolute',

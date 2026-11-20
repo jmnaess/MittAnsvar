@@ -41,7 +41,7 @@ export { SegmentedControl } from './SegmentedControl';
 export { Sheet } from './Sheet';
 export { ShowMoreRow } from './ShowMoreRow';
 export { SwipeToDelete } from './SwipeToDelete';
-export { Switch } from './Switch';
+export { Switch, SwitchSpacer } from './Switch';
 export { tabIcon } from './tabIcon';
 export { TaskRow } from './TaskRow';
 export { Text } from './Text';

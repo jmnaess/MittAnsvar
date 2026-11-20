@@ -207,7 +207,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `JobCard` / `JobGrid` | ekstrajobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
-| `ListRow` | rad i lister (Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil. `reserveChevron` holder av pilens plass når raden ikke kan trykkes, så (i), bryter og pil står likt på alle rader (årshjulet) |
+| `ListRow` | rad i lister (Årshjul, Husstand, historikk): tittel, metalinjer, merkelapp, høyreside, pil. `reserveChevron` holder av pilens plass når raden ikke kan trykkes, så (i), bryter og pil står likt på alle rader (årshjulet). Rader uten bryter får `right={<SwitchSpacer />}`: en usynlig bryter med nøyaktig samme størrelse |
 | `Section` | seksjon på en side: tittel, forklaring og innhold |
 | `GroupCard` | hvitt kort for én gruppe (radius 16, skygge, overflow hidden): overskrift øverst, rader med 1 px `border` mellom |
 | `GroupHeader` | overskrift i et `GroupCard`, foldes ut og inn: ikon/avatar (34), navn, antall, pil ned (åpen) / høyre (lukket) (`accessibilityState.expanded`) |

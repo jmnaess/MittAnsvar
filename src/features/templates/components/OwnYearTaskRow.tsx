@@ -1,4 +1,4 @@
-import { Chip, ListRow } from '../../../ui';
+import { Chip, ListRow, SwitchSpacer } from '../../../ui';
 import { describeRecurrence, formatNextDue, isSeasonal } from '../../tasks/recurrence';
 import type { Task } from '../../tasks/types';
 
@@ -14,7 +14,7 @@ type Props = {
   onInfoPress?: () => void;
 };
 
-/** En egen oppgave i årshjulet, merket «Egen». Trykk åpner den for redigering. */
+/** En egen oppgave i årshjulet, merket «Egen». Trykk åpner den for redigering. Plass til bryter og pil som malradene. */
 export function OwnYearTaskRow({ task, assigneeName, onPress, when, onInfoPress }: Props) {
   return (
     <ListRow
@@ -28,6 +28,8 @@ export function OwnYearTaskRow({ task, assigneeName, onPress, when, onInfoPress 
       onPress={onPress}
       onInfoPress={onInfoPress}
       reserveChevron
+      // Ingen bryter, men samme plass som malradene, så (i) og pilen står likt.
+      right={<SwitchSpacer />}
       accessibilityLabel={`${task.title}. Egen oppgave`}
       accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}
     />

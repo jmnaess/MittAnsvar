@@ -38,14 +38,25 @@ const cat = (
   </>
 );
 
+// Samme geometri som app-ikonet (assets/brand/icon-source.svg), men med åpne øyne og bare hodet.
 const fox = (
   <>
     <Circle cx={24} cy={24} r={24} fill="#FFE3CC" />
-    <Path d="M10 9l11 9-8 7z M38 9l-11 9 8 7z" fill="#E36B2C" />
-    <Circle cx={24} cy={27} r={14} fill="#E36B2C" />
-    <Path d="M12 29c4 7 8 9 12 9s8-2 12-9c-5 1-9 0-12-3-3 3-7 4-12 3z" fill="#FFFFFF" />
-    <Eyes y={24} />
-    <Circle cx={24} cy={31} r={1.9} fill={EYE} />
+    <Path
+      d="M11.2 11.5L19.1 16.8 11.2 22.6z M36.8 11.5L28.9 16.8 36.8 22.6z"
+      fill="#E36B2C"
+      stroke="#E36B2C"
+      strokeWidth={0.8}
+      strokeLinejoin="round"
+    />
+    <Path d="M13 14.4L17.3 17.8 13 21.2z M35 14.4L30.7 17.8 35 21.2z" fill="#FFF4E6" />
+    <Path d="M11.2 22.6L19.1 16.8Q24 15.4 28.9 16.8L36.8 22.6 40.4 31.7 33.4 37.5 24 38.7 14.6 37.5 7.6 31.7z" fill="#E36B2C" />
+    <Path
+      d="M7.6 31.7L14.6 24.7H18.7L20.8 26.8 22.5 33.4H25.5L27.2 26.8 29.3 24.7H33.4L40.4 31.7 33.4 37.5 24 38.7 14.6 37.5z"
+      fill="#FFFAEE"
+    />
+    <Path d="M22.3 33.4H25.7L24 35.6z" fill={EYE} stroke={EYE} strokeWidth={0.9} strokeLinejoin="round" />
+    <Eyes y={28.6} left={17.8} right={30.2} r={1.9} />
   </>
 );
 
@@ -238,28 +249,40 @@ const hedgehog = (
   </>
 );
 
+// Stor busket hale som buer opp bak hodet, små ører med dusker og liten snute (ikke lik reven).
 const squirrel = (
   <>
     <Circle cx={24} cy={24} r={24} fill="#FBE1D5" />
-    <Path d="M13 8l7 11-9 3z M35 8l-7 11 9 3z" fill="#B4532E" />
-    <Circle cx={13.5} cy={8.5} r={2.2} fill="#8E3A1C" />
-    <Circle cx={34.5} cy={8.5} r={2.2} fill="#8E3A1C" />
-    <Circle cx={24} cy={27} r={13.5} fill="#C65E32" />
-    <Circle cx={19.5} cy={31.5} r={4.8} fill="#F7E3CC" />
-    <Circle cx={28.5} cy={31.5} r={4.8} fill="#F7E3CC" />
-    <Eyes y={24} />
-    <Ellipse cx={24} cy={28.6} rx={2} ry={1.5} fill={EYE} />
+    <Path
+      d="M26 43C40 42 46.5 31 44.5 19.5 42.5 9.5 33.5 5.5 27.5 9 24.5 11 25.5 15.5 29 15.5 33.5 15 36.5 19 36 25 35.5 32 31.5 38 26 43z"
+      fill="#DB7D4E"
+    />
+    <Path d="M41 21C41 15 38 11 33.5 10.5" stroke="#EFA57E" strokeWidth={1.6} fill="none" strokeLinecap="round" />
+    <Path d="M13.5 14l4.5 6-6 1.5z M29.5 14l-4.5 6 6 1.5z" fill="#B4532E" />
+    <Circle cx={13.6} cy={14} r={1.6} fill="#8E3A1C" />
+    <Circle cx={29.4} cy={14} r={1.6} fill="#8E3A1C" />
+    <Circle cx={21.5} cy={28} r={12} fill="#C65E32" />
+    <Ellipse cx={21.5} cy={33} rx={5.5} ry={4} fill="#F7E3CC" />
+    <Eyes y={25.5} left={17.5} right={25.5} />
+    <Ellipse cx={21.5} cy={31} rx={1.5} ry={1.1} fill={EYE} />
   </>
 );
 
+// I profil, vendt mot høyre: mørk hette over hode og bakhode, lyst grått kinn og stort stripete nebb.
 const puffin = (
   <>
     <Circle cx={24} cy={24} r={24} fill="#FFE1D9" />
-    <Circle cx={24} cy={27} r={14} fill="#2F3338" />
-    <Ellipse cx={24} cy={27.5} rx={11} ry={9} fill="#FFFFFF" />
-    <Eyes y={24} left={18.5} right={29.5} />
-    <Path d="M19 29c2-2 8-2 10 0l-5 9z" fill="#E8563F" />
-    <Path d="M19.5 29c2-1.5 7-1.5 9 0l-.9 1.8c-2-1-5.2-1-7.2 0z" fill="#F2B705" />
+    <Circle cx={20} cy={26} r={14} fill="#2F3338" />
+    <Ellipse cx={23.5} cy={27.5} rx={8} ry={7.5} fill="#ECEEF1" />
+    <Path d="M29.5 18.5C35 19.5 40 24.5 41.5 29.5 38.5 32.5 34.5 35.5 29.5 37z" fill="#E8563F" />
+    <Path d="M29.5 18.5C30.8 18.7 31.8 19 32.5 19.3V36.1C31.6 36.4 30.6 36.7 29.5 37z" fill="#9AA0A8" />
+    <Path d="M32.5 19.3L34 20V35.5L32.5 36.1z" fill="#F2B705" />
+    <Path d="M36.8 22.5C37.6 25.5 37.6 30.5 36.8 33.5" stroke="#F2B705" strokeWidth={1.2} fill="none" strokeLinecap="round" />
+    <Path d="M29.5 29L41.5 29.5" stroke="#B8402E" strokeWidth={0.8} strokeLinecap="round" />
+    <Circle cx={29.8} cy={29.2} r={1.1} fill="#F2B705" />
+    <Path d="M25 22.6H27.8L26.4 23.6z" fill="#6B7078" />
+    <Path d="M24.6 25L20 26.6" stroke="#6B7078" strokeWidth={1} strokeLinecap="round" />
+    <Circle cx={26.4} cy={25} r={1.5} fill={EYE} />
   </>
 );
 

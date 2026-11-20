@@ -23,6 +23,7 @@ import { useMyHousehold, useMyMember, useUpdateHousehold } from '../../../src/fe
 import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
 import type { Household } from '../../../src/features/household/types';
 import { ReminderSettingsSection } from '../../../src/features/notifications/components/ReminderSettingsSection';
+import { FeedbackRow } from '../../../src/features/support/components/FeedbackRow';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
 export default function SettingsScreen() {
@@ -44,6 +45,9 @@ export default function SettingsScreen() {
         <ReminderSettingsSection userId={session!.user.id} />
       </Section>
       <AppearanceSection />
+      <Section title="Hjelp">
+        <FeedbackRow />
+      </Section>
       <AccountSection />
     </ScrollView>
   );

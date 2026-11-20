@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "feedback_messages": {
                   Row: {
-                    "audience": Database["public"]['Enums']["audience"],"category": string | null,"id": string,"is_active": boolean,"text": string,"tone": string
+                    "audience": Database["public"]['Enums']["audience"],"category": string | null,"id": string,"is_active": boolean,"kind": string,"text": string,"tone": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "audience"?: Database["public"]['Enums']["audience"],"category"?: string | null,"id"?: string,"is_active"?: boolean,"text": string,"tone": string
+                    "audience"?: Database["public"]['Enums']["audience"],"category"?: string | null,"id"?: string,"is_active"?: boolean,"kind"?: string,"text": string,"tone": string
                   }
                   Update: {
-                    "audience"?: Database["public"]['Enums']["audience"],"category"?: string | null,"id"?: string,"is_active"?: boolean,"text"?: string,"tone"?: string
+                    "audience"?: Database["public"]['Enums']["audience"],"category"?: string | null,"id"?: string,"is_active"?: boolean,"kind"?: string,"text"?: string,"tone"?: string
                   }
                   Relationships: [
                     
@@ -533,8 +533,8 @@ isOneToOne: false
 { Args: { "p_completion_ids": (string)[] }; Returns: number
                            },
 "complete_task":
-{ Args: { "p_member_id": string,"p_task_id": string }; Returns: {
-              "completion_id": string,"feedback_text": string,"next_due_on": string,"reward_nok": number,"status": Database["public"]['Enums']["completion_status"]
+{ Args: { "p_last_today"?: boolean,"p_member_id": string,"p_task_id": string }; Returns: {
+              "completion_id": string,"feedback_kind": string,"feedback_text": string,"next_due_on": string,"reward_nok": number,"status": Database["public"]['Enums']["completion_status"]
             }[]
                            },
 "create_display_link_token":

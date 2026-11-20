@@ -13,3 +13,15 @@ export function boardCards(board: Pick<FamilyBoard, 'tasks' | 'members' | 'compl
     showAllMembers: true,
   });
 }
+
+/**
+ * Oppgavene som står igjen på personens eget kort i dag. Brukes for «siste for dagen»
+ * (CelebrationOverlay). «Felles», «Denne måneden» og «Ekstrajobber» telles ikke.
+ */
+export function memberTodayTaskIds(
+  board: Pick<FamilyBoard, 'tasks' | 'members' | 'completions'>,
+  memberId: string,
+): string[] {
+  const card = boardCards(board).find((c) => c.member?.id === memberId);
+  return card ? card.data.map((t) => t.id) : [];
+}

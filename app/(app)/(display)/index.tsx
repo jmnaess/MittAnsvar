@@ -14,6 +14,7 @@ import { boardPersonView, focusedMember } from '../../../src/features/display/pe
 import type { FamilyBoard } from '../../../src/features/display/types';
 import { useBoardActions } from '../../../src/features/display/useBoardActions';
 import { useIdleReset } from '../../../src/features/display/useIdleReset';
+import { CelebrationOverlay } from '../../../src/features/feedback/components/CelebrationOverlay';
 import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
 import { MemberPhotoUrlsContext, usePhotoUrls } from '../../../src/features/household/hooks';
 import { memberPhoto, photoPathsToSign } from '../../../src/features/household/photo';
@@ -46,7 +47,8 @@ export default function FamilyBoardScreen() {
 
 /**
  * Familieskjermen: «I dag» for hele husstanden, ett kort per person side om side.
- * Trykk på en oppgave krysser av. Ingen redigering, ingen godkjenning og ingen saldo.
+ * Trykk på en oppgave krysser av. Barn får en feiring i fullskjerm, voksne et banner.
+ * Ingen redigering, ingen godkjenning og ingen saldo.
  *
  * Familieraden øverst: trykk på en person viser personvisningen (personens kort i dag,
  * «Kommende» og «Gjort siste 3 dager»). Trykk igjen, «Vis alle», midnatt eller 2 minutter uten
@@ -66,7 +68,7 @@ function Board({ board }: { board: FamilyBoard }) {
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
   const keepAwake = useKeepAwakeSetting();
-  const actions = useBoardActions(board.members);
+  const actions = useBoardActions(board);
   const { data: photoUrls } = usePhotoUrls(board.household_id, photoPathsToSign(board.members));
   const urls = photoUrls ?? EMPTY_URLS;
 
@@ -213,6 +215,14 @@ function Board({ board }: { board: FamilyBoard }) {
             undoing={actions.undoing}
             onUndo={actions.undoToast}
             onHide={actions.hideToast}
+          />
+        )}
+        {actions.celebration && (
+          <CelebrationOverlay
+            celebration={actions.celebration.celebration}
+            member={actions.celebration.member}
+            showName
+            onHide={actions.hideCelebration}
           />
         )}
       </View>

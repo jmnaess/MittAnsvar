@@ -72,8 +72,8 @@ function useInvalidateBoard() {
 export function useCompleteOnBoard() {
   const onSettled = useInvalidateBoard();
   return useMutation({
-    mutationFn: ({ taskId, memberId }: { taskId: string; memberId: string }) =>
-      completeTask(taskId, memberId),
+    mutationFn: ({ taskId, memberId, lastToday }: { taskId: string; memberId: string; lastToday?: boolean }) =>
+      completeTask(taskId, memberId, lastToday),
     onSettled,
   });
 }

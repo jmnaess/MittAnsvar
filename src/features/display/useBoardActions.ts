@@ -1,27 +1,34 @@
 import { useEffect, useState } from 'react';
 import { toNorwegianMessage } from '../../lib/errors';
 import type { TodayCompletion } from '../completions/api';
+import { isLastOfToday, toCelebration, type Celebration } from '../feedback/celebration';
 import { formatKroner } from '../tasks/reward';
+import { memberTodayTaskIds } from './board';
 import { chooseBoardDoer } from './chooseBoardDoer';
 import { useCompleteOnBoard, useUndoOnBoard } from './hooks';
-import type { BoardMember, BoardTask } from './types';
+import type { BoardMember, BoardTask, FamilyBoard } from './types';
 
 type Toast = { completionId: string; title: string; message: string | null; reward?: string };
 type Picking = { task: BoardTask; members: BoardMember[] };
+/** Fullskjermsfeiring når et barn har krysset av. */
+type BoardCelebration = { celebration: Celebration; member: BoardMember };
 
 /** Hvor lenge en feilmelding står på den felles skjermen. */
 const ERROR_VISIBLE_MS = 8000;
 
 /**
- * Avkrysning og angring på familieskjermen.
+ * Avkrysning og angring på familieskjermen. Barn får en feiring i fullskjerm, voksne det vanlige
+ * banneret med «Angre».
  * Flere kan trykke samtidig, så hver rad følges for seg. mutateAsync brukes fordi callbacks gitt
  * til mutate() bare kjøres for det siste kallet.
  */
-export function useBoardActions(members: BoardMember[]) {
+export function useBoardActions(board: FamilyBoard) {
+  const members = board.members;
   const complete = useCompleteOnBoard();
   const undo = useUndoOnBoard();
   const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(new Set());
   const [toast, setToast] = useState<Toast | null>(null);
+  const [celebration, setCelebration] = useState<BoardCelebration | null>(null);
   const [picking, setPicking] = useState<Picking | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +51,15 @@ export function useBoardActions(members: BoardMember[]) {
     setError(null);
     setBusy(task.id, true);
     try {
-      const result = await complete.mutateAsync({ taskId: task.id, memberId });
+      const doer = members.find((m) => m.id === memberId);
+      const lastToday =
+        doer?.role === 'child' && isLastOfToday(memberTodayTaskIds(board, memberId), task.id);
+      const result = await complete.mutateAsync({ taskId: task.id, memberId, lastToday });
+      if (doer?.role === 'child') {
+        setToast(null);
+        setCelebration({ celebration: toCelebration(result), member: doer });
+        return;
+      }
       setToast({
         completionId: result.completionId,
         title: task.title,
@@ -77,6 +92,7 @@ export function useBoardActions(members: BoardMember[]) {
     try {
       await undo.mutateAsync(completionId);
       setToast((t) => (t?.completionId === completionId ? null : t));
+      setCelebration((c) => (c?.celebration.completionId === completionId ? null : c));
     } catch (e) {
       setToast((t) => (t?.completionId === completionId ? null : t));
       setError(toNorwegianMessage(e));
@@ -86,6 +102,7 @@ export function useBoardActions(members: BoardMember[]) {
   return {
     busyIds,
     toast,
+    celebration,
     picking,
     error,
     undoingId: undo.isPending ? undo.variables : undefined,
@@ -96,5 +113,6 @@ export function useBoardActions(members: BoardMember[]) {
     undoCompletion: (c: TodayCompletion) => undoById(c.id),
     undoToast: () => (toast ? undoById(toast.completionId) : undefined),
     hideToast: () => setToast(null),
+    hideCelebration: () => setCelebration(null),
   };
 }

@@ -2,6 +2,9 @@ import { ApiError, unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../types/database';
 
+/** Tekstgruppen complete_task valgte ut fra (docs/DATABASE.md §4). Styrer feiringen for barn. */
+export type FeedbackKind = 'regular' | 'day_done' | 'young';
+
 export type CompletionResult = {
   completionId: string;
   /** null hvis det ikke finnes noen tekst som passer tonen og målgruppen. */
@@ -11,15 +14,26 @@ export type CompletionResult = {
   rewardNok: number | null;
   /** «pending» når et barn ga seg selv lønn på egen enhet: venter på godkjenning (steg 10b). */
   pending: boolean;
+  /** Voksne får alltid regular. */
+  feedbackKind: FeedbackKind;
 };
 
 /**
  * Krysser av en oppgave. Serveren setter dato, beregner neste frist og velger tilbakemelding.
  * memberId er den som gjorde oppgaven (kan være et barn, når en voksen krysser av for det).
+ * lastToday: oppgaven var den siste i barnets «I dag». Gir en egen feiring og egne tekster.
  */
-export async function completeTask(taskId: string, memberId: string): Promise<CompletionResult> {
+export async function completeTask(
+  taskId: string,
+  memberId: string,
+  lastToday = false,
+): Promise<CompletionResult> {
   const rows = unwrap(
-    await supabase.rpc('complete_task', { p_task_id: taskId, p_member_id: memberId }),
+    await supabase.rpc('complete_task', {
+      p_task_id: taskId,
+      p_member_id: memberId,
+      p_last_today: lastToday,
+    }),
   );
   const row = rows[0];
   // RPC-en returnerer alltid én rad når den lykkes. Dette er bare et sikkerhetsnett.
@@ -30,7 +44,13 @@ export async function completeTask(taskId: string, memberId: string): Promise<Co
     nextDueOn: row.next_due_on ?? null,
     rewardNok: row.reward_nok ?? null,
     pending: row.status === 'pending',
+    feedbackKind: toFeedbackKind(row.feedback_kind),
   };
+}
+
+/** En database som er eldre enn appen, sender ikke feedback_kind. */
+function toFeedbackKind(kind: string | null | undefined): FeedbackKind {
+  return kind === 'day_done' || kind === 'young' ? kind : 'regular';
 }
 
 /** Angrer en avkrysning (bare den siste på oppgaven, innen 10 minutter). Fristen går tilbake. */

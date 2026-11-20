@@ -45,8 +45,8 @@ export function useRecentCompletions(householdId: string, today: string, enabled
 export function useCompleteTask(householdId: string) {
   const onSettled = useInvalidateAfterCompletion(householdId);
   return useMutation({
-    mutationFn: ({ taskId, memberId }: { taskId: string; memberId: string }) =>
-      completeTask(taskId, memberId),
+    mutationFn: ({ taskId, memberId, lastToday }: { taskId: string; memberId: string; lastToday?: boolean }) =>
+      completeTask(taskId, memberId, lastToday),
     onSettled,
   });
 }

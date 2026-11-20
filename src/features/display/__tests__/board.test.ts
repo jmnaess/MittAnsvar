@@ -1,5 +1,5 @@
 import type { TodayCompletion } from '../../completions/api';
-import { boardCards } from '../board';
+import { boardCards, memberTodayTaskIds } from '../board';
 import { chooseBoardDoer } from '../chooseBoardDoer';
 import { boardColumnCount, distributeCards, MAX_COLUMNS } from '../layout';
 import type { BoardMember, BoardTask } from '../types';
@@ -159,5 +159,28 @@ describe('kolonner', () => {
 
   it('fordeler etter rekkefølge, så kort ikke flytter seg', () => {
     expect(distributeCards(['a', 'b', 'c', 'd', 'e'], 2)).toEqual([['a', 'c', 'e'], ['b', 'd']]);
+  });
+});
+
+describe('memberTodayTaskIds', () => {
+  const k = member('k');
+  const ola = member('ola');
+
+  it('gir oppgavene på personens eget kort, ikke felles eller andres', () => {
+    const board = {
+      members: [k, ola],
+      tasks: [
+        task('a', { assigned_member_id: 'k' }),
+        task('b', { assigned_member_id: 'k' }),
+        task('felles'),
+        task('olas', { assigned_member_id: 'ola' }),
+      ],
+      completions: [],
+    };
+    expect(memberTodayTaskIds(board, 'k').sort()).toEqual(['a', 'b']);
+  });
+
+  it('tom liste for en person som ikke finnes', () => {
+    expect(memberTodayTaskIds({ members: [k], tasks: [], completions: [] }, 'x')).toEqual([]);
   });
 });

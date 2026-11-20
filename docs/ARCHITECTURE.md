@@ -98,7 +98,7 @@ src/
                   PendingApprovalBanner)
     templates/    api.ts, hooks.ts, suggest.ts (filter, egne årlige oppgaver, månedsgruppering),
                   components/ (TemplateRow, OwnYearTaskRow)
-    feedback/     components/FeedbackToast.tsx (teksten velges i complete_task)
+    feedback/     components/FeedbackToast.tsx (voksne), CelebrationOverlay.tsx (barn, fullskjerm); teksten velges i complete_task
     display/      api.ts, hooks.ts, board.ts, chooseBoardDoer.ts, layout.ts (rene, testes),
                   useBoardActions.ts, settings.ts, components/
     devices/      api.ts, hooks.ts, linkCode.ts (QR-innhold, normalisering), components/ (QrScanner, LinkCodeCard)

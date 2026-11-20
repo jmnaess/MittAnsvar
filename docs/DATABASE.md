@@ -371,7 +371,7 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
 
 **Skriving skjer bare via RPC** (`security definer`, `set search_path = ''`):
 
-- `complete_task(p_task_id, p_member_id) returns table (completion_id uuid, feedback_text text, next_due_on date, reward_nok integer)`
+- `complete_task(p_task_id, p_member_id, p_last_today default false) returns table (completion_id uuid, feedback_text text, next_due_on date, reward_nok integer, status completion_status, feedback_kind text)`
   1. Kalleren er medlem av oppgavens husstand, og oppgaven er ikke arkivert. Ellers `task_not_found` (samme feil for andre husstander, så det ikke lekker om id-en finnes). Oppgaveraden låses med `for update`.
   2. `private.household_has_access(household_id)`, ellers feil `subscription_required`.
   3. `p_member_id` hører til samme husstand. Er kalleren et barn, må `p_member_id` være kallerens eget medlem, oppgaven må være barnets egen eller felles (`assigned_member_id` null), og en jobb må være for alle barna eller for barnet (steg 10a). Ellers `invalid_member`.
@@ -381,6 +381,7 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
   7. Steg 10b: `status` = `pending` hvis det er lønn og kalleren er et barn, ellers `approved`. Returneres også.
   8. **Familieskjerm som kaller:** oppgaven må stå i «I dag», ellers `task_not_due` (skjermen kan vise litt gamle data, og et trykk skal ikke krysse av neste forekomst). Oppgave med ansvarlig bare for den ansvarlige, felles for hvem som helst i husstanden, jobb bare for barn den gjelder. Ellers `invalid_member`.
   9. **Før fristen** (sirkelen i «Kommende»): ingen egen sjekk, avkrysningen virker som ellers. `due_on` er den planlagte datoen, og `completed_on` er i dag. Kalender: `compute_next_due` tar `greatest(next_due_on, completed_on)`, så den planlagte forekomsten hoppes over, og neste frist blir forekomsten etter. Intervall: regnes fra i dag. Angring setter fristen tilbake til den planlagte datoen. Bare den nærmeste forekomsten kan krysses av, fordi en oppgave bare har én åpen forekomst (`next_due_on`). Appen viser sirkel der forekomsten er lik `next_due_on`, men ikke på daglige oppgaver (`canCompleteEarly` i `src/features/tasks/upcoming.ts`). Testes i `supabase/tests/early_completion.test.sql`.
+  10. **Feiring for barn** (`*_child_celebration.sql`): `p_last_today` sendes av appen når oppgaven var den siste i barnets «I dag» (barnets enhet: «Mine oppgaver i dag», skjermen: personens kort). Brukes bare når utføreren er barn. `feedback_kind` er tekstgruppen som ble ønsket (se §4), og styrer feiringen i appen (`CelebrationOverlay`).
 - `undo_completion(p_completion_id)`: bare den **siste** avkrysningen på en oppgave. Den kan angres av en voksen, eller av den som registrerte den (`recorded_by`, også en familieskjerm), innen 10 minutter. Raden slettes (med beløpet), og `tasks.next_due_on` settes tilbake til `due_on`. En engangsjobb får `archived_at = null` igjen. Feil: `completion_not_found`, `undo_not_allowed`, `undo_expired`. Appen viser «Angre» i 6 sekunder. Steg 10b: en avvist rad kan ikke angres (`undo_not_allowed`), og avviste rader teller ikke som «nyere avkrysning». Et barn kan fortsatt angre sin egen ventende avkrysning.
 - `approve_completions(p_completion_ids uuid[]) returns int` (steg 10b): en voksen godkjenner én eller flere («Godkjenn alle»). Bare `pending` endres, så det er trygt å trykke to ganger. Returnerer antall godkjente.
 - `reject_completion(p_completion_id)` (steg 10b): «Ikke godkjent». Status blir `rejected`. Er det den siste ikke-avviste avkrysningen på oppgaven, settes `next_due_on` tilbake til `due_on`, og en engangsjobb får `archived_at = null` (som angring). Finnes en nyere, endres bare statusen. Låser oppgaven og leser raden på nytt, så to voksne ikke behandler samme rad samtidig. Feil: `not_pending`.
@@ -464,12 +465,16 @@ Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, bolig
 | template_id | uuid null → task_templates | mest spesifikk. **Ikke laget ennå**, kommer med tekster per mal i steg 12 |
 | category | text null | nest mest spesifikk. Er begge null, er teksten generell |
 | is_active | boolean not null default true | |
+| kind | text not null default `regular` | `regular` / `day_done` (barnets siste oppgave for dagen) / `young` (barn 5 år eller yngre) |
 
 **Utvalg** skjer på serveren, i `complete_task`, som returnerer teksten (endret i steg 5 fra et utvalg på klienten):
-1. Filtrer på husstandens tone (`both` = begge) og målgruppen til den som gjorde oppgaven (`any` eller rollen).
-2. Bare tekster for oppgavens kategori eller generelle tekster.
-3. Sorter: ikke blant de 20 sist viste i husstanden først, deretter kategori foran generell, deretter tilfeldig. Er alle vist nylig, gjentas en tekst.
-4. `feedback_message_id` lagres på avkrysningen.
+1. Ønsket gruppe (`kind`): voksne får alltid `regular`. For barn går `day_done` (når `p_last_today`) foran `young` (år i dag minus `birth_year` ≤ 5), ellers `regular`. Bare tekster i ønsket gruppe eller `regular` tas med, og ønsket gruppe sorteres først. Finnes ingen aktiv tekst i gruppen, brukes en `regular`-tekst.
+2. Filtrer på husstandens tone (`both` = begge) og målgruppen til den som gjorde oppgaven (`any` eller rollen). Tonen gjelder bare `regular`. `day_done` og `young` vises i alle toner (de er lagret med `tone = 'humor'`).
+3. Bare tekster for oppgavens kategori eller generelle tekster.
+4. Sorter: ikke den siste teksten i samme gruppe som personen fikk (så samme tekst aldri kommer to ganger på rad), deretter ikke blant de 20 sist viste i husstanden først, deretter kategori foran generell, deretter tilfeldig. Er alle vist nylig, gjentas en tekst.
+5. `feedback_message_id` lagres på avkrysningen.
+
+Tekstene for feiringen (vanlige for barn, `day_done` og `young`) ligger i `*_child_celebration.sql`.
 
 Startsettet (33 tekster) ligger i migrasjonen `*_task_completions.sql` og er justert i `*_adjust_feedback_messages.sql` (36 aktive, 5 deaktivert). Tekster deaktiveres med `is_active = false` i stedet for å slettes, så tidligere avkrysninger beholder koblingen. Det flyttes til `supabase/seed/feedback.sql` og utvides til 80–100 i steg 12.
 
@@ -564,7 +569,7 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `set_my_avatar(p_avatar)` | medlem (brukes av barn) | ny avatar på egen `members`-rad, ingenting annet. RPC i stedet for policy, fordi kolonnerettigheter gjelder hele rollen `authenticated`: en update-policy for barn ville også gitt dem navn og fødselsår. Sjekker formen (`^[a-z_]{1,30}$`), ikke listen, så nyere appversjoner kan legge til avatarer. Feil: `not_authenticated`, `invalid_avatar`, `member_not_found` |
 | `set_my_avatar_mode(p_mode)` | medlem (brukes av barn) | figur eller bilde på egen `members`-rad. Bildet legges inn og fjernes bare av voksne. Feil: `not_authenticated`, `member_not_found`, `no_photo` (`photo` uten bilde) |
 | `my_photo_folders_to_delete() returns text[]` | innlogget (kalles av Edge `delete-account`) | bildemappene som forsvinner med kontoen, etter samme regler som `delete_my_account_data`: siste voksne gir alle mapper i husstanden, ellers egen mappe. Barn/uten medlemskap: ingen. Se §6 |
-| `complete_task(task_id, member_id)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
+| `complete_task(task_id, member_id, last_today)` / `undo_completion(completion_id)` | medlem (se §3) | avkrysning med neste frist og tilbakemelding / angring |
 | `activate_templates(p_household_id, p_template_ids, p_member_ids default null) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, med valgfri ansvarlig per mal (barnemaler til et barn, ellers felles), hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid), `invalid_assignment` (feil eller manglende barn, ulik lengde) |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `approve_completions(p_completion_ids)` / `reject_completion(p_completion_id)` | voksen, `household_has_access` | godkjenning av lønn (se §3). Feil: `not_adult` (barn, annen husstand, ukjent id), `subscription_required`, `not_pending` (bare avvisning) |

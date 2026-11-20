@@ -14,7 +14,8 @@ import {
   useTodayCompletions,
   useUndoCompletion,
 } from '../../../src/features/completions/hooks';
-import { FeedbackToast } from '../../../src/features/feedback/components/FeedbackToast';
+import { isLastOfToday, toCelebration, type Celebration } from '../../../src/features/feedback/celebration';
+import { CelebrationOverlay } from '../../../src/features/feedback/components/CelebrationOverlay';
 import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { earnedLabel } from '../../../src/features/rewards/format';
@@ -25,7 +26,6 @@ import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRo
 import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
 import { JOBS_KEY } from '../../../src/features/tasks/groupToday';
 import { useMemberUpcoming, useTodayTasks } from '../../../src/features/tasks/hooks';
-import { formatKroner } from '../../../src/features/tasks/reward';
 import type { Task } from '../../../src/features/tasks/types';
 import { CHILD_UPCOMING_DAYS } from '../../../src/features/tasks/upcoming';
 import { formatWeekdayDate, toIsoDate } from '../../../src/lib/dates';
@@ -43,13 +43,13 @@ import {
   useTheme,
 } from '../../../src/ui';
 
-type Toast = { completionId: string; title: string; message: string | null; reward?: string };
-
 /**
  * «I dag» på barnets egen enhet: «Mine oppgaver i dag» i barnets egen farge, og «Ekstrajobber».
  * Barnet krysser alltid av for seg selv, med ett trykk. Langt trykk gjør ingenting.
  * Nederst: «Kommende» (2 uker, uten hyppige oppgaver, som barnet ser hver dag uansett) og
  * «Gjort siste 3 dager». Den nærmeste forekomsten i «Kommende» kan krysses av tidlig.
+ * Etter avkrysning vises en feiring i fullskjerm (CelebrationOverlay). Angring: trykk på den
+ * utførte raden (DoneList).
  */
 export default function ChildTodayScreen() {
   const { colors, personColor } = useTheme();
@@ -87,7 +87,7 @@ export default function ChildTodayScreen() {
   const complete = useCompleteTask(householdId);
   const undo = useUndoCompletion(householdId);
   const insets = useSafeAreaInsets();
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   /** Alle utførte vises. Ny dag: foldes inn igjen. */
   const [expanded, setExpanded] = useState(false);
@@ -111,21 +111,14 @@ export default function ChildTodayScreen() {
   const recentDays = me ? groupRecentByDay(recent, me.id, today) : [];
 
   // Fra «I dag», «Ekstrajobber» og sirkelen i «Kommende» (gjort før fristen).
-  function markDone(task: Pick<Task, 'id' | 'title'>) {
+  // lastToday: bare fra «Mine oppgaver i dag», når oppgaven er den siste som gjenstår.
+  function markDone(task: Pick<Task, 'id'>, lastToday = false) {
     if (!me) return;
     setActionError(null);
     complete.mutate(
-      { taskId: task.id, memberId: me.id },
+      { taskId: task.id, memberId: me.id, lastToday },
       {
-        onSuccess: (result) =>
-          setToast({
-            completionId: result.completionId,
-            title: task.title,
-            message: result.feedbackText,
-            reward: result.rewardNok
-              ? `+${formatKroner(result.rewardNok)}${result.pending ? ' – venter på godkjenning' : ''}`
-              : undefined,
-          }),
+        onSuccess: (result) => setCelebration(toCelebration(result)),
         onError: (e) => setActionError(toNorwegianMessage(e)),
       },
     );
@@ -135,19 +128,8 @@ export default function ChildTodayScreen() {
   function undoDone(completion: TodayCompletion) {
     setActionError(null);
     undo.mutate(completion.id, {
-      onSuccess: () => setToast((t) => (t?.completionId === completion.id ? null : t)),
+      onSuccess: () => setCelebration((c) => (c?.completionId === completion.id ? null : c)),
       onError: (e) => setActionError(toNorwegianMessage(e)),
-    });
-  }
-
-  function handleUndo() {
-    if (!toast) return;
-    undo.mutate(toast.completionId, {
-      onSuccess: () => setToast(null),
-      onError: (e) => {
-        setToast(null);
-        setActionError(toNorwegianMessage(e));
-      },
     });
   }
 
@@ -177,7 +159,7 @@ export default function ChildTodayScreen() {
                   task={task}
                   checkColor={color.ring}
                   busy={busyId === task.id}
-                  onPress={() => markDone(task)}
+                  onPress={() => markDone(task, isLastOfToday(mine.map((t) => t.id), task.id))}
                 />
               ))}
               <DoneList
@@ -216,16 +198,8 @@ export default function ChildTodayScreen() {
         </View>
       </ScrollView>
 
-      {toast && (
-        <FeedbackToast
-          resetKey={toast.completionId}
-          title={toast.title}
-          message={toast.message}
-          reward={toast.reward}
-          undoing={undo.isPending}
-          onUndo={handleUndo}
-          onHide={() => setToast(null)}
-        />
+      {celebration && me && (
+        <CelebrationOverlay celebration={celebration} member={me} onHide={() => setCelebration(null)} />
       )}
     </View>
   );

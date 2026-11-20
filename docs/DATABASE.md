@@ -552,7 +552,7 @@ grant update (has_garden, has_car, has_cabin, has_air_heat_pump, has_fireplace,
 ```
 
 ### RPC-oversikt
-Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences` og `activate_templates`, som kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`.
+Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences` og `activate_templates`, som kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`. Hjelpefunksjoner i `private` som bare kalles fra slike RPC-er (`delete_anonymous_users`, `assert_adult_for_completions`, `member_balance`, `lock_today_completion`, `assert_reward_not_paid`, `lock_task_for_adult`, `board_template`) og systemjobbene (`roll_over_seasons`, `delete_stale_anonymous_users`) har ikke `execute` for `authenticated`. Gi og ta rettigheter per funksjon, ikke med `on all functions in schema private`: det åpner igjen det som er stengt.
 
 | Funksjon | Hvem | Gjør |
 |----------|------|------|
@@ -683,6 +683,10 @@ Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
     - Ukoblet og eldre enn 24 timer slettes. Ukoblet og ny beholdes, til den passerer 24 timer.
     - Koblet barn (koblingen består), koblet skjerm (raden består), e-postbruker uten kobling og voksen beholdes.
     - Timesjobben finnes. Innloggede kan ikke kjøre funksjonen.
+
+19. Rettigheter i `private` (`private_function_privileges.test.sql`):
+    - `authenticated`, `anon` og `public` har ikke `execute` på hjelpefunksjonene som bare kalles fra `security definer`-RPC-er eller systemjobber.
+    - Alle funksjoner i `public` som kaller dem, er `security definer` og eies av `postgres`.
 
 ---
 

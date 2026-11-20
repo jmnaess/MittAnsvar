@@ -13,6 +13,7 @@ import { useHowToSheet, useTaskHowTo } from '../../tasks/components/HowToSheet';
 import { howToForTemplate } from '../../tasks/howTo';
 import type { Task } from '../../tasks/types';
 import { PreparednessCard } from '../../preparedness/components/PreparednessCard';
+import { useInvalidatePreparedness } from '../../preparedness/hooks';
 import { useActivateTemplates, useTemplates } from '../hooks';
 import {
   activeTemplateIds,
@@ -158,8 +159,13 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
   const loadError = templates.error ?? tasks.error;
   const refetchTemplates = templates.refetch;
   const refetchTasks = tasks.refetch;
+  // Også beredskapslageret, så kortet øverst er oppdatert.
+  const refetchPreparedness = useInvalidatePreparedness(householdId);
   const pullToRefresh = usePullToRefresh(
-    useCallback(() => Promise.all([refetchTemplates(), refetchTasks()]), [refetchTemplates, refetchTasks]),
+    useCallback(
+      () => Promise.all([refetchTemplates(), refetchTasks(), refetchPreparedness()]),
+      [refetchTemplates, refetchTasks, refetchPreparedness],
+    ),
   );
 
   return (

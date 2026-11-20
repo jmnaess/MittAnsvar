@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { toIsoDate } from '../../lib/dates';
 import { useMembers, useMyHousehold } from '../household/hooks';
 import { listPreparedness, setPreparednessItem } from './api';
@@ -14,6 +15,18 @@ export function usePreparednessRows(householdId: string) {
     queryKey: preparednessKeys.all(householdId),
     queryFn: () => listPreparedness(householdId),
   });
+}
+
+/**
+ * Henter beredskapslageret på nytt (dra for å oppdatere i Årshjul og «I dag»). Stabil funksjon,
+ * så den kan stå i avhengighetene til en useCallback.
+ */
+export function useInvalidatePreparedness(householdId: string) {
+  const queryClient = useQueryClient();
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: preparednessKeys.all(householdId) }),
+    [queryClient, householdId],
+  );
 }
 
 /**

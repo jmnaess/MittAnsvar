@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, SectionList, StyleSheet, View } from 'react-native';
-import { Button, makeStyles, Message, pageWidth, spacing, Text, useTheme } from '../../../ui';
+import { Button, makeStyles, Message, pageWidth, SearchField, spacing, Text, useTheme } from '../../../ui';
 import { toIsoDate } from '../../../lib/dates';
 import { toNorwegianMessage } from '../../../lib/errors';
 import { usePullToRefresh } from '../../../lib/usePullToRefresh';
@@ -25,6 +25,7 @@ import {
   yearWheelTemplates,
 } from '../suggest';
 import type { TaskTemplate } from '../types';
+import { otherYearTemplates, searchYearSections } from '../yearSearch';
 import { OwnYearTaskRow } from './OwnYearTaskRow';
 import { TemplateRow } from './TemplateRow';
 
@@ -37,6 +38,9 @@ type Props = {
   onRevealed: () => void;
 };
 
+/** Seksjonen med søketreff blant malene som ikke passer hjemprofilen. */
+const OTHER_SECTION_KEY = 'other';
+
 /** Så mange ganger prøver listen på nytt når den ikke kommer fram til seksjonen. */
 const MAX_SCROLL_RETRIES = 3;
 
@@ -44,7 +48,12 @@ const MAX_SCROLL_RETRIES = 3;
  * «Årshjul» i «Oppgaver»: januar til desember, så «Med jevne mellomrom» (lange intervaller).
  * Hver seksjon viser malene som passer husstanden, med en bryter for å aktivere (lage oppgave) eller
  * deaktivere (arkivere den), og husstandens egne oppgaver, merket «Egen». Voksne kan trykke på en egen
- * oppgave eller en mal som er på, for å endre oppgaven. Voksne lager nye med «+» øverst.
+ * oppgave eller en mal som er på, for å endre oppgaven. Ellers åpner trykk «Slik gjør du».
+ * Voksne lager nye med «+» øverst.
+ *
+ * Søket filtrerer på tittel: bare måneder med treff vises, med månedsoverskriften. Gir det ingen treff,
+ * vises treff blant malene som ikke passer hjemprofilen under «Passer kanskje ikke hjemmet ditt».
+ * De kan slås på som vanlig, og står da i sin måned.
  */
 export function YearWheel({ header, reveal, onRevealed }: Props) {
   const { colors } = useTheme();
@@ -64,6 +73,8 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
   // Bryterens verdi mens en endring lagres, så den ikke hopper tilbake før listen er hentet på nytt.
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const searching = query.trim() !== '';
 
   const today = toIsoDate(new Date());
   const suggested = yearWheelTemplates(
@@ -71,7 +82,24 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
     household!,
     activeTemplateIds(tasks.data ?? []),
   );
-  const sections = groupByMonth(suggested, tasks.data ?? []);
+  const monthSections = searchYearSections(groupByMonth(suggested, tasks.data ?? []), query);
+  // Ingen treff i årshjulet: let i malene som ikke passer hjemprofilen.
+  const otherHits =
+    searching && monthSections.length === 0
+      ? otherYearTemplates(templates.data ?? [], new Set(suggested.map((t) => t.id)), query)
+      : [];
+  const otherTitle = new Map(otherHits.map((h) => [h.template.id, h.sectionTitle]));
+  const sections: MonthSection[] =
+    otherHits.length > 0
+      ? [
+          {
+            key: OTHER_SECTION_KEY,
+            month: null,
+            title: 'Passer kanskje ikke hjemmet ditt',
+            data: otherHits.map(({ template }): YearItem => ({ kind: 'template', key: `t-${template.id}`, template })),
+          },
+        ]
+      : monthSections;
   const nameOf = (memberId: string | null) =>
     members.find((m) => m.id === memberId)?.display_name ?? 'Felles';
 
@@ -176,6 +204,7 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
         sections={sections}
         keyExtractor={(item) => item.key}
         stickySectionHeadersEnabled={false}
+        keyboardShouldPersistTaps="handled"
         {...pullToRefresh}
         // Uten faste høyder kan listen ikke alltid rulle rett til en seksjon langt nede.
         // Rull omtrent dit først, og prøv igjen når radene der er tegnet.
@@ -188,12 +217,16 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
         ListHeaderComponent={
           <View style={styles.header}>
             {header}
-            <PreparednessCard />
-            <Text variant="meta" color={colors.textMuted}>
-              Årshjulet husker det som bare skjer noen ganger i året. Slå på det som passer, eller
-              lag egne med +. Oppgavene dukker opp i «I dag» når det er tid.
-            </Text>
-            {isAdult && notActive.length > 0 && (
+            <SearchField value={query} onChangeText={setQuery} placeholder="Søk i årshjulet" />
+            {/* Under søk står treffene rett under feltet. */}
+            {!searching && <PreparednessCard />}
+            {!searching && (
+              <Text variant="meta" color={colors.textMuted}>
+                Årshjulet husker det som bare skjer noen ganger i året. Slå på det som passer, eller
+                lag egne med +. Oppgavene dukker opp i «I dag» når det er tid.
+              </Text>
+            )}
+            {!searching && isAdult && notActive.length > 0 && (
               <Button
                 title="Huk av alle"
                 variant="secondary"
@@ -201,7 +234,7 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
                 disabled={activate.isPending}
               />
             )}
-            {isAdult && !hasAnyAnswer(household!) && (
+            {!searching && isAdult && !hasAnyAnswer(household!) && (
               <Button
                 title="Fortell om hjemmet for flere forslag"
                 variant="text"
@@ -213,6 +246,9 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
             )}
             {(loadError || actionError) && <Message>{actionError ?? toNorwegianMessage(loadError)}</Message>}
           </View>
+        }
+        ListEmptyComponent={
+          searching && loaded ? <Message tone="muted">{`Ingen treff på «${query.trim()}».`}</Message> : undefined
         }
         renderSectionHeader={({ section }) => (
           <Text variant="sectionTitle" accessibilityRole="header" style={styles.month}>{section.title}</Text>
@@ -228,23 +264,29 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
         renderItem={({ item, section }) => {
           const inIntervals = section.key === INTERVAL_SECTION_KEY;
           if (item.kind === 'own') {
+            const howTo = infoPress(howToOf(item.task));
             return (
               <OwnYearTaskRow
                 task={item.task}
                 assigneeName={nameOf(item.task.assigned_member_id)}
                 when={inIntervals ? describeEvery(item.task, item.task.next_due_on, today) : undefined}
-                onInfoPress={infoPress(howToOf(item.task))}
+                onInfoPress={howTo}
+                // Voksne endrer oppgaven, barn får «Slik gjør du» (om den finnes).
                 onPress={
                   isAdult
                     ? () => router.push({ pathname: '/task/[id]', params: { id: item.task.id, ...FROM_TASKS } })
-                    : undefined
+                    : howTo
                 }
+                opensHowTo={!isAdult}
               />
             );
           }
           const template = item.template;
           const task = taskByTemplate.get(template.id) ?? null;
           const isPending = template.id in pending;
+          // Aktivert: oppgavens tekst (den kan være endret). Ellers malens.
+          const howTo = infoPress(task ? howToOf(task) : howToForTemplate(template));
+          const opensTask = isAdult && task !== null;
           return (
             <TemplateRow
               template={template}
@@ -252,15 +294,22 @@ export function YearWheel({ header, reveal, onRevealed }: Props) {
               value={isPending ? pending[template.id] : task !== null}
               disabled={!isAdult || isPending}
               onToggle={(on) => toggle(template, on)}
-              when={inIntervals ? describeEvery(template, task?.next_due_on ?? null, today) : undefined}
-              // Aktivert: oppgavens tekst (den kan være endret). Ellers malens.
-              onInfoPress={infoPress(task ? howToOf(task) : howToForTemplate(template))}
-              // En mal som er på, er en vanlig oppgave: voksne kan endre ansvarlig, lønn og frist.
-              onPress={
-                isAdult && task
-                  ? () => router.push({ pathname: '/task/[id]', params: { id: task.id, ...FROM_TASKS } })
-                  : undefined
+              when={
+                section.key === OTHER_SECTION_KEY
+                  ? otherTitle.get(template.id)
+                  : inIntervals
+                    ? describeEvery(template, task?.next_due_on ?? null, today)
+                    : undefined
               }
+              onInfoPress={howTo}
+              // En mal som er på, er en vanlig oppgave: voksne kan endre ansvarlig, lønn og frist.
+              // Ellers åpner trykk malen («Slik gjør du»).
+              onPress={
+                opensTask
+                  ? () => router.push({ pathname: '/task/[id]', params: { id: task.id, ...FROM_TASKS } })
+                  : howTo
+              }
+              opensHowTo={!opensTask}
             />
           );
         }}

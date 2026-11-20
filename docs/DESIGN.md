@@ -125,6 +125,14 @@ Lyst tema (`lightPersonColors`):
 | lion | `#FFF0CC` | `#6B4A00` | `#B48019` |
 | dog | `#E4EEF6` | `#24435E` | `#588BB7` |
 | unicorn | `#FBE6F6` | `#6A2C5E` | `#C064A8` |
+| elk | `#EFF0DA` | `#4A4A1A` | `#7D7A35` |
+| seal | `#E5ECF2` | `#2D4256` | `#5F7C96` |
+| otter | `#DFF1EA` | `#1F4F3F` | `#3F8C72` |
+| badger | `#E8E9F3` | `#33385C` | `#5C6290` |
+| sheep | `#F0ECF4` | `#4A4258` | `#857A99` |
+| hedgehog | `#F7E6E6` | `#6A3438` | `#A8636A` |
+| squirrel | `#FBE5DC` | `#6E2E17` | `#B0502C` |
+| puffin | `#FFE6E1` | `#7A2A1F` | `#DE5A45` |
 | Felles (og ukjent) | `#F4EFE6` | `#5C4A2A` | primary |
 
 Mørkt tema (`darkPersonColors`): dyp, mettet tint, lys pastell som ink og en lysnet ring.
@@ -141,6 +149,14 @@ Mørkt tema (`darkPersonColors`): dyp, mettet tint, lys pastell som ink og en ly
 | lion | `#382C0E` | `#F7D681` | `#E6AE34` |
 | dog | `#1C2B38` | `#B5D2EC` | `#74A6D2` |
 | unicorn | `#3A2132` | `#F0BCE2` | `#D682C0` |
+| elk | `#2C2C16` | `#DCDCA6` | `#ABA85A` |
+| seal | `#1F2A34` | `#BFD0E0` | `#8AA6C0` |
+| otter | `#16302A` | `#A9DCC9` | `#5FB396` |
+| badger | `#23253A` | `#C8CBE8` | `#9095C8` |
+| sheep | `#2A2632` | `#D9D2E4` | `#A79CBC` |
+| hedgehog | `#37201F` | `#EDBFC1` | `#CF8A90` |
+| squirrel | `#3A2016` | `#F4BCA4` | `#E07A52` |
+| puffin | `#3E2019` | `#F9B9AD` | `#F07A66` |
 | Felles (og ukjent) | `#2E261D` | `#E8D3AC` | primary |
 
 ### Avrunding og avstand
@@ -273,6 +289,13 @@ overskriften teller rader. Bare visningen: hver person har fortsatt sin egen opp
 oppgaver merket «Egen» (`OwnYearTaskRow`), begge `ListRow`. Voksne kan trykke på en egen oppgave, eller en
 mal som er på, for å endre oppgaven. Øverst en kort forklaring, «Velg anbefalte» og «Fortell om hjemmet for
 flere forslag» (voksne). + åpner «Ny årlig oppgave» og vises bare for voksne. Ikke personfilter.
+Trykk på en rad som ikke åpner oppgaven (mal som er av, eller barn), viser «Slik gjør du».
+`SearchField` («Søk i årshjulet») under segmentene søker på tittel i husstandens årshjul-oppgaver og malene
+(`features/templates/yearSearch.ts`, samme treffregel som Hverdag). Bare måneder med treff vises, med
+månedsoverskriften; forklaringen, beredskapskortet og knappene skjules under søk. Gir det ingen treff, vises
+treff blant malene som ikke passer hjemprofilen under «Passer kanskje ikke hjemmet ditt», med måneden i
+metalinjen. De slås på med bryteren som vanlig. Ingen treff i det hele tatt: «Ingen treff på «…».». Tomt søk
+viser årshjulet som før.
 
 Hjelpefunksjoner: `useTheme().personColor(avatar)`, `waitingText(names)` («Leah, Jesper og 2 til venter»),
 `jobColumns(count)`, `contrastRatio(a, b)`.
@@ -314,7 +337,13 @@ skjermen, fordi husstanden ikke kan hentes på nytt før oppstarten er ferdig (d
 Nøklene i `members.avatar` er uendret (`features/household/avatars.ts`). Tegningene ligger i
 `src/ui/avatarArt.tsx` (viewBox 0 0 48 48): sirkelbakgrunn, enkle flate former, to prikkøyne,
 ingen omriss. En ny avatar trenger en tegning der, en farge i `personColors` og en `label`.
-Ukjente nøkler vises som et nøytralt fjes. Tegningene er like i begge temaer: de er
+Ukjente nøkler (f.eks. en eldre app som ser en nyere figur) vises som reven (`avatarArtFor`,
+`FALLBACK_AVATAR`) med de nøytrale Felles-fargene, aldri tomt (`features/household/__tests__/avatars.test.ts`).
+Figurene: bjørn, katt, rev, frosk, kanin, ugle, panda, løve, hund, enhjørning, og de roligere elg, sel, oter,
+grevling og sau (passer også voksne), pinnsvin, ekorn og lunde.
+Voksne bytter egen figur på personskjermen (`app/(app)/member/[id].tsx`, «Figuren din»), som åpnes fra
+«Husstand» eller «Din profil» øverst i Innstillinger. Den lagres med en gang via `set_my_avatar`.
+Barnas figur endres i «Endre barn», og andre voksnes figur kan ikke endres. Tegningene er like i begge temaer: de er
 «klistremerker» med lys pastellsirkel, som synes godt mot mørk flate (mørkere sirkler ville gjort
 bjørn, hund og pandaørene nesten usynlige). `AvatarPicker` viser dem i tre kolonner, valgt med
 3 px primary-kant.

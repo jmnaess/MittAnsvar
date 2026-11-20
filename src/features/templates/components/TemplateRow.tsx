@@ -15,12 +15,24 @@ type Props = {
   when?: string;
   /** Åpner oppgaven malen er aktivert som. Utelatt = bare bryteren. */
   onPress?: () => void;
+  /** Trykk på raden åpner «Slik gjør du» i stedet for oppgaven (for tekst til skjermleser). */
+  opensHowTo?: boolean;
   /** Åpner «Slik gjør du». Forklaringen står bak ikonet, ikke i raden. */
   onInfoPress?: () => void;
 };
 
 /** Én mal i årshjulet: tittel, (i) for «Slik gjør du», bryter og neste frist når den er aktivert. Trykk åpner oppgaven. */
-export function TemplateRow({ template, task, value, disabled, onToggle, when, onPress, onInfoPress }: Props) {
+export function TemplateRow({
+  template,
+  task,
+  value,
+  disabled,
+  onToggle,
+  when,
+  onPress,
+  opensHowTo = false,
+  onInfoPress,
+}: Props) {
   return (
     <ListRow
       title={template.title}
@@ -35,7 +47,7 @@ export function TemplateRow({ template, task, value, disabled, onToggle, when, o
       onPress={onPress}
       onInfoPress={onInfoPress}
       reserveChevron
-      accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}
+      accessibilityHint={onPress ? (opensHowTo ? 'Viser slik gjør du' : 'Åpner oppgaven for redigering') : undefined}
       right={
         <Switch
           value={value}

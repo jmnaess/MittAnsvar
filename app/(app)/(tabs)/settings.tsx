@@ -18,6 +18,7 @@ import { AppearanceSection } from '../../../src/features/appearance/AppearanceSe
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useAccountActions } from '../../../src/features/auth/useAccountActions';
 import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
+import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
 import { useMyHousehold, useMyMember, useUpdateHousehold } from '../../../src/features/household/hooks';
 import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
 import type { Household } from '../../../src/features/household/types';
@@ -36,6 +37,7 @@ export default function SettingsScreen() {
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
+      <ProfileSection household={household!} />
       <HouseholdSection household={household!} />
       <HomeSection household={household!} />
       <Section title="Påminnelser">
@@ -44,6 +46,24 @@ export default function SettingsScreen() {
       <AppearanceSection />
       <AccountSection />
     </ScrollView>
+  );
+}
+
+/** «Din profil» (voksne): åpner personskjermen med navn, figur og profilbilde. */
+function ProfileSection({ household }: { household: Household }) {
+  const me = useMyMember(household.id);
+  const { personColor } = useTheme();
+  if (me?.role !== 'adult') return null;
+
+  return (
+    <Section title="Din profil">
+      <ListRow
+        title={me.display_name}
+        meta="Navn, figur og profilbilde"
+        left={<MemberAvatar member={me} size={44} ring={personColor(me.avatar).ring} />}
+        onPress={() => router.push({ pathname: '/member/[id]', params: { id: me.id } })}
+      />
+    </Section>
   );
 }
 

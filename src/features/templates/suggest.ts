@@ -22,7 +22,7 @@ export function fitsHousehold(t: TaskTemplate, household: SuggestionHousehold): 
  * Årshjulet: samme regel som for oppgaver (tasks/section.ts). Årlige maler står under måneden,
  * sesongmaler i periodens første måned, og lange intervallmaler under «Med jevne mellomrom».
  */
-function isYearWheelTemplate(t: TaskTemplate): boolean {
+export function isYearWheelTemplate(t: TaskTemplate): boolean {
   return taskSection(t) === 'year';
 }
 
@@ -177,6 +177,20 @@ export function yearSectionKey(r: Pick<Task, 'month' | 'season_start_month'>): s
   return month === null ? INTERVAL_SECTION_KEY : `month-${month}`;
 }
 
+const INTERVAL_SECTION_TITLE = 'Med jevne mellomrom';
+
+/** Overskriften til en måned i årshjulet: «Mars». null = «Med jevne mellomrom». */
+function monthTitle(month: number | null): string {
+  if (month === null) return INTERVAL_SECTION_TITLE;
+  const name = MONTH_NAMES[month - 1];
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** Seksjonen en rad står i, som tekst: «Mars» eller «Med jevne mellomrom». */
+export function yearSectionTitle(r: Pick<Task, 'month' | 'season_start_month'>): string {
+  return monthTitle(yearWheelMonth(r));
+}
+
 /**
  * Januar til desember, så «Med jevne mellomrom». I hver seksjon: malene først (i malenes
  * rekkefølge), så egne oppgaver alfabetisk. Seksjoner uten noe er med, så hele året vises.
@@ -200,10 +214,8 @@ export function groupByMonth(templates: TaskTemplate[], ownTasks: Task[]): Month
     ],
   });
   return [
-    ...MONTH_NAMES.map((name, i) =>
-      section(`month-${i + 1}`, i + 1, name.charAt(0).toUpperCase() + name.slice(1)),
-    ),
-    section(INTERVAL_SECTION_KEY, null, 'Med jevne mellomrom'),
+    ...MONTH_NAMES.map((_name, i) => section(`month-${i + 1}`, i + 1, monthTitle(i + 1))),
+    section(INTERVAL_SECTION_KEY, null, INTERVAL_SECTION_TITLE),
   ];
 }
 

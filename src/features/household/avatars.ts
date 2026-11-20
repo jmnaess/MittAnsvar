@@ -13,6 +13,14 @@ export const AVATARS = {
   lion: { label: 'Løve' },
   dog: { label: 'Hund' },
   unicorn: { label: 'Enhjørning' },
+  elk: { label: 'Elg' },
+  seal: { label: 'Sel' },
+  otter: { label: 'Oter' },
+  badger: { label: 'Grevling' },
+  sheep: { label: 'Sau' },
+  hedgehog: { label: 'Pinnsvin' },
+  squirrel: { label: 'Ekorn' },
+  puffin: { label: 'Lunde' },
 } as const;
 
 export type AvatarKey = keyof typeof AVATARS;

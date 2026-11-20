@@ -220,6 +220,14 @@ export const lightPersonColors: Record<string, PersonColor> = {
   lion: { tint: '#FFF0CC', ink: '#6B4A00', ring: '#B48019' },
   dog: { tint: '#E4EEF6', ink: '#24435E', ring: '#588BB7' },
   unicorn: { tint: '#FBE6F6', ink: '#6A2C5E', ring: '#C064A8' },
+  elk: { tint: '#EFF0DA', ink: '#4A4A1A', ring: '#7D7A35' },
+  seal: { tint: '#E5ECF2', ink: '#2D4256', ring: '#5F7C96' },
+  otter: { tint: '#DFF1EA', ink: '#1F4F3F', ring: '#3F8C72' },
+  badger: { tint: '#E8E9F3', ink: '#33385C', ring: '#5C6290' },
+  sheep: { tint: '#F0ECF4', ink: '#4A4258', ring: '#857A99' },
+  hedgehog: { tint: '#F7E6E6', ink: '#6A3438', ring: '#A8636A' },
+  squirrel: { tint: '#FBE5DC', ink: '#6E2E17', ring: '#B0502C' },
+  puffin: { tint: '#FFE6E1', ink: '#7A2A1F', ring: '#DE5A45' },
 };
 
 /** Mørk variant: dyp, mettet tint, lys pastell som ink og en lysnet ring. */
@@ -234,6 +242,14 @@ export const darkPersonColors: Record<string, PersonColor> = {
   lion: { tint: '#382C0E', ink: '#F7D681', ring: '#E6AE34' },
   dog: { tint: '#1C2B38', ink: '#B5D2EC', ring: '#74A6D2' },
   unicorn: { tint: '#3A2132', ink: '#F0BCE2', ring: '#D682C0' },
+  elk: { tint: '#2C2C16', ink: '#DCDCA6', ring: '#ABA85A' },
+  seal: { tint: '#1F2A34', ink: '#BFD0E0', ring: '#8AA6C0' },
+  otter: { tint: '#16302A', ink: '#A9DCC9', ring: '#5FB396' },
+  badger: { tint: '#23253A', ink: '#C8CBE8', ring: '#9095C8' },
+  sheep: { tint: '#2A2632', ink: '#D9D2E4', ring: '#A79CBC' },
+  hedgehog: { tint: '#37201F', ink: '#EDBFC1', ring: '#CF8A90' },
+  squirrel: { tint: '#3A2016', ink: '#F4BCA4', ring: '#E07A52' },
+  puffin: { tint: '#3E2019', ink: '#F9B9AD', ring: '#F07A66' },
 };
 
 /** «Felles»-seksjonen, og reserve for ukjente avatarnøkler. */

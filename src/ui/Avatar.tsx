@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { View } from 'react-native';
 import Svg from 'react-native-svg';
-import { avatarArt, fallbackArt } from './avatarArt';
+import { avatarArtFor } from './avatarArt';
 import { useTheme } from './ThemeProvider';
 
 /** Størrelsene designsystemet bruker. */
@@ -43,7 +43,7 @@ export function Avatar({ avatar, photo, size = 44, ring, outlined }: Props) {
     />
   ) : (
     <Svg width={size} height={size} viewBox="0 0 48 48">
-      {avatarArt[avatar] ?? fallbackArt}
+      {avatarArtFor(avatar)}
     </Svg>
   );
 

@@ -23,7 +23,7 @@ export default function ChildTabsLayout() {
         options={{
           title: 'Min lønn',
           tabBarIcon: tabIcon('wallet'),
-          headerRight: () => <MyProfileButton size={32} />,
+          headerRight: () => <MyProfileButton />,
           headerRightContainerStyle: { paddingRight: spacing.page },
         }}
       />

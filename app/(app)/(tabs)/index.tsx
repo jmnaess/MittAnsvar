@@ -500,7 +500,7 @@ export default function TodayScreen() {
         <PageHeader
           overline={formatWeekdayDate(today)}
           title="I dag"
-          right={<MyProfileButton size={48} />}
+          right={<MyProfileButton />}
         />
 
         {members.length > 1 && (

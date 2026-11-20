@@ -49,6 +49,6 @@ export default function TabsLayout() {
 
 /** Egen avatar i navigasjonsheaderen (se MyProfileButton). */
 const profileHeaderRight = {
-  headerRight: () => <MyProfileButton size={32} />,
+  headerRight: () => <MyProfileButton />,
   headerRightContainerStyle: { paddingRight: spacing.page },
 };

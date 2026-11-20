@@ -146,7 +146,7 @@ export default function ChildTodayScreen() {
         <PageHeader
           overline={formatWeekdayDate(today)}
           title={me ? `Hei, ${me.display_name}!` : 'I dag'}
-          right={<MyProfileButton size={48} />}
+          right={<MyProfileButton />}
         />
 
         <View style={styles.body}>

@@ -27,6 +27,7 @@ export function OwnYearTaskRow({ task, assigneeName, onPress, when, onInfoPress 
       }
       onPress={onPress}
       onInfoPress={onInfoPress}
+      reserveChevron
       accessibilityLabel={`${task.title}. Egen oppgave`}
       accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}
     />

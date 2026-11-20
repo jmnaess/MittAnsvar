@@ -22,6 +22,11 @@ type Props = {
   onLongPress?: () => void;
   /** Satt: (i)-ikon etter teksten som åpner «Slik gjør du». Trykk på raden er uendret. */
   onInfoPress?: () => void;
+  /**
+   * Tom plass med pilens bredde når raden ikke kan trykkes. Brukes i lister der bare noen rader
+   * har pil (årshjulet), så (i), bryteren og pilen står på samme sted på alle rader.
+   */
+  reserveChevron?: boolean;
   /** Raden ligger i et hvitt kort: bruk surfaceMuted som bakgrunn. */
   muted?: boolean;
   accessibilityLabel?: string;
@@ -30,7 +35,8 @@ type Props = {
 
 /** Én rad i en liste (Oppgaver, Årshjul, Husstand, historikk): hvit, avrundet, pil når den kan trykkes. */
 export function ListRow({
-  title, meta, left, right, badge, onPress, onLongPress, onInfoPress, muted, accessibilityLabel, accessibilityHint,
+  title, meta, left, right, badge, onPress, onLongPress, onInfoPress, reserveChevron, muted,
+  accessibilityLabel, accessibilityHint,
 }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -61,10 +67,17 @@ export function ListRow({
       </View>
       {onInfoPress && <InfoButton onPress={onInfoPress} title={title} />}
       {right}
-      {onPress && <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />}
+      {(onPress || reserveChevron) && (
+        // Fast bredde, så den tomme plassen er nøyaktig like bred som pilen.
+        <View style={styles.chevron}>
+          {onPress && <Ionicons name="chevron-forward" size={CHEVRON_SIZE} color={colors.textMuted} />}
+        </View>
+      )}
     </Pressable>
   );
 }
+
+const CHEVRON_SIZE = 20;
 
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
@@ -84,5 +97,6 @@ const useStyles = makeStyles(({ colors }) =>
     text: { flex: 1, gap: 2 },
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
     title: { flexShrink: 1 },
+    chevron: { width: CHEVRON_SIZE, alignItems: 'center' },
   }),
 );

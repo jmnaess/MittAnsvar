@@ -34,6 +34,7 @@ export function TemplateRow({ template, task, value, disabled, onToggle, when, o
       }
       onPress={onPress}
       onInfoPress={onInfoPress}
+      reserveChevron
       accessibilityHint={onPress ? 'Åpner oppgaven for redigering' : undefined}
       right={
         <Switch

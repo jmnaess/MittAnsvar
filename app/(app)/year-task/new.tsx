@@ -18,7 +18,7 @@ export default function NewYearlyTaskScreen() {
   const { data: household } = useMyHousehold();
   const { data: members } = useMembers(household!.id);
   const createTasks = useCreateTasks(household!.id);
-  const form = useYearlyTaskForm();
+  const form = useYearlyTaskForm(members ?? [], household?.type);
   const params = useLocalSearchParams<{ from?: string }>();
 
   function save() {

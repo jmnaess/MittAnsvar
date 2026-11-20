@@ -1,6 +1,5 @@
 import type { TodayCompletion } from '../completions/api';
-import type { TodaySection } from './groupToday';
-import { JOBS_KEY } from './groupToday';
+import { isSharedYearTask, JOBS_KEY, type TodaySection } from './groupToday';
 import type { TodayTask } from './types';
 
 export const MINE_KEY = 'mine';
@@ -8,11 +7,14 @@ export const MINE_KEY = 'mine';
 /**
  * «I dag» på barnets egen enhet (steg 10a): bare det barnet kan krysse av.
  *
- * - «Mine oppgaver i dag»: oppgaver til barnet og felles oppgaver, også månedsoppgaver.
+ * - «Mine oppgaver i dag»: oppgaver til barnet og felles oppgaver, også månedsoppgaver. Felles
+ *   årshjul-oppgaver (isSharedYearTask) er for voksne og vises ikke. En årshjul-oppgave som står
+ *   på barnet, vises.
  * - «Ekstrajobber»: jobber for alle barna eller for dette barnet.
  *
- * Samme regel som i complete_task i databasen, så barnet aldri ser en oppgave det ikke får lov
- * til å krysse av. Tomme seksjoner vises ikke.
+ * Barnet ser aldri en oppgave det ikke får lov til å krysse av i complete_task. complete_task
+ * lar likevel barnet krysse av felles årshjul-oppgaver (kjent begrensning, docs/DATABASE.md).
+ * Tomme seksjoner vises ikke.
  *
  * done: dagens avkrysninger. Barnet ser bare sine egne (RLS), og alle vises under «Mine oppgaver
  * i dag», også jobber barnet har tatt.
@@ -24,7 +26,9 @@ export function childTodaySections(
 ): TodaySection[] {
   const isJob = (t: TodayTask) => t.recurrence_type === 'job';
   const mine = tasks.filter(
-    (t) => !isJob(t) && (t.assigned_member_id === null || t.assigned_member_id === meId),
+    (t) =>
+      !isJob(t) &&
+      (t.assigned_member_id === meId || (t.assigned_member_id === null && !isSharedYearTask(t))),
   );
   const jobs = tasks.filter((t) => {
     if (!isJob(t)) return false;

@@ -3,8 +3,17 @@ import { StyleSheet, View } from 'react-native';
 import { toIsoDate } from '../../../lib/dates';
 import { Avatar, ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import { useMemberPhotoLookup } from '../../household/hooks';
-import type { Member } from '../../household/types';
-import { allAdults, allowedAssignees, nextAssignees, SHARED, toTaskInputs, yearlyAdultsHint } from '../assignees';
+import type { HouseholdType, Member } from '../../household/types';
+import {
+  allAdults,
+  allowedAssignees,
+  nextAssignees,
+  SHARED,
+  soloMemberId,
+  toTaskInputs,
+  waitingForSolo,
+  yearlyAdultsHint,
+} from '../assignees';
 import { type CategoryKey, toCategory } from '../categories';
 import { defaultRecurrenceForm, fromRecurrence, sameWhen, toRecurrence } from '../recurrence';
 import { MAX_REWARD_NOK, taskReward } from '../reward';
@@ -30,8 +39,12 @@ type Initial = Omit<TaskInput, 'category'> & { category: string; next_due_on: st
 export function useTaskForm(
   members: Member[],
   initial?: Initial,
-  /** Ny oppgave: hvem som er forhåndsvalgt (f.eks. fra personfilteret i «Oppgaver»). Standard er «Felles». */
-  options?: { assignees?: string[] },
+  /**
+   * assignees: ny oppgave, hvem som er forhåndsvalgt (f.eks. fra personfilteret i «Oppgaver»).
+   * Standard er «Felles».
+   * householdType: «Enslig» med én person skjuler «Hvem har ansvaret?» (se soloMemberId).
+   */
+  options?: { assignees?: string[]; householdType?: HouseholdType },
 ) {
   // Enhetens dato når skjemaet åpnes. I dag og I morgen regnes fra den.
   const [today] = useState(() => toIsoDate(new Date()));
@@ -59,12 +72,19 @@ export function useTaskForm(
   // har en eksisterende årsoppgave, også om det er et barn.
   const yearly = schedule !== null && taskSection(schedule) === 'year';
   const keepId = initial && taskSection(initial) === 'year' ? initial.assigned_member_id : null;
-  const chosen = allowedAssignees(assignees, members, { yearly, keepId });
+  // Enslig: en ny oppgave lagres på personen. En oppgave som endres, beholder ansvarlig (valget er
+  // skjult og kan ikke endres), så en felles oppgave blir ikke stille gjort om til personens.
+  const soloId = soloMemberId(options?.householdType, members);
+  const chosen =
+    soloId && !initial ? [soloId] : allowedAssignees(assignees, members, { yearly, keepId });
   // Årshjul-oppgaver har aldri lønn (feltet er skjult), uansett ansvarlig.
   const rewardNok = taskReward(reward, { yearly });
 
   const values: TaskInput[] | null =
-    trimmedTitle.length > 0 && schedule && rewardNok !== undefined
+    trimmedTitle.length > 0 &&
+    schedule &&
+    rewardNok !== undefined &&
+    !waitingForSolo(options?.householdType, members)
       ? toTaskInputs(
           { title: trimmedTitle, category, job_member_ids: [], reward_nok: rewardNok, ...schedule },
           chosen,
@@ -81,6 +101,8 @@ export function useTaskForm(
     /** Utvalget slik det lagres (uten barn når oppgaven blir en årsoppgave). */
     assignees: chosen,
     setAssignees,
+    /** Enslig husstand: «Hvem har ansvaret?» vises ikke. */
+    hideAssignees: soloId !== null,
     /** Oppgaven blir en årsoppgave: bare voksne og Felles (og keepId) kan velges. */
     yearly,
     keepId,
@@ -155,7 +177,8 @@ export function TaskFields({ form, members, canSetReward, disabled }: Props) {
         today={form.today}
         disabled={disabled}
       />
-      {form.multiple ? (
+      {/* Enslig: ingen å velge mellom (se soloMemberId). */}
+      {form.hideAssignees ? null : form.multiple ? (
         <>
           <MultiChoiceChips
             label="Hvem har ansvaret?"

@@ -199,11 +199,13 @@ export default function TodayScreen() {
 
   const me = members.find((m) => m.auth_user_id === session?.user.id);
   const isAdult = me?.role === 'adult';
-  // Voksne ser alltid «Ekstrajobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
+  // Ekstrajobber er for barn: uten barn ingen tomt «Ekstrajobber»-kort og ingen «Ekstrajobb» i plussen.
+  const hasChildren = members.some((m) => m.role === 'child');
+  // Voksne med barn ser alltid «Ekstrajobber», så de vet hvor jobbene havner. Ikke før listen er hentet.
   // Personvisning: alle personer får kort, så personens kort finnes selv om det bare får felles
   // årshjul-oppgaver. Tomme kort fjernes under.
   const allSections = groupTodayByMember(tasks ?? [], members, {
-    showEmptyJobs: isAdult && !isPending,
+    showEmptyJobs: isAdult && hasChildren && !isPending,
     showAllMembers: focused !== undefined,
     done,
   });
@@ -488,7 +490,7 @@ export default function TodayScreen() {
     );
   }
 
-  const addItems = todayAddMenu({ isAdult, memberId: focusedId });
+  const addItems = todayAddMenu({ isAdult, memberId: focusedId, hasChildren });
   const hasFab = addItems.length > 0;
 
   return (

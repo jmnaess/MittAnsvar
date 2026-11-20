@@ -3,9 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { Avatar, ChoiceChips, Hint, MultiChoiceChips, TextField } from '../../../ui';
 import { MONTH_NAMES } from '../../../lib/dates';
 import { useMemberPhotoLookup } from '../../household/hooks';
-import type { Member } from '../../household/types';
+import type { HouseholdType, Member } from '../../household/types';
 import type { CategoryKey } from '../categories';
-import { YEARLY_ADULTS_HINT } from '../assignees';
+import { soloMemberId, waitingForSolo, YEARLY_ADULTS_HINT } from '../assignees';
 import { toYearlyInputs } from '../yearly';
 import { CategoryPicker } from './CategoryPicker';
 
@@ -14,26 +14,34 @@ const SHARED = 'shared';
 
 const MONTH_OPTIONS = MONTH_NAMES.map((name, i) => ({ value: i + 1, label: name.slice(0, 3) }));
 
-/** Tilstanden i «Ny årlig oppgave». value er null så lenge skjemaet ikke er gyldig. */
-export function useYearlyTaskForm() {
+/**
+ * Tilstanden i «Ny årlig oppgave». value er null så lenge skjemaet ikke er gyldig.
+ * Enslig husstand med én person: «Hvem har ansvaret?» skjules, og oppgaven lagres på personen.
+ */
+export function useYearlyTaskForm(members: Pick<Member, 'id'>[], householdType?: HouseholdType) {
   const [title, setTitle] = useState('');
   const [assignee, setAssignee] = useState(SHARED);
   const [months, setMonths] = useState<number[]>([]);
   // Årshjulet er mest vedlikehold, så det er forhåndsvalgt.
   const [category, setCategory] = useState<CategoryKey>('maintenance');
 
-  const value = toYearlyInputs({
-    title,
-    assigneeId: assignee === SHARED ? null : assignee,
-    months,
-    category,
-  });
+  const soloId = soloMemberId(householdType, members);
+  const value = waitingForSolo(householdType, members)
+    ? null
+    : toYearlyInputs({
+        title,
+        assigneeId: soloId ?? (assignee === SHARED ? null : assignee),
+        months,
+        category,
+      });
 
   return {
     title,
     setTitle,
     assignee,
     setAssignee,
+    /** Enslig husstand: «Hvem har ansvaret?» vises ikke. */
+    hideAssignee: soloId !== null,
     months,
     setMonths,
     category,
@@ -75,14 +83,19 @@ export function YearlyTaskFields({ form, members, disabled }: Props) {
         maxLength={80}
         editable={!disabled}
       />
-      <ChoiceChips
-        label="Hvem har ansvaret?"
-        options={assigneeOptions}
-        value={form.assignee}
-        onChange={form.setAssignee}
-        disabled={disabled}
-      />
-      {members.some((m) => m.role === 'child') && <Hint>{YEARLY_ADULTS_HINT}</Hint>}
+      {/* Enslig: ingen å velge mellom (se soloMemberId). */}
+      {!form.hideAssignee && (
+        <>
+          <ChoiceChips
+            label="Hvem har ansvaret?"
+            options={assigneeOptions}
+            value={form.assignee}
+            onChange={form.setAssignee}
+            disabled={disabled}
+          />
+          {members.some((m) => m.role === 'child') && <Hint>{YEARLY_ADULTS_HINT}</Hint>}
+        </>
+      )}
       <MultiChoiceChips
         label="Hvilke måneder?"
         options={MONTH_OPTIONS}

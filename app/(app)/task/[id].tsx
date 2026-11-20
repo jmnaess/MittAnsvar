@@ -55,7 +55,8 @@ function EditTaskForm({ task, householdId, fromTasks, onArchived }: FormProps) {
   const updateTask = useUpdateTask(householdId);
   const archiveTask = useArchiveTask(householdId);
   const me = useMyMember(householdId);
-  const form = useTaskForm(members ?? [], task);
+  const { data: household } = useMyHousehold();
+  const form = useTaskForm(members ?? [], task, { householdType: household?.type });
   // Øverst for alle oppgaver med beskrivelse, også rutiner (som ikke har (i) i listene).
   const howTo = useTaskHowTo()(task, { always: true });
 

@@ -1,5 +1,6 @@
 // Hva plussen nede til høyre gjør. Bare voksne lager oppgaver, så barn får ingen pluss.
 //   «I dag»:     en meny med Ny oppgave og Ekstrajobb (todayAddMenu). Årshjul-oppgaver lages i «Oppgaver».
+//                Uten barn i husstanden bare Ny oppgave: ekstrajobber er for barn.
 //   «Oppgaver»: en knapp med tekst uten meny, etter segmentet (tasksAddButton).
 
 import type { Href } from 'expo-router';
@@ -20,17 +21,25 @@ export type AddMenuItem = {
  * Menyen på «I dag». Tom liste = ingen pluss. Valgt person i personvisningen forhåndsvelges i
  * «Ny oppgave». Uten from=tasks, så man blir stående på «I dag» etter lagring.
  */
-export function todayAddMenu({ isAdult, memberId }: { isAdult: boolean; memberId?: string | null }): AddMenuItem[] {
+export function todayAddMenu({
+  isAdult,
+  memberId,
+  hasChildren,
+}: {
+  isAdult: boolean;
+  memberId?: string | null;
+  /** Har husstanden barn? Uten barn ingen «Ekstrajobb». */
+  hasChildren: boolean;
+}): AddMenuItem[] {
   if (!isAdult) return [];
-  return [
-    {
-      key: 'task',
-      label: 'Ny oppgave',
-      icon: 'add-circle-outline',
-      href: { pathname: '/task/new', params: memberId ? { memberId } : {} },
-    },
-    { key: 'job', label: 'Ekstrajobb', icon: 'cash-outline', href: '/job/new' },
-  ];
+  const task: AddMenuItem = {
+    key: 'task',
+    label: 'Ny oppgave',
+    icon: 'add-circle-outline',
+    href: { pathname: '/task/new', params: memberId ? { memberId } : {} },
+  };
+  if (!hasChildren) return [task];
+  return [task, { key: 'job', label: 'Ekstrajobb', icon: 'cash-outline', href: '/job/new' }];
 }
 
 export type AddButton = { label: string; href: Href };

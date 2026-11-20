@@ -1,5 +1,5 @@
 import type { TodayCompletion } from '../../completions/api';
-import { boardCards, memberTodayTaskIds } from '../board';
+import { boardAllCards, boardCards, memberTodayTaskIds } from '../board';
 import { chooseBoardDoer } from '../chooseBoardDoer';
 import { boardColumnCount, distributeCards, MAX_COLUMNS } from '../layout';
 import type { BoardMember, BoardTask } from '../types';
@@ -106,7 +106,61 @@ describe('boardCards', () => {
   });
 });
 
+const yearly = { recurrence_type: 'calendar', recurrence_unit: 'year', recurrence_every: 1 } as const;
+
+describe('boardAllCards («Alle»)', () => {
+  const tasks = [
+    task('felles'),
+    task('felles-årlig', yearly),
+    task('felles-sesong', { recurrence_unit: 'week', season_start_month: 4 }),
+    task('felles-måned', { ...yearly, is_month_task: true }),
+    task('k-årlig', { ...yearly, assigned_member_id: 'k' }),
+    task('jobb', { recurrence_type: 'job' }),
+  ];
+  const ids = (cards: ReturnType<typeof boardCards>, key: string) =>
+    cards.find((c) => c.key === key)?.data.map((t) => t.id);
+
+  it('viser ikke felles årshjul-oppgaver i «Felles» eller «Denne måneden»', () => {
+    const cards = boardAllCards({ members, completions: [], tasks });
+    expect(ids(cards, 'shared')).toEqual(['felles']);
+    expect(cards.some((c) => c.key === 'this-month')).toBe(false);
+    expect(ids(cards, 'jobs')).toEqual(['jobb']);
+  });
+
+  it('personkortene er uendret, også årshjul-oppgaver på en person', () => {
+    const cards = boardAllCards({ members, completions: [], tasks });
+    expect(cards.filter((c) => c.member).map((c) => c.key)).toEqual(['a', 'k', 'l']);
+    expect(ids(cards, 'k')).toEqual(['k-årlig']);
+  });
+
+  it('fjerner «Felles» når bare felles årshjul-oppgaver står der, men beholder utførte', () => {
+    const only = [task('felles-årlig', yearly)];
+    expect(boardAllCards({ members, completions: [], tasks: only }).some((c) => c.key === 'shared')).toBe(false);
+    const withDone = boardAllCards({
+      members,
+      tasks: only,
+      completions: [done('1', { assigned_member_id: null })],
+    });
+    expect(withDone.find((c) => c.key === 'shared')?.data).toEqual([]);
+  });
+
+  it('boardCards (personvisningen) har dem fortsatt', () => {
+    const cards = boardCards({ members, completions: [], tasks });
+    expect(ids(cards, 'shared')).toEqual(['felles', 'felles-årlig', 'felles-sesong']);
+  });
+});
+
 describe('chooseBoardDoer', () => {
+  it('felles årshjul-oppgave: velg bare blant voksne', () => {
+    const b = member('b', 'adult');
+    expect(chooseBoardDoer(task('t', yearly), [adult, b, k, l])).toEqual({ kind: 'pick', members: [adult, b] });
+    expect(chooseBoardDoer(task('t', { ...yearly, is_month_task: true }), members)).toEqual({
+      kind: 'direct',
+      memberId: 'a',
+    });
+  });
+
+
   it('krysser av for den ansvarlige med ett trykk, også med lønn', () => {
     expect(chooseBoardDoer(task('t', { assigned_member_id: 'k' }), members)).toEqual({
       kind: 'direct',

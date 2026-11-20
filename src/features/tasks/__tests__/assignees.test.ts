@@ -7,7 +7,9 @@ import {
   newTaskForLabel,
   nextAssignees,
   SHARED,
+  soloMemberId,
   toTaskInputs,
+  waitingForSolo,
   YEARLY_ADULTS_HINT,
   yearlyAdultsHint,
 } from '../assignees';
@@ -135,5 +137,30 @@ describe('yearlyAdultsHint', () => {
     expect(yearlyAdultsHint(named, 'leah')).toBe(
       'Årsoppgaver er for voksne. Leah har denne fra før, men andre barn kan ikke velges.',
     );
+  });
+});
+
+describe('enslig husstand (soloMemberId)', () => {
+  const alone = [member('meg', 'adult')];
+
+  it('enslig med én person: personen har ansvaret', () => {
+    expect(soloMemberId('single', alone)).toBe('meg');
+  });
+
+  it('par og familie med én person ennå: vanlig valg med «Felles»', () => {
+    expect(soloMemberId('couple', alone)).toBeNull();
+    expect(soloMemberId('family', alone)).toBeNull();
+  });
+
+  it('enslig med flere personer, eller ukjent type: vanlig valg', () => {
+    expect(soloMemberId('single', members)).toBeNull();
+    expect(soloMemberId(undefined, alone)).toBeNull();
+  });
+
+  it('venter bare når en enslig husstand ikke har hentet personene ennå', () => {
+    expect(waitingForSolo('single', [])).toBe(true);
+    expect(waitingForSolo('single', alone)).toBe(false);
+    expect(waitingForSolo('couple', [])).toBe(false);
+    expect(waitingForSolo(undefined, [])).toBe(false);
   });
 });

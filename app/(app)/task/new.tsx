@@ -21,7 +21,10 @@ export default function NewTaskScreen() {
   const { data: members } = useMembers(household!.id);
   const createTasks = useCreateTasks(household!.id);
   const me = useMyMember(household!.id);
-  const form = useTaskForm(members ?? [], undefined, { assignees: initialAssignees(memberId) });
+  const form = useTaskForm(members ?? [], undefined, {
+    assignees: initialAssignees(memberId),
+    householdType: household?.type,
+  });
 
   function save() {
     // Én oppgave per valgt person, i ett kall: enten lagres alle, eller ingen.

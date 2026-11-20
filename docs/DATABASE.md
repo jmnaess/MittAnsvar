@@ -260,6 +260,7 @@ En jobb er en oppgave **uten dato**. Den minste endringen var én ny enum-verdi 
 - **For hvem:** `job_member_ids` er barna som kan ta jobben. Tom liste = alle barna. Jobber bruker aldri `assigned_member_id`. Jobber for ett barn fra før steg 9 ble flyttet over til listen i migrasjonen `job_members`.
 - En liste i stedet for en koblingstabell: jobben lagres i ett kall og følger med i `today_tasks`. Prisen er at innholdet sjekkes av en trigger i stedet for en FK.
 - Fra steg 10a hindrer databasen at et barn på egen enhet krysser av en jobb for andre barn, eller en oppgave tildelt et søsken (`complete_task`, `invalid_member`). En voksen kan fortsatt registrere for hvem som helst.
+- **Kjent begrensning:** felles årshjul-oppgaver (uten ansvarlig, `taskSection = 'year'`) er bare for voksne, men `complete_task` lar fortsatt et barn krysse dem av (på egen enhet og fra familieskjermen). Det hindres bare i appen: barnets «I dag» viser dem ikke (`childTodaySections`), «Alle» på familieskjermen viser dem ikke (`boardAllCards`), og velgeren på skjermen tilbyr bare voksne (`chooseBoardDoer`). Skal databasen håndheve det, må `complete_task` få samme regel som `get_family_board` (se `*_board_year_rule_calendar.sql`).
 
 **Beregning av neste frist** skjer i databasen, i `private.compute_next_due(p_task public.tasks, p_completed_on date) returns date`. Funksjonen er `language plpgsql immutable` og ligger i schemaet `private`, som ikke eksponeres i API-et:
 - `once`: gir `null` (oppgaven er ferdig). `job` gir også `null` (har aldri frist).

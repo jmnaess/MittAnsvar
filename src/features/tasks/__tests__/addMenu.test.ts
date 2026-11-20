@@ -7,24 +7,31 @@ const paramsOf = (href: unknown) => (typeof href === 'string' ? {} : ((href as H
 
 describe('todayAddMenu («I dag»)', () => {
   it('barn får ingen meny', () => {
-    expect(todayAddMenu({ isAdult: false, memberId: 'm1' })).toEqual([]);
+    expect(todayAddMenu({ isAdult: false, memberId: 'm1', hasChildren: true })).toEqual([]);
   });
 
   it('voksne får to valg: Ny oppgave og Ekstrajobb (ikke Årshjul-oppgave)', () => {
-    const items = todayAddMenu({ isAdult: true });
+    const items = todayAddMenu({ isAdult: true, hasChildren: true });
     expect(items.map((i) => i.label)).toEqual(['Ny oppgave', 'Ekstrajobb']);
     expect(items.map((i) => pathOf(i.href))).toEqual(['/task/new', '/job/new']);
   });
 
   it('valgt person følger bare med til «Ny oppgave»', () => {
-    const [task, job] = todayAddMenu({ isAdult: true, memberId: 'm1' });
+    const [task, job] = todayAddMenu({ isAdult: true, memberId: 'm1', hasChildren: true });
     expect(paramsOf(task.href)).toEqual({ memberId: 'm1' });
     expect(paramsOf(job.href)).toEqual({});
   });
 
+  it('uten barn i husstanden: bare Ny oppgave, ingen Ekstrajobb', () => {
+    const items = todayAddMenu({ isAdult: true, hasChildren: false });
+    expect(items.map((i) => i.label)).toEqual(['Ny oppgave']);
+  });
+
   it('uten valgt person og aldri from=tasks', () => {
     for (const memberId of [null, undefined]) {
-      for (const item of todayAddMenu({ isAdult: true, memberId })) expect(paramsOf(item.href)).toEqual({});
+      for (const item of todayAddMenu({ isAdult: true, memberId, hasChildren: true })) {
+        expect(paramsOf(item.href)).toEqual({});
+      }
     }
   });
 });

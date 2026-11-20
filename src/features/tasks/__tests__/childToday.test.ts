@@ -8,6 +8,9 @@ const task = (overrides: Partial<TodayTask>) =>
     title: 'Oppgave',
     recurrence_type: 'calendar',
     assigned_member_id: null,
+    recurrence_unit: 'day',
+    recurrence_every: 1,
+    season_start_month: null,
     job_member_ids: [],
     is_month_task: false,
     is_overdue: false,
@@ -34,6 +37,27 @@ describe('childTodaySections', () => {
   it('viser jobber for alle barna og for barnet, ikke for andre barn', () => {
     const jobs = childTodaySections(tasks, 'leah').find((s) => s.key === JOBS_KEY)!;
     expect(ids(jobs.data)).toEqual(['jobb-alle', 'jobb-leah']);
+  });
+
+  it('viser ikke felles årshjul-oppgaver (årlig, sesong, lang gjentakelse, månedsoppgave)', () => {
+    const year = [
+      task({ id: 'årlig', recurrence_unit: 'year', recurrence_every: 1 }),
+      task({ id: 'sesong', recurrence_unit: 'week', recurrence_every: 1, season_start_month: 4 }),
+      task({ id: 'kvartal', recurrence_type: 'interval', recurrence_unit: 'month', recurrence_every: 3 }),
+      task({ id: 'måned', recurrence_unit: 'year', recurrence_every: 1, is_month_task: true }),
+    ];
+    expect(childTodaySections(year, 'leah')).toEqual([]);
+  });
+
+  it('viser felles hverdagsoppgaver og årshjul-oppgaver som står på barnet', () => {
+    const mixed = [
+      task({ id: 'ukentlig', recurrence_unit: 'week', recurrence_every: 1 }),
+      task({ id: 'månedlig', recurrence_unit: 'month', recurrence_every: 1 }),
+      task({ id: 'egen-årlig', assigned_member_id: 'leah', recurrence_unit: 'year', recurrence_every: 1 }),
+      task({ id: 'felles-årlig', recurrence_unit: 'year', recurrence_every: 1 }),
+    ];
+    const mine = childTodaySections(mixed, 'leah').find((s) => s.key === MINE_KEY)!;
+    expect(ids(mine.data)).toEqual(['ukentlig', 'månedlig', 'egen-årlig']);
   });
 
   it('skjuler tomme seksjoner', () => {

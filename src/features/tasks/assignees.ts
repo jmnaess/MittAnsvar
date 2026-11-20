@@ -1,5 +1,5 @@
 // «Hvem har ansvaret?» med flervalg. Ren logikk, så den kan testes uten React Native.
-import type { Member } from '../household/types';
+import type { HouseholdType, Member } from '../household/types';
 import type { TaskInput } from './types';
 
 /** ChoiceChips trenger en verdi for «Felles». null kan ikke brukes som nøkkel. */
@@ -92,4 +92,22 @@ export function allowedAssignees(
   if (!rule.yearly) return assignees;
   const kept = assignees.filter((id) => canHaveYearlyTask(id, members, rule.keepId));
   return kept.length > 0 ? kept : [SHARED];
+}
+
+/**
+ * Husstandstypen «Enslig» (single) med én person: «Hvem har ansvaret?» skjules, og nye oppgaver
+ * lagres på personen. Gir personens id, ellers null (vanlig valg med «Felles»). Regelen er
+ * husstandstypen, ikke antall personer: et par eller en familie som ikke er komplett ennå, skal
+ * fortsatt kunne velge «Felles». Har en enslig husstand flere personer, vises valget som vanlig.
+ */
+export function soloMemberId(
+  householdType: HouseholdType | undefined,
+  members: Pick<Member, 'id'>[],
+): string | null {
+  return householdType === 'single' && members.length === 1 ? members[0].id : null;
+}
+
+/** Enslig husstand der personene ikke er hentet ennå: vent, så ingenting lagres som «Felles». */
+export function waitingForSolo(householdType: HouseholdType | undefined, members: unknown[]): boolean {
+  return householdType === 'single' && members.length === 0;
 }

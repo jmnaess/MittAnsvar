@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import { MemberPickerModal } from '../../../src/features/completions/components/MemberPickerModal';
 import { RecentDoneCard } from '../../../src/features/completions/components/RecentDoneCard';
-import { boardCards, type BoardCard } from '../../../src/features/display/board';
+import { boardAllCards, type BoardCard } from '../../../src/features/display/board';
 import { BoardCardView } from '../../../src/features/display/components/BoardCardView';
 import { BoardSettingsSheet } from '../../../src/features/display/components/BoardSettingsSheet';
 import { useFamilyBoard, useKeepAwakeSetting } from '../../../src/features/display/hooks';
@@ -54,8 +54,9 @@ export default function FamilyBoardScreen() {
  *
  * Familieraden øverst: trykk på en person viser personvisningen (personens kort i dag,
  * «Kommende» og «Gjort siste 3 dager»). Trykk igjen, «Vis alle», midnatt eller 2 minutter uten
- * berøring går tilbake til alle. «Kommende» og «Gjort» er bare visning: skjermen kan bare krysse
- * av det som står i «I dag». Beløp per oppgave vises, men ingen summer eller saldo.
+ * berøring går tilbake til alle. Felles årshjul-oppgaver vises bare i personvisningen for en
+ * voksen, ikke i «Alle» (boardAllCards). «Kommende» og «Gjort» er bare visning: skjermen kan
+ * bare krysse av det som står i «I dag». Beløp per oppgave vises, men ingen summer eller saldo.
  * Bruker hele bredden (ikke pageWidth), og kolonnene følger vinduet, så den virker både
  * stående, liggende og i delt skjerm.
  */
@@ -141,7 +142,7 @@ function Board({ board }: { board: FamilyBoard }) {
     return cards;
   }
 
-  const cards = focused ? personCards(focused) : boardCards(board).map(renderCard);
+  const cards = focused ? personCards(focused) : boardAllCards(board).map(renderCard);
   const columnCount = boardColumnCount(width);
   // Personvisningen har få kort: de får heller bredden enn å stå i smale kolonner.
   const columns = distributeCards(cards, focused ? Math.min(columnCount, cards.length) : columnCount);

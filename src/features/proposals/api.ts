@@ -1,6 +1,7 @@
-import { unwrap } from '../../lib/errors';
+import { ApiError, unwrap } from '../../lib/errors';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../types/database';
+import { type CompletionResult, toCompletionResult } from '../completions/api';
 
 type Functions = Database['public']['Functions'];
 
@@ -18,25 +19,43 @@ export type PendingProposal = {
   createdAt: string;
 };
 
+/** Et forslag med lønn. Uten lønn brukes addOwnTask (ingen godkjenning). */
 export type ProposalInput = {
   title: string;
   isDone: boolean;
-  wantsReward: boolean;
-  /** Valgfritt, bare med wantsReward. */
+  /** Valgfritt beløp barnet ønsker. null = «La de voksne foreslå». */
   proposedNok: number | null;
 };
 
-/** Barnet sender et forslag. Grensene (tittel, beløp, 5 som venter) sjekkes i databasen. */
+/** Barnet sender et forslag med lønn. Grensene (tittel, beløp, 5 som venter) sjekkes i databasen. */
 export async function submitProposal(input: ProposalInput): Promise<void> {
   unwrap(
     await supabase.rpc('submit_task_proposal', {
       p_title: input.title,
       p_is_done: input.isDone,
-      p_wants_reward: input.wantsReward,
+      p_wants_reward: true,
       // Utelatt = null i databasen.
       p_proposed_nok: input.proposedNok ?? undefined,
     }),
   );
+}
+
+export type OwnTaskInput = { title: string; isDone: boolean };
+
+/**
+ * Barnet legger inn noe uten lønn, uten godkjenning. Ikke gjort: en engangsoppgave til barnet i
+ * dag. Gjort: registreres som utført av barnet med en gang, og completion brukes til feiringen.
+ * Grensene (tittel, 10 per dag, innstillingen) sjekkes i databasen.
+ */
+export async function addOwnTask(
+  input: OwnTaskInput,
+): Promise<{ taskId: string; completion: CompletionResult | null }> {
+  const rows = unwrap(
+    await supabase.rpc('add_own_task', { p_title: input.title, p_is_done: input.isDone }),
+  );
+  const row = rows[0];
+  if (!row) throw new ApiError('empty_result', 500, 'empty_result');
+  return { taskId: row.task_id, completion: row.completion_id ? toCompletionResult(row) : null };
 }
 
 /** Barnets egne forslag, nyeste først. Barn leser bare via denne RPC-en. */

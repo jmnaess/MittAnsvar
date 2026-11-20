@@ -510,7 +510,7 @@ isOneToOne: false
                   ]
                 },"today_completions": {
                   Row: {
-                    "assigned_member_id": string | null,"completed_at": string,"completed_by_member_id": string,"household_id": string,"id": string,"is_latest": boolean | null,"job_member_ids": (string)[],"recorded_by": string | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_id": string,"title": string
+                    "assigned_member_id": string | null,"completed_at": string,"completed_by_member_id": string,"household_id": string,"id": string,"is_latest": boolean | null,"job_member_ids": (string)[],"recorded_by": string | null,"recurrence_type": Database["public"]['Enums']["recurrence_type"],"reward_nok": number | null,"status": Database["public"]['Enums']["completion_status"],"task_created_by": string | null,"task_id": string,"title": string
                   }
                   ComputedFields: never
                   Relationships: [
@@ -544,6 +544,18 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "today_tasks"
       referencedColumns: ["household_id","id"]
+    },{
+      foreignKeyName: "tasks_created_by_fkey"
+      columns: ["task_created_by"]
+isOneToOne: false
+      referencedRelation: "member_balances"
+      referencedColumns: ["member_id"]
+    },{
+      foreignKeyName: "tasks_created_by_fkey"
+      columns: ["task_created_by"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
     }
                   ]
                 },"today_tasks": {
@@ -604,6 +616,11 @@ isOneToOne: false
                            },
 "activate_templates":
 { Args: { "p_household_id": string,"p_member_ids"?: (string)[],"p_template_ids": (string)[] }; Returns: number
+                           },
+"add_own_task":
+{ Args: { "p_is_done": boolean,"p_title": string }; Returns: {
+              "completion_id": string,"feedback_kind": string,"feedback_text": string,"next_due_on": string,"reward_nok": number,"status": Database["public"]['Enums']["completion_status"],"task_id": string
+            }[]
                            },
 "approve_completions":
 { Args: { "p_completion_ids": (string)[] }; Returns: number

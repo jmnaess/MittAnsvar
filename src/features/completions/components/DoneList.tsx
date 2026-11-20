@@ -30,6 +30,8 @@ type Props = {
   onUndo: (completion: TodayCompletion) => void;
   /** Satt for voksne: rette feil uten tidsgrense i stedet for angring. */
   adultActions?: AdultDoneActions;
+  /** Voksne: «Lagt inn av Leah» når barnet la inn oppgaven selv (vises når «Gjort av» ikke gjør det). */
+  addedByOf?: (completion: TodayCompletion) => string | undefined;
   /** Alle utførte vises (ellers bare de to siste, se visibleDone). */
   expanded: boolean;
   onToggleExpanded: () => void;
@@ -45,7 +47,7 @@ type Props = {
  */
 export function DoneList({
   done, sectionKey, allDone, nameOf, checkColor, isAdult, userId, busyId, onUndo, adultActions,
-  expanded, onToggleExpanded, large,
+  addedByOf, expanded, onToggleExpanded, large,
 }: Props) {
   const { colors } = useTheme();
   if (done.length === 0) return null;
@@ -75,7 +77,7 @@ export function DoneList({
             <TaskRow
               key={c.id}
               title={c.title}
-              meta={doneBy}
+              meta={doneBy ?? addedByOf?.(c)}
               done
               checkColor={checkColor}
               disabled={busyId === c.id}

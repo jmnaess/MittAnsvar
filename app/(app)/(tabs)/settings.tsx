@@ -128,7 +128,7 @@ function HouseholdSection({ household }: { household: Household }) {
   );
 }
 
-/** «Barna»: om barna kan sende forslag. Bare voksne, og bare når husstanden har barn. */
+/** «Barna»: om barna kan legge inn egne oppgaver og spørre om lønn. Bare voksne, og bare når husstanden har barn. */
 function ChildrenSection({ household }: { household: Household }) {
   const me = useMyMember(household.id);
   const { data: members = [] } = useMembers(household.id);
@@ -144,11 +144,11 @@ function ChildrenSection({ household }: { household: Household }) {
   return (
     <Section
       title="Barna"
-      description="Barna kan sende forslag til oppgaver og spørre om lønn. En voksen godkjenner."
+      description="Uten lønn legges det inn med en gang. Med lønn godkjenner en voksen."
     >
       <Switch
-        label="Barn kan foreslå oppgaver"
-        accessibilityLabel="Barn kan foreslå oppgaver"
+        label="Barn kan legge inn egne oppgaver og spørre om lønn"
+        accessibilityLabel="Barn kan legge inn egne oppgaver og spørre om lønn"
         value={value}
         onValueChange={(on) => update.mutate({ child_proposals_enabled: on })}
         disabled={update.isPending}

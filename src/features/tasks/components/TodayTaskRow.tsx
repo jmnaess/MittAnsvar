@@ -32,6 +32,8 @@ type Props = {
   longPressHint?: string;
   /** Satt: (i)-ikon som åpner «Slik gjør du» (useHowToSheet). */
   onInfoPress?: () => void;
+  /** Voksne: «Lagt inn av Leah» når barnet la inn oppgaven selv (addedByText). */
+  addedBy?: string;
 };
 
 const DEFAULT_HINT = 'Hold inne for å velge hvem som gjorde det';
@@ -40,13 +42,12 @@ const DEFAULT_HINT = 'Hold inne for å velge hvem som gjorde det';
  * Linjen under tittelen: «I løpet av november» for månedsoppgaver, ellers gjentakelsen.
  * Forfalt vises som merkelapp til høyre, aldri med dato.
  */
-function metaText(task: RowTask, assigneeName?: string): string {
-  if (task.is_month_task && task.next_due_on) {
-    const text = `I løpet av ${monthName(task.next_due_on)}`;
-    return assigneeName ? `${text} · ${assigneeName}` : text;
-  }
-  const text = describeRecurrence(task);
-  return assigneeName ? `${text} · ${assigneeName}` : text;
+function metaText(task: RowTask, assigneeName?: string, addedBy?: string): string {
+  const text =
+    task.is_month_task && task.next_due_on
+      ? `I løpet av ${monthName(task.next_due_on)}`
+      : describeRecurrence(task);
+  return [text, assigneeName, addedBy].filter(Boolean).join(' · ');
 }
 
 /**
@@ -56,14 +57,14 @@ function metaText(task: RowTask, assigneeName?: string): string {
  */
 export function TodayTaskRow({
   task, assigneeName, checkColor, muted, large, busy, onPress, onRowPress, onLongPress,
-  longPressHint = DEFAULT_HINT, onInfoPress,
+  longPressHint = DEFAULT_HINT, onInfoPress, addedBy,
 }: Props) {
   const label = `${task.title}${task.is_overdue ? ', forfalt' : ''}`;
   const hasChips = task.reward_nok !== null || !!task.is_overdue;
   return (
     <TaskRow
       title={task.title}
-      meta={metaText(task, assigneeName)}
+      meta={metaText(task, assigneeName, addedBy)}
       done={busy}
       disabled={busy}
       checkColor={checkColor}

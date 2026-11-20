@@ -6,6 +6,34 @@ import { formatKroner } from '../tasks/reward';
 export const MAX_PROPOSAL_TITLE = 60;
 export const MAX_PROPOSED_NOK = 200;
 export const MAX_PENDING_PROPOSALS = 5;
+/** Samme grense som add_own_task: egne oppgaver uten lønn per barn per dag. */
+export const MAX_OWN_TASKS_PER_DAY = 10;
+
+/**
+ * Hva «Legg inn noe» gjør. Uten lønn skjer det med en gang, med lønn trengs en voksen.
+ * - add:      vil gjøre, uten lønn → engangsoppgave i dag («Legg til»)
+ * - register: gjort, uten lønn → registreres som utført med en gang («Registrer»)
+ * - send:     med lønn → forslag til de voksne («Send til de voksne»)
+ */
+export type ProposalActionKind = 'add' | 'register' | 'send';
+
+const ACTION_LABELS: Record<ProposalActionKind, string> = {
+  add: 'Legg til',
+  register: 'Registrer',
+  send: 'Send til de voksne',
+};
+
+/**
+ * Handlingen og knappeteksten for valgene i skjemaet. Er ett av valgene ikke gjort ennå, er
+ * kind null og knappen er av. Teksten følger det som er valgt så langt, så den ikke hopper.
+ */
+export function proposalAction(
+  done: boolean | null,
+  wantsReward: boolean | null,
+): { kind: ProposalActionKind | null; label: string } {
+  const kind: ProposalActionKind = wantsReward ? 'send' : done ? 'register' : 'add';
+  return { kind: done === null || wantsReward === null ? null : kind, label: ACTION_LABELS[kind] };
+}
 
 export type ProposalStatus = 'pending' | 'approved' | 'rejected';
 

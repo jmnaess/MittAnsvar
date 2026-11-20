@@ -18,6 +18,8 @@ type Props = {
   onPress: () => void;
   /** Satt: (i)-ikon etter tittelen som åpner «Slik gjør du». */
   onInfoPress?: () => void;
+  /** «Lagt inn av Leah» når barnet la inn oppgaven selv (addedByText). */
+  addedBy?: string;
 };
 
 /**
@@ -25,11 +27,12 @@ type Props = {
  * Til høyre: «Forfalt», lønn og avatarene til de tildelte (felles/ingen: et personer-ikon).
  * Flere oppgaver: nærmeste frist, «Forfalt» hvis én er forfalt, og lønnsspenn («10–20 kr»).
  */
-export function TaskRow({ tasks, people, assigneeName, today, onPress, onInfoPress }: Props) {
+export function TaskRow({ tasks, people, assigneeName, today, onPress, onInfoPress, addedBy }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   const task = tasks[0];
-  const { schedule: meta, overdue } = bundleSchedule(tasks, today);
+  const { schedule, overdue } = bundleSchedule(tasks, today);
+  const meta = [schedule, addedBy].filter(Boolean).join(' · ');
   const reward = bundleReward(tasks);
 
   return (

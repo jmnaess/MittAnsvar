@@ -32,6 +32,7 @@ import { useHowToSheet, useTaskHowTo } from '../../../src/features/tasks/compone
 import { todayAddMenu } from '../../../src/features/tasks/addMenu';
 import { TodayJobsSection } from '../../../src/features/tasks/components/TodayJobsSection';
 import { TaskRowMenu } from '../../../src/features/tasks/components/TaskRowMenu';
+import { addedByText } from '../../../src/features/tasks/addedBy';
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
 import {
@@ -429,6 +430,7 @@ export default function TodayScreen() {
         onLongPress={isAdult ? () => openMenu({ kind: 'open', task }) : () => pickDoer(task)}
         longPressHint={isAdult ? 'Trykk for å velge hvem som gjorde det. Hold inne for valg' : undefined}
         onInfoPress={infoPressFor(task)}
+        addedBy={isAdult ? addedByText(task.created_by, members) : undefined}
       />
     ));
     return (
@@ -444,6 +446,7 @@ export default function TodayScreen() {
           userId={session?.user.id}
           busyId={undo.isPending ? undo.variables : fixingBusyId}
           onUndo={undoDone}
+          addedByOf={(c) => addedByText(c.task_created_by, members)}
           adultActions={{
             onRemove: confirmRemove,
             onPress: pressDoneRow,

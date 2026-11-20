@@ -1,4 +1,29 @@
-import { approvalBannerText, parseAmount, proposalMeta, proposalStatusChip, visibleMyProposals } from '../format';
+import {
+  approvalBannerText,
+  parseAmount,
+  proposalAction,
+  proposalMeta,
+  proposalStatusChip,
+  visibleMyProposals,
+} from '../format';
+
+describe('proposalAction', () => {
+  it('vil gjøre, uten lønn: «Legg til» (oppgave med en gang)', () => {
+    expect(proposalAction(false, false)).toEqual({ kind: 'add', label: 'Legg til' });
+  });
+  it('gjort, uten lønn: «Registrer» (utført med en gang)', () => {
+    expect(proposalAction(true, false)).toEqual({ kind: 'register', label: 'Registrer' });
+  });
+  it('med lønn: «Send til de voksne», både gjort og vil gjøre', () => {
+    expect(proposalAction(true, true)).toEqual({ kind: 'send', label: 'Send til de voksne' });
+    expect(proposalAction(false, true)).toEqual({ kind: 'send', label: 'Send til de voksne' });
+  });
+  it('mangler et valg: ingen handling (knappen er av), teksten følger det som er valgt', () => {
+    expect(proposalAction(null, null)).toEqual({ kind: null, label: 'Legg til' });
+    expect(proposalAction(true, null)).toEqual({ kind: null, label: 'Registrer' });
+    expect(proposalAction(null, true)).toEqual({ kind: null, label: 'Send til de voksne' });
+  });
+});
 
 describe('proposalStatusChip', () => {
   it('venter', () => {

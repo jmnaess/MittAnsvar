@@ -86,8 +86,11 @@ const KNOWN: Record<string, string> = {
   reward_already_paid: 'Beløpet er allerede betalt ut, så det kan ikke trekkes tilbake.',
   status_not_changeable: 'Statusen kan ikke endres. Last inn på nytt og prøv igjen.',
   // Forslag fra barn
-  not_child: 'Bare barn kan sende forslag.',
-  proposals_disabled: 'Forslag er slått av. Spør en voksen.',
+  not_child: 'Bare barn kan legge inn egne oppgaver.',
+  proposals_disabled: 'Dette er slått av. Spør en voksen.',
+  too_many_own_tasks: 'Du har lagt inn 10 i dag. Prøv igjen i morgen.',
+  // Skal ikke skje: appen sender alltid forslag med lønn.
+  reward_required: 'Forslag til de voksne må gjelde lønn.',
   too_many_pending: 'Du har 5 forslag som venter. Vent til en voksen har sett på dem.',
   invalid_title: 'Skriv hva du har gjort eller vil gjøre (maks 60 tegn).',
   invalid_amount: 'Beløpet er ikke gyldig.',

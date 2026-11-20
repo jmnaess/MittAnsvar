@@ -24,6 +24,7 @@ import { MemberPickerModal } from '../../completions/components/MemberPickerModa
 import { useMemberPhotoLookup, useMembers, useMyMember } from '../../household/hooks';
 import type { Member } from '../../household/types';
 import { useArchiveTask, useRestoreTask, useTasks } from '../hooks';
+import { addedByText } from '../addedBy';
 import { describeJobMembers, jobMembers } from '../job';
 import { toggleGroup, useOpenGroups } from '../openGroups';
 import { isJob } from '../recurrence';
@@ -173,6 +174,7 @@ export function EverydayTasks({ householdId, header, personId, onPersonChange, a
         today={today}
         onPress={() => (rowTasks.length > 1 ? setPicking(rowTasks) : edit(rowTasks[0]))}
         onInfoPress={infoPress(howToOf(rowTasks[0]))}
+        addedBy={isAdult && rowTasks.length === 1 ? addedByText(rowTasks[0].created_by, members) : undefined}
       />
     );
     return isAdult ? (

@@ -55,6 +55,7 @@ function done(id: string, over: Partial<TodayCompletion> = {}): TodayCompletion 
     recurrence_type: 'interval',
     job_member_ids: [],
     is_latest: true,
+    task_created_by: null,
     ...over,
   };
 }

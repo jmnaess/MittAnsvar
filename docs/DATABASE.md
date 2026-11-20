@@ -52,7 +52,7 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | created_at | timestamptz not null default now() | |
 | has_garden, has_car, has_cabin, has_air_heat_pump, has_fireplace, has_balanced_ventilation, has_hydronic_heating, has_private_well | boolean null | **hjemprofil**. `null` = ikke svart |
 | sewage_type | sewage_type null | hjemprofil: avløp. `null` = ikke svart |
-| child_proposals_enabled | boolean not null default true | «Barn kan foreslå oppgaver» (Innstillinger → Barna). Av = `submit_task_proposal` gir `proposals_disabled`. Ventende forslag kan fortsatt avgjøres |
+| child_proposals_enabled | boolean not null default true | «Barn kan legge inn egne oppgaver og spørre om lønn» (Innstillinger → Barna). Av = `add_own_task` og `submit_task_proposal` gir `proposals_disabled`. Ventende forslag kan fortsatt avgjøres |
 
 **Hjemprofil:** spørsmål om boligen som styrer forslag i årshjulet (via `task_templates.requires`, §4). Boligtype er `housing_type`. Profilen ligger som kolonner på `households` (én per husstand), så RLS er som for resten av husstanden: alle medlemmer leser, voksne endrer. Et ubesvart spørsmål oppfyller aldri en betingelse.
 
@@ -152,7 +152,7 @@ Som `invite_attempts`: ett feilet `redeem_link_token`-forsøk = én rad, 5 rader
 | reward_nok | integer null | lønn i hele kroner, 1–10 000 (steg 9). null = ingen lønn. Bare voksne kan sette den (RLS) |
 | job_repeats | boolean not null default false | bare for jobber: false = engangsjobb, true = kan gjøres igjen. Check: `job_repeats ⇒ recurrence_type = 'job'` |
 | job_member_ids | uuid[] not null default `'{}'` | bare for jobber: barna som kan ta jobben. Tom = alle barna. Check: `'{}'` eller `recurrence_type = 'job'`. En liste kan ikke ha FK, så triggeren `tasks_check_job_members` avviser alt som ikke er barn i samme husstand, og duplikater (`invalid_member`). Triggeren `members_remove_from_jobs` fjerner et barn som slettes |
-| created_by | uuid null → members on delete set null | settes av triggeren |
+| created_by | uuid null → members on delete set null | settes av triggeren. Et barn her betyr at barnet la inn oppgaven selv (`add_own_task`): barn kan ikke sette inn i `tasks` direkte, og oppgaver fra godkjente forslag har den voksne. Appen viser «Lagt inn av Leah» hos voksne |
 | created_at | timestamptz not null default now() | |
 | archived_at | timestamptz null | «slettede» oppgaver arkiveres, slik at historikken beholdes |
 
@@ -169,7 +169,7 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 
 «I dag» regnes dermed aldri ut på mobilen. Appen legger månedsoppgaver som ikke er forfalt, i seksjonen «Denne måneden», og jobber i «Ekstrajobber».
 
-**View `today_completions`** (`security_invoker = true`, så RLS på `task_completions` og `tasks` gjelder): dagens avkrysninger (`completed_on = private.household_today(household_id)`), uten avviste. Med tittel, `assigned_member_id`, `recurrence_type` og `job_member_ids` (hvem en jobb kan flyttes til) fra oppgaven, også når oppgaven er arkivert (en ledig jobb som er gjort). `is_latest`: ingen nyere avkrysning på samme oppgave, samme regel som `undo_completion`. «I dag» viser radene som utført nederst i hvert kort. Appen angrer ved trykk bare når `is_latest`, innen 10 minutter, og for barn bare det de selv registrerte (`recorded_by`); serveren sjekker det samme i `undo_completion`. Voksne kan i tillegg rette hele dagen: trykk på sirkelen gir «Merke som ikke gjort?» (`remove_completion`), trykk på raden gir «Endre hvem som gjorde det» (`reassign_completion`), og langt trykk gir valg mellom «Ikke gjort» og «Endre hvem som gjorde det». Testes i `today_completions.test.sql`.
+**View `today_completions`** (`security_invoker = true`, så RLS på `task_completions` og `tasks` gjelder): dagens avkrysninger (`completed_on = private.household_today(household_id)`), uten avviste. Med tittel, `assigned_member_id`, `recurrence_type` og `job_member_ids` (hvem en jobb kan flyttes til) fra oppgaven, også når oppgaven er arkivert (en ledig jobb som er gjort). `is_latest`: ingen nyere avkrysning på samme oppgave, samme regel som `undo_completion`. `task_created_by`: oppgavens `created_by`, til «Lagt inn av Leah» (`*_child_own_tasks.sql`). «I dag» viser radene som utført nederst i hvert kort. Appen angrer ved trykk bare når `is_latest`, innen 10 minutter, og for barn bare det de selv registrerte (`recorded_by`); serveren sjekker det samme i `undo_completion`. Voksne kan i tillegg rette hele dagen: trykk på sirkelen gir «Merke som ikke gjort?» (`remove_completion`), trykk på raden gir «Endre hvem som gjorde det» (`reassign_completion`), og langt trykk gir valg mellom «Ikke gjort» og «Endre hvem som gjorde det». Testes i `today_completions.test.sql`.
 
 **View `recent_completions`** (`security_invoker = true`, som `today_completions`): avkrysninger fra i går til og med tre dager siden (`completed_on between household_today - 3 and household_today - 1`), uten avviste. Med tittel og `recurrence_type` fra oppgaven, også når den er arkivert. Brukes i personvisningen i «I dag» («Gjort siste 3 dager»), der appen filtrerer på `completed_by_member_id` og grupperer per dag. RLS på `task_completions` gjør at barn bare ser sin egen historikk, så viewet trenger ingen security definer. «Kommende» i samme visning bruker `get_upcoming_occurrences` (8 uker for voksne, 2 uker på barnets enhet). Testes i `recent_completions.test.sql`.
 
@@ -203,8 +203,17 @@ Kjent kanttilfelle: en utbetaling, og så en angring innen 10 minutter, kan gi n
 - Appen skriver med `upsert` på primærnøkkelen. Det finnes ingen `delete`-rettighet: et svar fjernes med `status = null`.
 - Kortet øverst i Årshjul viser «X av Y på plass · N går snart ut» og åpner skjermen «Beredskapslager» (`app/(app)/preparedness.tsx`).
 
-### `task_proposals` (forslag fra barn)
-Et barn foreslår noe det har gjort eller vil gjøre, og kan spørre om lønn. En voksen godkjenner eller avslår. Migrasjon `*_task_proposals.sql`.
+### Barnets egne oppgaver (uten lønn, `add_own_task`)
+Prinsipp: å ta ansvar uten betaling skal være det enkleste. Penger krever en avtale med en voksen. Uten lønn lager barnet oppgaven selv, uten godkjenning og uten rad i `task_proposals`. Migrasjon `*_child_own_tasks.sql`.
+- **Vil gjøre:** engangsoppgave til barnet for i dag (`once`, `once_on` = i dag, `assigned_member_id` = barnet, kategori `other`, ingen lønn). Krysses av som vanlig.
+- **Gjort:** engangsjobb bare for barnet (`job`, `job_repeats false`, `job_member_ids {barnet}`, kategori `other`, ingen lønn), og `complete_task(…, p_last_today => false)` uendret, med barnet som kaller og utfører. Status `approved`, ingen lønn, og jobben arkiveres. Samme mønster som godkjente «gjort»-forslag: avkrysningen står i barnets kort i «I dag», på familieskjermen og i «Gjort siste 3 dager», men ikke i «Oppgaver». En utført engangsoppgave ville blitt stående der. Resultatet returneres, så barnets enhet viser feiringen.
+- `created_by` = barnet (triggeren, `auth.uid()` er barnet også i `security definer`). Ingen ny kolonne.
+- **Grense:** maks 10 per barn per dag (husstandens dato for `created_at`), begge typer. Arkiverte og angrede teller også. Låser barnets `members`-rad som `submit_task_proposal`.
+- Voksne endrer og sletter (arkiverer) oppgavene som andre oppgaver. Barnet angrer egen avkrysning innen 10 minutter (`undo_completion`).
+- **Kjent kanttilfelle** (som for forslag): angring eller «Ikke gjort» på en «gjort» gjør engangsjobben aktiv igjen, som «Til deg» i Ekstrajobber uten lønn. En voksen kan slette den. Det godtas.
+
+### `task_proposals` (forslag fra barn, bare med lønn)
+Et barn foreslår noe det har gjort eller vil gjøre, og spør om lønn. En voksen godkjenner eller avslår. Uten lønn er det ikke et forslag (se over): `submit_task_proposal` gir `reward_required` når `p_wants_reward` er false (`*_child_own_tasks.sql`). Eldre ventende forslag uten lønn kan fortsatt avgjøres. Migrasjon `*_task_proposals.sql`.
 
 | Kolonne | Type | Merknad |
 |---------|------|---------|
@@ -636,7 +645,8 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `postpone_task(p_task_id, p_to) returns date` | voksen, `household_has_access` | «Utsett til» (se §2 Utsettelse). Låser oppgaven. Returnerer fristen før. Alle oppgaver med åpen frist, også kommende og allerede utsatte, men ikke jobber eller utførte engangsoppgaver. `p_to` må være etter både i dag og fristen, og høyst 366 dager fram. Feil: `not_adult` (barn, annen husstand, ukjent eller arkivert), `subscription_required`, `not_postponable`, `invalid_date` |
 | `undo_postpone(p_task_id)` | voksen, `household_has_access` | «Angre»: fristen før kommer tilbake, også forfalt. For engangsoppgaver settes `once_on` først og fristen i en egen spørring, ellers ville triggeren flyttet en passert dato til i dag. Bare mens oppgaven fortsatt er utsatt. Feil: `not_adult`, `subscription_required`, `undo_postpone_expired` (krysset av eller redigert siden) |
 | `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Fra steg 10b er grensen godkjent saldo (ventende og avviste teller ikke). Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
-| `submit_task_proposal(p_title, p_is_done, p_wants_reward, p_proposed_nok default null) returns uuid` | barn (på egen enhet), `household_has_access` | barnet sender et forslag. `household_id` og `member_id` kommer fra kalleren. Låser barnets `members`-rad, så grensen på 5 som venter holder ved samtidige kall. Feil: `not_child` (voksen, familieskjerm, uten medlemskap), `subscription_required`, `proposals_disabled`, `invalid_title` (tom eller over 60 tegn etter trimming), `invalid_amount` (utenfor 1–200, eller beløp uten `p_wants_reward`), `too_many_pending` |
+| `submit_task_proposal(p_title, p_is_done, p_wants_reward, p_proposed_nok default null) returns uuid` | barn (på egen enhet), `household_has_access` | barnet sender et forslag. `household_id` og `member_id` kommer fra kalleren. Låser barnets `members`-rad, så grensen på 5 som venter holder ved samtidige kall. Feil: `not_child` (voksen, familieskjerm, uten medlemskap), `subscription_required`, `proposals_disabled`, `invalid_title` (tom eller over 60 tegn etter trimming), `reward_required` (`p_wants_reward` false: uten lønn brukes `add_own_task`), `invalid_amount` (utenfor 1–200), `too_many_pending` |
+| `add_own_task(p_title, p_is_done) returns table (task_id, completion_id, feedback_text, next_due_on, reward_nok, status, feedback_kind)` | barn (på egen enhet), `household_has_access` | barnet legger inn noe uten lønn, se «Barnets egne oppgaver». Ingen medlems- eller beløpsparameter: alltid til barnet selv, aldri lønn. Gjort: raden fra `complete_task` (til feiringen). Ikke gjort: bare `task_id`, resten null. Feil: `not_child`, `subscription_required`, `proposals_disabled`, `invalid_title` (tom, over 60 tegn, eller `p_is_done` null), `too_many_own_tasks` (10 i dag) |
 | `list_my_task_proposals()` | barn | egne forslag som venter eller er avgjort de siste 3 dagene, nyeste først. Tom for alle andre |
 | `decide_task_proposal(p_proposal_id, p_approve, p_amount_nok default null) returns uuid` | voksen, `household_has_access` | godkjenn (beløp `null`/0 = ingen lønn, ellers 1–10 000) eller avslå. Låser forslaget. Godkjent lager oppgaven (og avkrysningen når det er gjort) i samme transaksjon, se `task_proposals`. Returnerer oppgavens id, `null` ved avslag. Feil: `not_adult` (barn, skjerm, annen husstand, ukjent id), `subscription_required`, `not_pending`, `invalid_amount` |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
@@ -761,6 +771,16 @@ Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
     - Avslag: ingen oppgave, barnet ser det, og et avgjort forslag kan ikke avgjøres igjen. Barn, skjerm, annen husstand og ukjent id kan ikke avgjøre. Ingen kan skrive direkte.
     - Avgjort for over 3 dager siden vises ikke for barnet. Barnet kan ikke slå av innstillingen. Av: nye forslag avvises, og ventende kan avgjøres. Utløpt prøvetid: kan ikke sende eller avgjøre.
     - Sletting: med barnet, med husstanden (siste voksne), og `decided_by_member_id = null` når en av flere voksne sletter seg. Oppryddingen sletter bare avgjorte forslag eldre enn 30 dager, og jobben finnes.
+
+22. Barnets egne oppgaver (`child_own_tasks.test.sql`):
+    - «Legg til»: engangsoppgave til barnet i dag, trimmet tittel, ingen lønn, `created_by` = barnet, i barnets `today_tasks`, ingen avkrysning, ingen rad i `task_proposals`.
+    - «Registrer»: arkivert engangsjobb for barnet, avkrysning med barnet som utfører og registrert av barnets enhet, `approved` uten beløp, `completion_id` og tekstgruppe returnert, saldoen uendret, ingen rad i `task_proposals`.
+    - Voksne ser `task_created_by` i `today_completions` og `created_by` i `today_tasks`. Familieskjermen har avkrysningen med barnet som utfører.
+    - Bare én variant av funksjonen (ingen med medlem eller beløp). Barnet kan ikke sette inn i `tasks` direkte, og ikke gi egen oppgave lønn eller flytte den. Forslag uten lønn gir `reward_required`.
+    - Voksen og familieskjerm får `not_child`, anon får 42501. Ugyldig tittel og `p_is_done` null avvises.
+    - Voksen endrer og arkiverer oppgaven. Barnet angrer egen avkrysning.
+    - Grensen: 10 per dag, også med slettede og angrede. Nr. 11 avvises for begge typer. Oppgaver fra godkjente forslag teller ikke, og søsken har egen grense.
+    - Innstillingen av og utløpt prøvetid avviser. En annen husstand (voksen og barn) ser verken oppgaver eller avkrysninger.
 
 19. Rettigheter i `private` (`private_function_privileges.test.sql`):
     - `authenticated`, `anon` og `public` har ikke `execute` på hjelpefunksjonene som bare kalles fra `security definer`-RPC-er eller systemjobber.

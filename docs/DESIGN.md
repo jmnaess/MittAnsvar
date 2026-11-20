@@ -56,7 +56,7 @@ tilgjengelighetstekster. Se [VISJON.md](VISJON.md) for tonen.
 | Opptjent / saldo | Det et barn har tjent minus utbetalinger | |
 | Utbetaling | Når en voksen registrerer at pengene er gitt | |
 | Til godkjenning | Barnets avkrysninger med lønn som venter på en voksen | |
-| Forslag | Noe et barn har gjort eller vil gjøre, og sender til en voksen («Foreslå»). Status: «Venter», «Godkjent», «Ikke denne gangen» | «søknad», «ønske» |
+| Forslag | Noe et barn har gjort eller vil gjøre og vil ha lønn for, og sender til en voksen («Send til de voksne»). Status: «Venter», «Godkjent», «Ikke denne gangen». Uten lønn er det ikke et forslag: barnet legger det inn selv | «søknad», «ønske» |
 | Figur / profilbilde | Den tegnede avataren / et eget bilde | |
 | Familieskjerm | En felles enhet (typisk iPad) som viser dagens oppgaver | «kiosk» |
 | Beredskapslager | Det husstanden trenger for å klare seg selv i en uke, basert på råd fra DSB. Varene er «på plass» eller «trenger vi ikke» | «nødlager», «DSBs liste» |
@@ -350,14 +350,30 @@ på fremdriften før noe vises, så fanene blinker aldri forbi. Første steg byg
 når siste steg er ferdig eller hoppet over. På en ny enhet eller etter en reinstallasjon (Android) finnes ingen
 fremdrift, og man havner i fanene; resten finnes under Husstand og Innstillinger.
 
-### Forslag fra barn
+### Barnets egne oppgaver og forslag
 
-`features/proposals/`. På barnets «I dag»: `AddFab label="Foreslå"` (bare når husstanden har slått det på)
-åpner `ProposalSheet`: «Hva har du gjort, eller vil du gjøre?» (maks 60 tegn), «Er det gjort?» (Ja / Nei, jeg
-vil gjøre det) og «Vil du ha lønn for det?» (Nei / Ja, med «Hvor mye?» og plassholderen «La de voksne foreslå»,
-maks 200 kr). Hele skjemaet skal få plass på en iPhone SE (667 pt): luft 8 mellom feltene, og «Avbryt» og «Send»
-side om side i `footer`, så de og valgene under tekstfeltet synes også med tastaturet oppe. Etter sending:
-`NoticeToast aboveFab` «Sendt! En voksen ser på det.». Med 5 som venter viser arket bare en melding.
+Prinsipp: å ta ansvar uten betaling skal være det enkleste. Penger krever en avtale med en voksen.
+
+`features/proposals/`. På barnets «I dag»: `AddFab label="Legg inn"` (bare når husstanden har slått det på)
+åpner `ProposalSheet` «Legg inn noe»: «Hva har du gjort, eller vil du gjøre?» (maks 60 tegn), «Er det gjort?»
+(Ja / Nei, jeg vil gjøre det) og «Vil du ha lønn for det?» (Nei / Ja, med «Hvor mye?» og plassholderen «La de
+voksne foreslå», maks 200 kr). Knappen skifter tekst etter valgene (`proposalAction`):
+
+| Valg | Knapp | Resultat |
+|------|-------|----------|
+| Vil gjøre, uten lønn | «Legg til» | oppgave i «Mine oppgaver i dag» med en gang, `NoticeToast` «Lagt til i dagens oppgaver.» |
+| Gjort, uten lønn | «Registrer» | utført med en gang, vanlig feiring (`CelebrationOverlay`) |
+| Med lønn | «Send til de voksne» | forslag, `NoticeToast` «Sendt! En voksen ser på det.» |
+
+Knappen er av til begge valgene er gjort. Hele skjemaet skal få plass på en iPhone SE (667 pt): luft 8 mellom
+feltene, og «Avbryt» og handlingen side om side i `footer`, så de og valgene under tekstfeltet synes også med
+tastaturet oppe. Med 5 forslag som venter viser arket en melding i stedet for «Hvor mye?» når lønn er valgt.
+Uten lønn går det fortsatt. Maks 10 egne per dag: feilmeldingen kommer fra databasen.
+
+Hos de voksne viser oppgaver barnet la inn selv, «Lagt inn av Leah» i metalinjen (`addedByText`, `tasks/addedBy.ts`):
+i «I dag» (`TodayTaskRow addedBy`, og på utførte rader `DoneList addedByOf` når «Gjort av» ikke vises) og i
+«Oppgaver» (`TaskRow addedBy`, bare når raden er én oppgave). Ikke på barnets enhet eller familieskjermen. De
+endres og slettes som andre oppgaver.
 `MyProposalsCard` «Mine forslag» står etter «Ekstrajobber»: én `ListRow` per forslag som venter eller er avslått
 (`visibleMyProposals`), med `proposalMeta` («Gjort · ønsker 30 kr») og `Chip` «Venter» eller «Ikke denne gangen».
 Avslag forsvinner etter 3 dager. Godkjente vises ikke her: de står i «Mine oppgaver i dag», som utført med beløpet
@@ -367,7 +383,8 @@ Hos de voksne står forslagene i samme banner og ark som «Til godkjenning» (`P
 «Forslag». `ProposalReviewRow`: avatar, tittel, «Leah · Vil gjøre det · ønsker 50 kr», feltet «Fortjent lønn»
 (forhåndsutfylt med barnets beløp, tomt = ingen lønn), et hint om hva godkjenning gjør, «Avslå» (bekreftes) og
 «Godkjenn». Banneret hentes på nytt ved fokus, ved dra for å oppdatere og hvert minutt mens appen er åpen
-(`WAITING_REFRESH_MS`, samme for forslag og godkjenninger). Innstillinger → «Barna»: bryteren «Barn kan foreslå oppgaver» (bare voksne, bare med barn).
+(`WAITING_REFRESH_MS`, samme for forslag og godkjenninger). Innstillinger → «Barna»: bryteren «Barn kan legge inn egne oppgaver og spørre om lønn» (bare voksne, bare med
+barn), med beskrivelsen «Uten lønn legges det inn med en gang. Med lønn godkjenner en voksen.». Av = ingen «Legg inn».
 Familieskjermen viser ingenting om forslag.
 
 ## Avatarer

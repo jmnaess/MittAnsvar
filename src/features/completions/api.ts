@@ -38,6 +38,11 @@ export async function completeTask(
   const row = rows[0];
   // RPC-en returnerer alltid én rad når den lykkes. Dette er bare et sikkerhetsnett.
   if (!row) throw new ApiError('empty_result', 500, 'empty_result');
+  return toCompletionResult(row);
+}
+
+/** Raden fra complete_task (også via add_own_task) slik appen bruker den. */
+export function toCompletionResult(row: CompleteTaskRow): CompletionResult {
   return {
     completionId: row.completion_id,
     feedbackText: row.feedback_text ?? null,
@@ -47,6 +52,8 @@ export async function completeTask(
     feedbackKind: toFeedbackKind(row.feedback_kind),
   };
 }
+
+type CompleteTaskRow = Database['public']['Functions']['complete_task']['Returns'][number];
 
 /** En database som er eldre enn appen, sender ikke feedback_kind. */
 function toFeedbackKind(kind: string | null | undefined): FeedbackKind {

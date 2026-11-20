@@ -84,4 +84,22 @@ describe('childTodaySections', () => {
     expect(mine.done.map((c) => c.id)).toEqual(['c']);
     expect(sections.some((s) => s.key === JOBS_KEY)).toBe(false);
   });
+
+  it('egen «Registrer» uten lønn: står som utført i «Mine oppgaver i dag», ikke i Ekstrajobber', () => {
+    // add_own_task: arkivert engangsjobb bare for Leah, krysset av av Leah selv, uten lønn.
+    const registrert = {
+      id: 'r',
+      assigned_member_id: null,
+      completed_by_member_id: 'leah',
+      recurrence_type: 'job',
+      job_member_ids: ['leah'],
+      reward_nok: null,
+      task_created_by: 'leah',
+    } as TodayCompletion;
+    const sections = childTodaySections([], 'leah', [registrert]);
+    const mine = sections.find((s) => s.key === MINE_KEY)!;
+    expect(mine.data).toEqual([]);
+    expect(mine.done.map((c) => c.id)).toEqual(['r']);
+    expect(sections.some((s) => s.key === JOBS_KEY)).toBe(false);
+  });
 });

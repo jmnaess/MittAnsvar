@@ -18,10 +18,9 @@ import { isLastOfToday, toCelebration, type Celebration } from '../../../src/fea
 import { CelebrationOverlay } from '../../../src/features/feedback/components/CelebrationOverlay';
 import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
-import type { ProposalInput } from '../../../src/features/proposals/api';
 import { MyProposalsCard } from '../../../src/features/proposals/components/MyProposalsCard';
-import { ProposalSheet } from '../../../src/features/proposals/components/ProposalSheet';
-import { useMyProposals, useSubmitProposal } from '../../../src/features/proposals/hooks';
+import { ProposalSheet, type ProposalSubmit } from '../../../src/features/proposals/components/ProposalSheet';
+import { useAddOwnTask, useMyProposals, useSubmitProposal } from '../../../src/features/proposals/hooks';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalance } from '../../../src/features/rewards/hooks';
 import { childTodaySections, MINE_KEY } from '../../../src/features/tasks/childToday';
@@ -57,8 +56,10 @@ import {
  * «Gjort siste 3 dager». Den nærmeste forekomsten i «Kommende» kan krysses av tidlig.
  * Etter avkrysning vises en feiring i fullskjerm (CelebrationOverlay). Angring: trykk på den
  * utførte raden (DoneList).
- * «Foreslå» (når husstanden har slått det på) åpner ProposalSheet. «Mine forslag» viser det som
- * venter og det som ble avgjort de siste 3 dagene.
+ * «Legg inn» (når husstanden har slått det på) åpner ProposalSheet. Uten lønn skjer det med en
+ * gang: «Legg til» gir en oppgave i «Mine oppgaver i dag», «Registrer» krysser av med feiring.
+ * Med lønn blir det et forslag til de voksne. «Mine forslag» viser forslag som venter eller er
+ * avslått.
  */
 export default function ChildTodayScreen() {
   const { colors, personColor } = useTheme();
@@ -104,9 +105,10 @@ export default function ChildTodayScreen() {
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const submitProposal = useSubmitProposal(householdId);
+  const addOwnTask = useAddOwnTask(householdId);
   const [proposalOpen, setProposalOpen] = useState(false);
-  /** Satt = «Sendt!» vises. Ny verdi starter nedtellingen på nytt. */
-  const [sentKey, setSentKey] = useState<string | null>(null);
+  /** Satt = bekreftelsen vises. Ny key starter nedtellingen på nytt. */
+  const [notice, setNotice] = useState<{ key: string; message: string } | null>(null);
   const canPropose = !!me && !!household?.child_proposals_enabled;
   const pendingProposals = myProposals.filter((p) => p.status === 'pending').length;
   /** Alle utførte vises. Ny dag: foldes inn igjen. */
@@ -155,16 +157,36 @@ export default function ChildTodayScreen() {
 
   function openProposal() {
     submitProposal.reset();
+    addOwnTask.reset();
     setProposalOpen(true);
   }
 
-  function sendProposal(input: ProposalInput) {
-    submitProposal.mutate(input, {
-      onSuccess: () => {
-        setProposalOpen(false);
-        setSentKey(String(Date.now()));
+  const showNotice = (message: string) => setNotice({ key: String(Date.now()), message });
+
+  // Uten lønn: oppgave eller avkrysning med en gang. Med lønn: forslag til de voksne.
+  function sendProposal(input: ProposalSubmit) {
+    if (input.kind === 'send') {
+      submitProposal.mutate(
+        { title: input.title, isDone: input.isDone, proposedNok: input.proposedNok },
+        {
+          onSuccess: () => {
+            setProposalOpen(false);
+            showNotice('Sendt! En voksen ser på det.');
+          },
+        },
+      );
+      return;
+    }
+    addOwnTask.mutate(
+      { title: input.title, isDone: input.kind === 'register' },
+      {
+        onSuccess: ({ completion }) => {
+          setProposalOpen(false);
+          if (completion) setCelebration(toCelebration(completion));
+          else showNotice('Lagt til i dagens oppgaver.');
+        },
       },
-    });
+    );
   }
 
   return (
@@ -238,17 +260,17 @@ export default function ChildTodayScreen() {
 
       {howToSheet}
 
-      {canPropose && <AddFab label="Foreslå" onPress={openProposal} />}
+      {canPropose && <AddFab label="Legg inn" onPress={openProposal} />}
       <ProposalSheet
         visible={proposalOpen}
         pendingCount={pendingProposals}
-        saving={submitProposal.isPending}
-        error={submitProposal.error}
+        saving={submitProposal.isPending || addOwnTask.isPending}
+        error={submitProposal.error ?? addOwnTask.error}
         onSubmit={sendProposal}
         onClose={() => setProposalOpen(false)}
       />
-      {sentKey && (
-        <NoticeToast message="Sendt! En voksen ser på det." resetKey={sentKey} aboveFab onHide={() => setSentKey(null)} />
+      {notice && (
+        <NoticeToast message={notice.message} resetKey={notice.key} aboveFab onHide={() => setNotice(null)} />
       )}
 
       {celebration && me && (

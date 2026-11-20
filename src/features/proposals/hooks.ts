@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useInvalidateRewards, WAITING_REFRESH_MS } from '../rewards/hooks';
 import { useInvalidateTasks } from '../tasks/hooks';
-import { decideProposal, listMyProposals, listPendingProposals, submitProposal } from './api';
+import { addOwnTask, decideProposal, listMyProposals, listPendingProposals, submitProposal } from './api';
 
 export const proposalKeys = {
   all: (householdId: string) => ['proposals', householdId] as const,
@@ -40,6 +40,12 @@ export function usePendingProposals(householdId: string) {
 export function useSubmitProposal(householdId: string) {
   const onSettled = useInvalidateProposals(householdId);
   return useMutation({ mutationFn: submitProposal, onSettled });
+}
+
+/** Barnet legger inn noe uten lønn: en oppgave, og kanskje en avkrysning. Hent oppgavene på nytt. */
+export function useAddOwnTask(householdId: string) {
+  const invalidateTasks = useInvalidateTasks(householdId);
+  return useMutation({ mutationFn: addOwnTask, onSettled: invalidateTasks });
 }
 
 /** Godkjenning lager en oppgave og kanskje en avkrysning med lønn: hent alt på nytt. */

@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(88);
+select plan(89);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i de andre testfilene)
@@ -126,8 +126,8 @@ insert into public.household_displays (household_id, auth_user_id) values
 -- 1. Barnet sender og leser egne forslag
 -- ===========================================================================
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
-select lives_ok($$select tests.submit('boden', '  Ryddet boden  ', true, false)$$,
-  'barnet sender et forslag (gjort, uten lønn)');
+select lives_ok($$select tests.submit('boden', '  Ryddet boden  ', true, true)$$,
+  'barnet sender et forslag (gjort, ønsker lønn)');
 select lives_ok($$select tests.submit('bilen', 'Vaske bilen', false, true, 50)$$,
   'barnet sender et forslag (ikke gjort, ønsker 50 kr)');
 select lives_ok($$select tests.submit('hagen', 'Raket løv', true, true, 50)$$,
@@ -156,25 +156,27 @@ select tests.logout();
 -- 2. Ugyldige forslag
 -- ===========================================================================
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
-select throws_ok($$select public.submit_task_proposal('   ', true, false)$$,
+select throws_ok($$select public.submit_task_proposal('   ', true, true)$$,
   'P0001', 'invalid_title', 'tom tittel avvises');
-select throws_ok(format('select public.submit_task_proposal(%L, true, false)', repeat('x', 61)),
+select throws_ok(format('select public.submit_task_proposal(%L, true, true)', repeat('x', 61)),
   'P0001', 'invalid_title', 'tittel på 61 tegn avvises');
-select lives_ok(format('select tests.submit(%L, %L, true, false)', 'lang', repeat('x', 60)),
+select lives_ok(format('select tests.submit(%L, %L, true, true)', 'lang', repeat('x', 60)),
   'tittel på 60 tegn går');
 select throws_ok($$select public.submit_task_proposal('Mye', true, true, 201)$$,
   'P0001', 'invalid_amount', 'beløp over 200 avvises');
 select throws_ok($$select public.submit_task_proposal('Null', true, true, 0)$$,
   'P0001', 'invalid_amount', 'beløp 0 avvises');
 select throws_ok($$select public.submit_task_proposal('Uten', true, false, 20)$$,
-  'P0001', 'invalid_amount', 'beløp uten ønske om lønn avvises');
+  'P0001', 'reward_required', 'beløp uten ønske om lønn avvises');
+select throws_ok($$select public.submit_task_proposal('Uten lønn', true, false)$$,
+  'P0001', 'reward_required', 'forslag uten lønn avvises: da brukes add_own_task');
 select tests.logout();
 
 -- ===========================================================================
 -- 3. Grensen på 5 som venter (A1 har 5 nå)
 -- ===========================================================================
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
-select throws_ok($$select public.submit_task_proposal('Nummer seks', true, false)$$,
+select throws_ok($$select public.submit_task_proposal('Nummer seks', true, true)$$,
   'P0001', 'too_many_pending', 'nr. 6 som venter avvises');
 select tests.logout();
 
@@ -182,14 +184,14 @@ select tests.logout();
 -- 4. Hvem kan sende og lese
 -- ===========================================================================
 select tests.login_as('00000000-0000-0000-0000-00000000a001');
-select throws_ok($$select public.submit_task_proposal('Voksen', true, false)$$,
+select throws_ok($$select public.submit_task_proposal('Voksen', true, true)$$,
   'P0001', 'not_child', 'en voksen kan ikke sende forslag');
 select is((select count(*)::int from public.task_proposals), 5, 'voksen A ser alle forslagene i husstanden');
 select is((select count(*)::int from public.list_my_task_proposals()), 0, 'list_my_task_proposals er tom for voksne');
 select tests.logout();
 
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000d001');
-select throws_ok($$select public.submit_task_proposal('Skjerm', true, false)$$,
+select throws_ok($$select public.submit_task_proposal('Skjerm', true, true)$$,
   'P0001', 'not_child', 'familieskjermen kan ikke sende forslag');
 select is((select count(*)::int from public.task_proposals), 0, 'familieskjermen ser ingen forslag');
 select is((select count(*)::int from public.list_my_task_proposals()), 0, 'familieskjermen får tom liste');
@@ -204,7 +206,7 @@ select is((select count(*)::int from public.list_my_task_proposals()), 0, 'barn 
 select tests.logout();
 
 select set_config('role', 'anon', true);
-select throws_ok($$select public.submit_task_proposal('Anon', true, false)$$, '42501', null,
+select throws_ok($$select public.submit_task_proposal('Anon', true, true)$$, '42501', null,
   'anon kan ikke sende forslag');
 select throws_ok($$select * from public.list_my_task_proposals()$$, '42501', null,
   'anon kan ikke lese forslag');
@@ -213,7 +215,7 @@ select throws_ok($$select count(*) from public.task_proposals$$, '42501', null,
 select tests.logout();
 
 -- ===========================================================================
--- 5. Godkjent: gjort, uten lønn
+-- 5. Godkjent: gjort, uten lønn (barnet ba om lønn, voksen godkjenner uten beløp)
 -- ===========================================================================
 select tests.login_as('00000000-0000-0000-0000-00000000a001');
 select lives_ok($$select tests.decide('boden', true)$$, 'voksen godkjenner «Ryddet boden»');
@@ -288,7 +290,7 @@ select tests.logout();
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
 select is((select status from public.list_my_task_proposals() where id = tests.id('nei')),
   'rejected'::public.proposal_status, 'barnet ser avslaget');
-select lives_ok($$select tests.submit('ny', 'Bære ved', true, false)$$,
+select lives_ok($$select tests.submit('ny', 'Bære ved', true, true)$$,
   'etter avgjørelser er det plass til nye forslag');
 select tests.logout();
 
@@ -298,7 +300,7 @@ select tests.logout();
 -- Voksen nr. 2 (ikke den som laget husstanden) ser forslagene og kan avgjøre.
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
 select tests.submit('a3', 'Tømt søpla', true, true, 10);
-select tests.submit('oppvask', 'Ta oppvasken', false, false);
+select tests.submit('oppvask', 'Ta oppvasken', false, true);
 select tests.logout();
 
 select tests.login_as('00000000-0000-0000-0000-00000000a003');
@@ -402,7 +404,7 @@ update public.households set child_proposals_enabled = false where id = 'aaaaaaa
 select tests.logout();
 
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a004');
-select throws_ok($$select public.submit_task_proposal('Av', true, false)$$,
+select throws_ok($$select public.submit_task_proposal('Av', true, true)$$,
   'P0001', 'proposals_disabled', 'innstillingen av hindrer nye forslag');
 select tests.logout();
 
@@ -417,7 +419,7 @@ select tests.logout();
 update public.households set trial_ends_at = now() - interval '1 day' where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a004');
-select throws_ok($$select public.submit_task_proposal('Utløpt', true, false)$$,
+select throws_ok($$select public.submit_task_proposal('Utløpt', true, true)$$,
   'P0001', 'subscription_required', 'utløpt prøvetid: kan ikke sende');
 select tests.logout();
 
@@ -433,7 +435,7 @@ update public.households set trial_ends_at = now() + interval '14 days' where id
 -- ===========================================================================
 -- Barn A2 sender et forslag, og voksen A2 avgjør ett av A1 sine.
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a004');
-select tests.submit('a2', 'Mate katten', true, false);
+select tests.submit('a2', 'Mate katten', true, true);
 select tests.logout();
 
 select tests.login_as('00000000-0000-0000-0000-00000000a003');
@@ -456,7 +458,7 @@ select ok((tests.proposal('ny')).id is not null and (tests.proposal('ny')).decid
 
 -- Siste voksne i C sletter kontoen.
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000c002');
-select tests.submit('c', 'Gå med hunden', true, false);
+select tests.submit('c', 'Gå med hunden', true, true);
 select tests.logout();
 select tests.login_as('00000000-0000-0000-0000-00000000c001');
 select public.delete_my_account_data();
@@ -469,7 +471,7 @@ select is((select count(*)::int from public.task_proposals where household_id = 
 -- ===========================================================================
 update public.task_proposals set decided_at = now() - interval '31 days' where id = tests.id('nei');
 select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
-select tests.submit('gammel', 'Gammel', true, false);
+select tests.submit('gammel', 'Gammel', true, true);
 select tests.logout();
 update public.task_proposals set created_at = now() - interval '60 days' where id = tests.id('gammel');
 

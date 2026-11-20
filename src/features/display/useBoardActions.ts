@@ -75,7 +75,12 @@ export function useBoardActions(board: FamilyBoard) {
     }
   }
 
-  function press(task: BoardTask) {
+  /** doerId: satt for en felles rad i personens kort (cardDoerId), da krysses det av for personen. */
+  function press(task: BoardTask, doerId: string | null = null) {
+    if (doerId) {
+      completeFor(task, doerId);
+      return;
+    }
     const action = chooseBoardDoer(task, members);
     if (action.kind === 'direct') completeFor(task, action.memberId);
     else if (action.kind === 'pick') setPicking({ task, members: action.members });

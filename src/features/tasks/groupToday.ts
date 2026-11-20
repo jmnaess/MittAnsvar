@@ -126,3 +126,14 @@ export function focusSections<T extends FocusTask, M>(
     ) ?? [];
   return month && ownMonth.length > 0 ? [...own, { ...month, data: ownMonth }] : own;
 }
+
+/**
+ * Personvisningen: en felles rad i personens eget kort krysses av for personen, uten spørsmål.
+ * null = vanlig regel (personens egne rader, «Felles», «Denne måneden» og «Ekstrajobber»).
+ */
+export function cardDoerId(
+  section: { member: { id: string } | null },
+  task: Pick<TodayTask, 'assigned_member_id'>,
+): string | null {
+  return section.member && task.assigned_member_id === null ? section.member.id : null;
+}

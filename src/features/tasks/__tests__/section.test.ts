@@ -24,6 +24,16 @@ describe('taskSection', () => {
     expect(taskSection(r({ recurrence_unit: 'month' }))).toBe('everyday');
   });
 
+  it('lange gjentakelser i kalenderen er i Årshjul, som intervall: 90 dager, 13 uker, 3 måneder', () => {
+    const cal = (unit: 'day' | 'week' | 'month', every: number) => taskSection(r({ recurrence_unit: unit, recurrence_every: every }));
+    expect(cal('day', 89)).toBe('everyday');
+    expect(cal('day', 90)).toBe('year');
+    expect(cal('week', 12)).toBe('everyday');
+    expect(cal('week', 13)).toBe('year');
+    expect(cal('month', 2)).toBe('everyday');
+    expect(cal('month', 3)).toBe('year');
+  });
+
   it('årlige oppgaver er i Årshjul', () => {
     expect(taskSection(r({ recurrence_unit: 'year' }))).toBe('year');
   });
@@ -68,8 +78,8 @@ describe('taskSection: paritet med get_family_board', () => {
   const [, json] = sql.split('$parity$');
   const cases: ParityCase[] = JSON.parse(json);
 
-  it('leser alle 14 tilfellene', () => {
-    expect(cases).toHaveLength(14);
+  it('leser alle 18 tilfellene', () => {
+    expect(cases).toHaveLength(18);
   });
 
   it.each(cases.map((c) => [c.title, c] as const))('%s', (_title, c) => {

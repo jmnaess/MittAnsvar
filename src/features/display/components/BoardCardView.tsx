@@ -4,7 +4,7 @@ import { progressText } from '../../completions/doneToday';
 import type { TodayCompletion } from '../../completions/api';
 import { memberPhoto } from '../../household/photo';
 import { TodayTaskRow } from '../../tasks/components/TodayTaskRow';
-import { JOBS_KEY, THIS_MONTH_KEY } from '../../tasks/groupToday';
+import { cardDoerId, JOBS_KEY, THIS_MONTH_KEY } from '../../tasks/groupToday';
 import { describeJobMembers } from '../../tasks/job';
 import type { BoardCard } from '../board';
 import type { BoardMember, BoardTask } from '../types';
@@ -18,7 +18,8 @@ type Props = {
   undoingId: string | undefined;
   expanded: boolean;
   onToggleExpanded: () => void;
-  onPress: (task: BoardTask) => void;
+  /** doerId: personen når en felles rad står i personens kort (cardDoerId), ellers null. */
+  onPress: (task: BoardTask, doerId: string | null) => void;
   /** «Slik gjør du» for raden, eller undefined = ikke ikon. */
   infoPressFor: (task: BoardTask) => (() => void) | undefined;
   onUndo: (completion: TodayCompletion) => void;
@@ -61,7 +62,7 @@ export function BoardCardView({
           assigneeName={assigneeName(task)}
           checkColor={color.ring}
           busy={busyIds.has(task.id)}
-          onPress={() => onPress(task)}
+          onPress={() => onPress(task, cardDoerId(card, task))}
           onInfoPress={infoPressFor(task)}
         />
       ))}

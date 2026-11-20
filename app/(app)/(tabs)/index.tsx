@@ -33,6 +33,7 @@ import { TaskRowMenu } from '../../../src/features/tasks/components/TaskRowMenu'
 import { TodayTaskRow } from '../../../src/features/tasks/components/TodayTaskRow';
 import { UpcomingCard } from '../../../src/features/tasks/components/UpcomingCard';
 import {
+  cardDoerId,
   focusSections,
   groupTodayByMember,
   JOBS_KEY,
@@ -252,6 +253,13 @@ export default function TodayScreen() {
     }
   }
 
+  // Sirkelen i «I dag». En felles rad i personens kort (personvisningen): gjort av personen.
+  function pressCheck(section: TodaySection, task: TodayTask) {
+    const doerId = isAdult ? cardDoerId(section, task) : null;
+    if (doerId) markDone(task, doerId);
+    else handlePress(task);
+  }
+
   const pickDoer = (task: Completable) => setPicking({ task, members, preselectedId: null });
 
   function openMenu(row: RowMenu) {
@@ -408,7 +416,7 @@ export default function TodayScreen() {
         checkColor={checkColor}
         muted={muted}
         busy={busyId === task.id}
-        onPress={() => handlePress(task)}
+        onPress={() => pressCheck(section, task)}
         onRowPress={isAdult ? () => pressOpenRow(task) : undefined}
         onLongPress={isAdult ? () => openMenu({ kind: 'open', task }) : () => pickDoer(task)}
         longPressHint={isAdult ? 'Trykk for å velge hvem som gjorde det. Hold inne for valg' : undefined}

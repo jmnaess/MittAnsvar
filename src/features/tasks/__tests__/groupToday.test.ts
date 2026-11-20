@@ -1,6 +1,6 @@
 import type { TodayCompletion } from '../../completions/api';
 import type { Member } from '../../household/types';
-import { focusSections, groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../groupToday';
+import { cardDoerId, focusSections, groupTodayByMember, JOBS_KEY, THIS_MONTH_KEY } from '../groupToday';
 import type { TodayTask } from '../types';
 
 const leah: Member = {
@@ -147,5 +147,21 @@ describe('focusSections: felles årshjul-oppgaver', () => {
       ['kari', []],
       [THIS_MONTH_KEY, ['fm']],
     ]);
+  });
+});
+
+describe('cardDoerId', () => {
+  const kari = { id: 'kari' };
+
+  it('felles rad i personens kort: personen', () => {
+    expect(cardDoerId({ member: kari }, { assigned_member_id: null })).toBe('kari');
+  });
+
+  it('personens egen rad: vanlig regel', () => {
+    expect(cardDoerId({ member: kari }, { assigned_member_id: 'kari' })).toBeNull();
+  });
+
+  it('«Felles», «Denne måneden» og «Ekstrajobber» (uten person): vanlig regel, det spørres som før', () => {
+    expect(cardDoerId({ member: null }, { assigned_member_id: null })).toBeNull();
   });
 });

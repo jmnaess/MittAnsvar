@@ -1,5 +1,6 @@
 -- Tester for familieskjermen: felles årshjul-oppgaver i get_family_board (upcoming_tasks og
--- occurrences). Se migrasjonen 20261203090000_board_shared_year_tasks.sql. Alt rulles tilbake.
+-- occurrences). Se migrasjonene 20261203090000_board_shared_year_tasks.sql og
+-- 20261204090000_board_year_rule_calendar.sql. Alt rulles tilbake.
 --
 -- «Bare for voksne, aldri barn» kan ikke testes her: tavla er én for hele skjermen, og klienten
 -- velger person. Det testes i src/features/display/__tests__/personView.test.ts.
@@ -57,7 +58,11 @@ select * from jsonb_to_recordset($parity$
   {"title": "Felles årlig",            "recurrence_type": "calendar", "recurrence_unit": "year",  "recurrence_every": 1,  "weekdays": null, "month": 3,    "month_day": 15,   "season_start_month": null, "season_end_month": null, "year_wheel": true},
   {"title": "Felles sesong",           "recurrence_type": "calendar", "recurrence_unit": "week",  "recurrence_every": 1,  "weekdays": [6],  "month": null, "month_day": null, "season_start_month": 4,    "season_end_month": 9,    "year_wheel": true},
   {"title": "Sesong intervall 7 dager", "recurrence_type": "interval", "recurrence_unit": "day",   "recurrence_every": 7,  "weekdays": null, "month": null, "month_day": null, "season_start_month": 5,    "season_end_month": 9,    "year_wheel": true},
-  {"title": "Kalender hver 3. måned",  "recurrence_type": "calendar", "recurrence_unit": "month", "recurrence_every": 3,  "weekdays": null, "month": null, "month_day": 1,    "season_start_month": null, "season_end_month": null, "year_wheel": false},
+  {"title": "Kalender hver 3. måned",  "recurrence_type": "calendar", "recurrence_unit": "month", "recurrence_every": 3,  "weekdays": null, "month": null, "month_day": 1,    "season_start_month": null, "season_end_month": null, "year_wheel": true},
+  {"title": "Kalender hver 2. måned",  "recurrence_type": "calendar", "recurrence_unit": "month", "recurrence_every": 2,  "weekdays": null, "month": null, "month_day": 1,    "season_start_month": null, "season_end_month": null, "year_wheel": false},
+  {"title": "Kalender hver 13. uke",   "recurrence_type": "calendar", "recurrence_unit": "week",  "recurrence_every": 13, "weekdays": [6],  "month": null, "month_day": null, "season_start_month": null, "season_end_month": null, "year_wheel": true},
+  {"title": "Kalender hver 12. uke",   "recurrence_type": "calendar", "recurrence_unit": "week",  "recurrence_every": 12, "weekdays": [6],  "month": null, "month_day": null, "season_start_month": null, "season_end_month": null, "year_wheel": false},
+  {"title": "Kalender hver 90. dag",   "recurrence_type": "calendar", "recurrence_unit": "day",   "recurrence_every": 90, "weekdays": null, "month": null, "month_day": null, "season_start_month": null, "season_end_month": null, "year_wheel": true},
   {"title": "Intervall 6 mnd",         "recurrence_type": "interval", "recurrence_unit": "month", "recurrence_every": 6,  "weekdays": null, "month": null, "month_day": null, "season_start_month": null, "season_end_month": null, "year_wheel": true},
   {"title": "Intervall 3 mnd",         "recurrence_type": "interval", "recurrence_unit": "month", "recurrence_every": 3,  "weekdays": null, "month": null, "month_day": null, "season_start_month": null, "season_end_month": null, "year_wheel": true},
   {"title": "Intervall 1 år",          "recurrence_type": "interval", "recurrence_unit": "year",  "recurrence_every": 1,  "weekdays": null, "month": null, "month_day": null, "season_start_month": null, "season_end_month": null, "year_wheel": true},
@@ -137,7 +142,7 @@ select tests.logout();
 -- ===========================================================================
 -- 1. Paritet: felles oppgaver i upcoming_tasks = tilfellene med year_wheel = true
 -- ===========================================================================
-select ok((select count(*) = 14 from tests.parity), 'paritetslisten har 14 tilfeller');
+select ok((select count(*) = 18 from tests.parity), 'paritetslisten har 18 tilfeller');
 
 select ok(
   (select bool_and(next_due_on is not null) from public.tasks

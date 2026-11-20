@@ -11,23 +11,27 @@ type SectionFields = Pick<
   'recurrence_type' | 'recurrence_unit' | 'recurrence_every' | 'season_start_month'
 >;
 
-/** Korteste intervall (ca. 3 måneder) som står i Årshjul, per enhet. År er alltid langt nok. */
-const LONG_INTERVAL_MIN: Record<'day' | 'week' | 'month', number> = { day: 90, week: 13, month: 3 };
+/** Korteste gjentakelse (ca. 3 måneder) som står i Årshjul, per enhet. År er alltid langt nok. */
+const LONG_RECURRENCE_MIN: Record<'day' | 'week' | 'month', number> = { day: 90, week: 13, month: 3 };
 
-/** «Etter sist utført» med minst ca. 3 måneder mellom: 90 dager, 13 uker, 3 måneder eller år. */
-export function isLongInterval(r: Pick<SectionFields, 'recurrence_type' | 'recurrence_unit' | 'recurrence_every'>): boolean {
-  if (r.recurrence_type !== 'interval' || r.recurrence_unit === null) return false;
+/**
+ * Minst ca. 3 måneder mellom hver gang: 90 dager, 13 uker, 3 måneder eller år. Gjelder både
+ * fast kalender (hver 3. måned) og «etter sist utført» (3 måneder etter sist).
+ */
+export function isLongRecurrence(r: Pick<SectionFields, 'recurrence_type' | 'recurrence_unit' | 'recurrence_every'>): boolean {
+  if (r.recurrence_type !== 'calendar' && r.recurrence_type !== 'interval') return false;
+  if (r.recurrence_unit === null) return false;
   if (r.recurrence_unit === 'year') return true;
-  return (r.recurrence_every ?? 1) >= LONG_INTERVAL_MIN[r.recurrence_unit];
+  return (r.recurrence_every ?? 1) >= LONG_RECURRENCE_MIN[r.recurrence_unit];
 }
 
 /**
- * Årshjul: årlige oppgaver, sesongoppgaver (alle typer) og lange intervaller.
- * Hverdag: alt annet, også engangsoppgaver langt fram i tid og ekstrajobber.
+ * Årshjul: årlige oppgaver, sesongoppgaver (alle typer) og lange gjentakelser (kalender eller
+ * intervall). Hverdag: alt annet, også engangsoppgaver langt fram i tid og ekstrajobber.
+ * Samme regel i get_family_board (se paritetstesten i section.test.ts).
  */
 export function taskSection(r: SectionFields): TaskSection {
   if (r.recurrence_type === 'once' || r.recurrence_type === 'job') return 'everyday';
   if (isSeasonal(r)) return 'year';
-  if (r.recurrence_type === 'calendar' && r.recurrence_unit === 'year') return 'year';
-  return isLongInterval(r) ? 'year' : 'everyday';
+  return isLongRecurrence(r) ? 'year' : 'everyday';
 }

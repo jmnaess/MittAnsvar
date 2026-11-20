@@ -485,14 +485,12 @@ function ChildrenStep({ householdId, finishing, onAdded, onDone, onBack }: Child
           />
           {error && <Message>{toNorwegianMessage(error)}</Message>}
 
-          <View style={styles.done}>
-            <Button
-              variant="secondary"
-              title={children.length > 0 ? 'Ferdig' : 'Hopp over'}
-              onPress={onDone}
-              disabled={busy}
-            />
-          </View>
+          <Button
+            variant="text"
+            title={children.length > 0 ? 'Ferdig' : 'Hopp over'}
+            onPress={onDone}
+            disabled={busy}
+          />
           <Button variant="text" title="Tilbake" onPress={onBack} disabled={busy} />
         </>
       )}
@@ -506,7 +504,6 @@ const useStyles = makeStyles(({ colors }) =>
     flex: { flex: 1 },
     container: { ...pageWidth, padding: spacing.page, gap: 16, paddingBottom: 48 },
     children: { gap: spacing.row },
-    done: { marginTop: 8 },
     account: { marginTop: spacing.section, alignItems: 'center' },
     later: { textAlign: 'center' },
   }),

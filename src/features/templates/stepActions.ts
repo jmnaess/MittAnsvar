@@ -1,13 +1,11 @@
 // Knappene nederst i «Forslag til hverdagen» og «Om hjemmet». Ren logikk, så den kan testes.
 // Regelen: «Hopp over» / «Ikke nå» lagrer aldri noe fra steget. Er noe valgt eller endret, er
-// hovedknappen det som lagrer, og hoppknappen blir en mindre tekstknapp.
+// hovedknappen (fylt) det som lagrer. Hoppknappen er alltid en vanlig tekstknapp, lik «Tilbake».
 
 export type StepButtons = {
   primaryTitle: string;
   /** null: ingen hoppknapp (lukk i headeren). */
   skipTitle: string | null;
-  /** Mindre tekstknapp når hovedknappen har noe å lagre. */
-  skipSmall: boolean;
 };
 
 /** «Legg til (3)», eller «Legg til» uten valg (da er knappen av). */
@@ -25,9 +23,9 @@ export function routineButtons(o: {
   isOnboarding: boolean;
   hasAdded: boolean;
 }): StepButtons {
-  if (o.choiceCount === 0) return { primaryTitle: addTitle(0), skipTitle: 'Ferdig', skipSmall: false };
+  if (o.choiceCount === 0) return { primaryTitle: addTitle(0), skipTitle: 'Ferdig' };
   const skipTitle = !o.isOnboarding ? 'Ikke nå' : o.hasAdded ? 'Fortsett' : 'Hopp over';
-  return { primaryTitle: addTitle(o.selectedCount), skipTitle, skipSmall: o.selectedCount > 0 };
+  return { primaryTitle: addTitle(o.selectedCount), skipTitle };
 }
 
 /**
@@ -35,11 +33,10 @@ export function routineButtons(o: {
  * (lagrer ingenting). Innstillinger: «Lagre», og ingen hoppknapp.
  */
 export function homeFormButtons(o: { isOnboarding: boolean; changed: boolean }): StepButtons {
-  if (!o.isOnboarding) return { primaryTitle: 'Lagre', skipTitle: null, skipSmall: false };
+  if (!o.isOnboarding) return { primaryTitle: 'Lagre', skipTitle: null };
   return {
     primaryTitle: o.changed ? 'Lagre og vis forslag' : 'Vis forslag',
     skipTitle: 'Hopp over',
-    skipSmall: o.changed,
   };
 }
 
@@ -48,6 +45,5 @@ export function homeSuggestionButtons(o: { selectedCount: number; isOnboarding: 
   return {
     primaryTitle: addTitle(o.selectedCount),
     skipTitle: o.isOnboarding ? 'Hopp over' : 'Ikke nå',
-    skipSmall: o.selectedCount > 0,
   };
 }

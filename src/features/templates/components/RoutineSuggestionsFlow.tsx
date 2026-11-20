@@ -309,7 +309,6 @@ function SuggestionList({
       {/* «Hopp over» / «Ikke nå» lagrer ingenting: valgene finnes bare her i skjermen. */}
       <Button
         variant="text"
-        small={buttons.skipSmall}
         title={buttons.skipTitle ?? ''}
         onPress={onDone}
         disabled={busy}

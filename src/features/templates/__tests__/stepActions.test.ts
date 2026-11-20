@@ -7,14 +7,13 @@ describe('«Legg til»', () => {
   });
 });
 
-describe('hverdagen: «Hopp over» blir liten når noe er valgt', () => {
+describe('hverdagen', () => {
   const base = { choiceCount: 5, isOnboarding: true, hasAdded: false };
 
-  it('med valg: «Legg til (n)» og liten «Hopp over»', () => {
+  it('med valg: «Legg til (n)» og «Hopp over»', () => {
     expect(routineButtons({ ...base, selectedCount: 2 })).toEqual({
       primaryTitle: 'Legg til (2)',
       skipTitle: 'Hopp over',
-      skipSmall: true,
     });
   });
 
@@ -22,7 +21,6 @@ describe('hverdagen: «Hopp over» blir liten når noe er valgt', () => {
     expect(routineButtons({ ...base, selectedCount: 0 })).toEqual({
       primaryTitle: 'Legg til',
       skipTitle: 'Hopp over',
-      skipSmall: false,
     });
   });
 
@@ -31,18 +29,16 @@ describe('hverdagen: «Hopp over» blir liten når noe er valgt', () => {
     expect(routineButtons({ ...base, selectedCount: 1, isOnboarding: false })).toEqual({
       primaryTitle: 'Legg til (1)',
       skipTitle: 'Ikke nå',
-      skipSmall: true,
     });
     expect(routineButtons({ ...base, choiceCount: 0, selectedCount: 0 }).skipTitle).toBe('Ferdig');
   });
 });
 
 describe('om hjemmet, spørsmålene', () => {
-  it('oppstart med endrede svar: «Lagre og vis forslag» og liten «Hopp over»', () => {
+  it('oppstart med endrede svar: «Lagre og vis forslag» og «Hopp over»', () => {
     expect(homeFormButtons({ isOnboarding: true, changed: true })).toEqual({
       primaryTitle: 'Lagre og vis forslag',
       skipTitle: 'Hopp over',
-      skipSmall: true,
     });
   });
 
@@ -50,7 +46,6 @@ describe('om hjemmet, spørsmålene', () => {
     expect(homeFormButtons({ isOnboarding: true, changed: false })).toEqual({
       primaryTitle: 'Vis forslag',
       skipTitle: 'Hopp over',
-      skipSmall: false,
     });
   });
 
@@ -61,16 +56,14 @@ describe('om hjemmet, spørsmålene', () => {
 });
 
 describe('om hjemmet, forslag til årshjulet', () => {
-  it('«Hopp over» i oppstarten, «Ikke nå» i Innstillinger, liten når noe er valgt', () => {
+  it('«Hopp over» i oppstarten, «Ikke nå» i Innstillinger', () => {
     expect(homeSuggestionButtons({ selectedCount: 4, isOnboarding: true })).toEqual({
       primaryTitle: 'Legg til (4)',
       skipTitle: 'Hopp over',
-      skipSmall: true,
     });
     expect(homeSuggestionButtons({ selectedCount: 0, isOnboarding: false })).toEqual({
       primaryTitle: 'Legg til',
       skipTitle: 'Ikke nå',
-      skipSmall: false,
     });
   });
 });

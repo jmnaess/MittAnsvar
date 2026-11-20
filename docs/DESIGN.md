@@ -324,8 +324,9 @@ rader er avhuket fra start. Barn uten fødselsår får en `Hint` om å legge det
 («Fortsett» når noe alt er lagt til) eller «Ikke nå».
 
 **«Hopp over» / «Ikke nå» lagrer aldri noe fra steget** (hverdagen og Om hjemmet, i oppstarten og i Innstillinger).
-Er noe valgt eller endret, er hovedknappen det som lagrer («Legg til (n)», «Lagre og vis forslag»), og hoppknappen
-blir en liten tekstknapp (`small`). Uten valg er den vanlig størrelse. Titlene står i
+Er noe valgt eller endret, er hovedknappen (fylt) det som lagrer («Legg til (n)», «Lagre og vis forslag»).
+Alle sekundærknapper nederst på stegene («Hopp over», «Ikke nå», «Ferdig», «Fortsett», «Tilbake») er samme
+tekstknapp (`variant="text"`, ikke `small`), også når noe er valgt. Titlene står i
 `features/templates/stepActions.ts`.
 Det som er lagt til, står dempet nederst i seksjonen med `Chip` «Lagt til» og oppgavens egen hyppighet (ingen brikke).
 «Fjern» under raden arkiverer oppgaven (historikken blir stående) og gjør forslaget valgbart igjen. I oppstarten skjer

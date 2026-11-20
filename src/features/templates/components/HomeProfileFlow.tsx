@@ -55,7 +55,7 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
   const [error, setError] = useState<string | null>(null);
 
   const ready = !!templates.data && !!tasks.data;
-  // Endret fra det som er lagret? Da lagrer hovedknappen, og «Hopp over» blir liten (lagrer ingenting).
+  // Endret fra det som er lagret? Da heter hovedknappen «Lagre og vis forslag». «Hopp over» lagrer ingenting.
   const changed = Object.keys(homeProfileChanges(saved, profile)).length > 0;
   const buttons = homeFormButtons({ isOnboarding, changed });
 
@@ -117,7 +117,6 @@ export function HomeProfileFlow({ householdId, householdType, saved, variant, on
       {buttons.skipTitle && (
         <Button
           variant="text"
-          small={buttons.skipSmall}
           title={buttons.skipTitle}
           onPress={onDone}
           disabled={update.isPending}
@@ -205,7 +204,6 @@ function SuggestionsStep({ householdId, groups, isOnboarding, onDone, onBack }: 
       {/* «Hopp over» / «Ikke nå» legger ikke til noen av forslagene. */}
       <Button
         variant="text"
-        small={buttons.skipSmall}
         title={buttons.skipTitle ?? ''}
         onPress={onDone}
         disabled={activate.isPending}

@@ -335,8 +335,10 @@ skjermen, fordi husstanden ikke kan hentes på nytt før oppstarten er ferdig (d
 ## Avatarer
 
 Nøklene i `members.avatar` er uendret (`features/household/avatars.ts`). Tegningene ligger i
-`src/ui/avatarArt.tsx` (viewBox 0 0 48 48): sirkelbakgrunn, enkle flate former, to prikkøyne,
-ingen omriss. En ny avatar trenger en tegning der, en farge i `personColors` og en `label`.
+`src/ui/avatarArt.tsx` (viewBox 0 0 48 48). Reven er fasit for stilen: sirkelbakgrunn, geometriske
+flate former (trekanter og facetter der dyret har tydelige former, runde der dyret er rundt), to åpne
+prikkøyne, ingen omriss. Felles mål: hodet omtrent like stort, øynene på y ≈ 26–29, nesen på y ≈ 32–35,
+tyngdepunktet nær midten og alt innenfor r ≈ 21. Alle skal kjennes igjen i 20 px. En ny avatar trenger en tegning der, en farge i `personColors` og en `label`.
 Ukjente nøkler (f.eks. en eldre app som ser en nyere figur) vises som reven (`avatarArtFor`,
 `FALLBACK_AVATAR`) med de nøytrale Felles-fargene, aldri tomt (`features/household/__tests__/avatars.test.ts`).
 Figurene: bjørn, katt, rev, frosk, kanin, ugle, panda, løve, hund, enhjørning, og de roligere elg, sel, oter,

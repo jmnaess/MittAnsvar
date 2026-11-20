@@ -757,6 +757,7 @@ Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
     - Voksen og familieskjerm kan ikke sende. Voksne ser alle i husstanden. Familieskjermen, en annen husstand og anon ser ingenting.
     - Godkjent og gjort uten lønn: arkivert engangsjobb, avkrysning `approved` uten beløp. Med 30 kr (barnet ba om 50): saldoen øker med én gang, og beløpet kan betales ut.
     - Godkjent, ikke gjort, med 20 kr: engangsoppgave i barnets «I dag», ingen avkrysning. Barnet krysser av, og den venter. En voksen godkjenner, og saldoen øker.
+    - Voksen nr. 2 ser og avgjør forslag. Godkjent og gjort står i `today_completions` og i familieskjermens `completions` med barnet, `job` og beløpet. Godkjent, ikke gjort, står i barnets `today_tasks` igjen etter angring og etter «Ikke gjort».
     - Avslag: ingen oppgave, barnet ser det, og et avgjort forslag kan ikke avgjøres igjen. Barn, skjerm, annen husstand og ukjent id kan ikke avgjøre. Ingen kan skrive direkte.
     - Avgjort for over 3 dager siden vises ikke for barnet. Barnet kan ikke slå av innstillingen. Av: nye forslag avvises, og ventende kan avgjøres. Utløpt prøvetid: kan ikke sende eller avgjøre.
     - Sletting: med barnet, med husstanden (siste voksne), og `decided_by_member_id = null` når en av flere voksne sletter seg. Oppryddingen sletter bare avgjorte forslag eldre enn 30 dager, og jobben finnes.

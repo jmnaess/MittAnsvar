@@ -354,16 +354,20 @@ fremdrift, og man havner i fanene; resten finnes under Husstand og Innstillinger
 
 `features/proposals/`. På barnets «I dag»: `AddFab label="Foreslå"` (bare når husstanden har slått det på)
 åpner `ProposalSheet`: «Hva har du gjort, eller vil du gjøre?» (maks 60 tegn), «Er det gjort?» (Ja / Nei, jeg
-vil gjøre det) og «Vil du ha lønn for det?» (Nei / Ja, med valgfritt beløp, maks 200 kr). «Send» / «Avbryt» i
-`footer`. Etter sending: `NoticeToast aboveFab` «Sendt! En voksen ser på det.». Med 5 som venter viser arket bare
-en melding. `MyProposalsCard` «Mine forslag» står etter «Ekstrajobber»: én `ListRow` per forslag med
-`proposalMeta` («Gjort · ønsker 30 kr») og `Chip` «Venter», «Godkjent +30 kr» (`money`), «Godkjent» eller «Ikke
-denne gangen». Avgjorte forsvinner etter 3 dager.
+vil gjøre det) og «Vil du ha lønn for det?» (Nei / Ja, med «Hvor mye?» og plassholderen «La de voksne foreslå»,
+maks 200 kr). Hele skjemaet skal få plass på en iPhone SE (667 pt): luft 8 mellom feltene, og «Avbryt» og «Send»
+side om side i `footer`, så de og valgene under tekstfeltet synes også med tastaturet oppe. Etter sending:
+`NoticeToast aboveFab` «Sendt! En voksen ser på det.». Med 5 som venter viser arket bare en melding.
+`MyProposalsCard` «Mine forslag» står etter «Ekstrajobber»: én `ListRow` per forslag som venter eller er avslått
+(`visibleMyProposals`), med `proposalMeta` («Gjort · ønsker 30 kr») og `Chip` «Venter» eller «Ikke denne gangen».
+Avslag forsvinner etter 3 dager. Godkjente vises ikke her: de står i «Mine oppgaver i dag», som utført med beløpet
+(gjort) eller som en vanlig oppgave (ikke gjort).
 
 Hos de voksne står forslagene i samme banner og ark som «Til godkjenning» (`PendingApprovalBanner`), først under
-«Forslag». `ProposalReviewRow`: avatar, tittel, «Leah · Vil gjøre det · ønsker 50 kr», feltet «Lønn (kr)»
+«Forslag». `ProposalReviewRow`: avatar, tittel, «Leah · Vil gjøre det · ønsker 50 kr», feltet «Fortjent lønn»
 (forhåndsutfylt med barnets beløp, tomt = ingen lønn), et hint om hva godkjenning gjør, «Avslå» (bekreftes) og
-«Godkjenn». Innstillinger → «Barna»: bryteren «Barn kan foreslå oppgaver» (bare voksne, bare med barn).
+«Godkjenn». Banneret hentes på nytt ved fokus, ved dra for å oppdatere og hvert minutt mens appen er åpen
+(`WAITING_REFRESH_MS`, samme for forslag og godkjenninger). Innstillinger → «Barna»: bryteren «Barn kan foreslå oppgaver» (bare voksne, bare med barn).
 Familieskjermen viser ingenting om forslag.
 
 ## Avatarer

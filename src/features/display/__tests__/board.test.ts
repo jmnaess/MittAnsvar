@@ -104,6 +104,22 @@ describe('boardCards', () => {
     expect(cards.find((c) => c.key === 'k')?.done.map((c) => c.id)).toEqual(['1']);
     expect(cards.find((c) => c.key === 'shared')?.done.map((c) => c.id)).toEqual(['2']);
   });
+
+  it('godkjent forslag som er gjort (engangsjobb), står som utført hos barnet, med beløpet', () => {
+    // Slik decide_task_proposal lagrer det: en arkivert engangsjobb for barnet, krysset av for barnet.
+    const forslag = done('forslag', {
+      assigned_member_id: null,
+      recurrence_type: 'job',
+      job_member_ids: ['l'],
+      completed_by_member_id: 'l',
+      reward_nok: 30,
+    });
+    const cards = boardCards({ members, tasks: [], completions: [forslag] });
+    const card = cards.find((c) => c.key === 'l');
+    expect(card?.done.map((c) => c.id)).toEqual(['forslag']);
+    expect(card?.done[0].reward_nok).toBe(30);
+    expect(cards.some((c) => c.key === 'shared' || c.key === 'jobs')).toBe(false);
+  });
 });
 
 const yearly = { recurrence_type: 'calendar', recurrence_unit: 'year', recurrence_every: 1 } as const;

@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(78);
+select plan(88);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i de andre testfilene)
@@ -291,6 +291,58 @@ select is((select status from public.list_my_task_proposals() where id = tests.i
 select lives_ok($$select tests.submit('ny', 'Bære ved', true, false)$$,
   'etter avgjørelser er det plass til nye forslag');
 select tests.logout();
+
+-- ===========================================================================
+-- 8b. Alle voksne, og hvor godkjente forslag vises
+-- ===========================================================================
+-- Voksen nr. 2 (ikke den som laget husstanden) ser forslagene og kan avgjøre.
+select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
+select tests.submit('a3', 'Tømt søpla', true, true, 10);
+select tests.submit('oppvask', 'Ta oppvasken', false, false);
+select tests.logout();
+
+select tests.login_as('00000000-0000-0000-0000-00000000a003');
+select is((select count(*)::int from public.task_proposals where status = 'pending'), 4,
+  'voksen nr. 2 ser forslagene som venter');
+select lives_ok($$select tests.decide('a3', true, 10)$$, 'voksen nr. 2 godkjenner et forslag');
+select lives_ok($$select tests.decide('oppvask', true)$$, 'voksen nr. 2 godkjenner et «vil gjøre»-forslag');
+select is((select reward_nok || ' ' || recurrence_type || ' ' || completed_by_member_id
+           from public.today_completions where task_id = tests.id('hagen-task')),
+  '30 job aaaaaaaa-0000-0000-0000-000000000002',
+  'godkjent og gjort står i dagens avkrysninger: barnet, engangsjobb, 30 kr');
+select tests.logout();
+
+-- Familieskjermen får avkrysningen med barnet og beløpet (legges i barnets kort, se board.test.ts).
+select tests.login_as_anonymous('00000000-0000-0000-0000-00000000d001');
+select ok(exists (
+    select 1 from jsonb_array_elements(public.get_family_board() -> 'completions') c
+    where c ->> 'task_id' = tests.id('hagen-task')::text
+      and c ->> 'completed_by_member_id' = 'aaaaaaaa-0000-0000-0000-000000000002'
+      and (c ->> 'reward_nok')::int = 30
+      and c ->> 'recurrence_type' = 'job'),
+  'familieskjermen ser det godkjente forslaget som utført av barnet, med 30 kr');
+select tests.logout();
+
+-- Godkjent, ikke gjort: blir stående når avkrysningen angres eller fjernes.
+select tests.login_as_anonymous('00000000-0000-0000-0000-00000000a002');
+insert into tests.ids select 'oppvask-c1', r.completion_id
+  from public.complete_task(tests.id('oppvask-task'), 'aaaaaaaa-0000-0000-0000-000000000002') r;
+select ok(not exists (select 1 from public.today_tasks where id = tests.id('oppvask-task')),
+  'krysset av: ikke lenger åpen i «I dag»');
+select lives_ok(format('select public.undo_completion(%L)', tests.id('oppvask-c1')), 'barnet angrer');
+select ok(exists (select 1 from public.today_tasks
+                  where id = tests.id('oppvask-task') and assigned_member_id = 'aaaaaaaa-0000-0000-0000-000000000002'),
+  'etter angring står oppgaven i barnets «I dag» igjen');
+insert into tests.ids select 'oppvask-c2', r.completion_id
+  from public.complete_task(tests.id('oppvask-task'), 'aaaaaaaa-0000-0000-0000-000000000002') r;
+select tests.logout();
+
+select tests.login_as('00000000-0000-0000-0000-00000000a001');
+select lives_ok(format('select public.remove_completion(%L)', tests.id('oppvask-c2')), 'voksen trykker «Ikke gjort»');
+select tests.logout();
+select ok((tests.task('oppvask')).archived_at is null
+          and exists (select 1 from public.today_tasks where id = tests.id('oppvask-task')),
+  'etter «Ikke gjort» står oppgaven i «I dag» igjen, ikke arkivert');
 
 -- ===========================================================================
 -- 9. Hvem kan avgjøre, og ingen direkte skriving

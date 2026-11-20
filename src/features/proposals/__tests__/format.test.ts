@@ -1,17 +1,22 @@
-import { approvalBannerText, parseAmount, proposalMeta, proposalStatusChip } from '../format';
+import { approvalBannerText, parseAmount, proposalMeta, proposalStatusChip, visibleMyProposals } from '../format';
 
 describe('proposalStatusChip', () => {
   it('venter', () => {
-    expect(proposalStatusChip('pending', null)).toEqual({ label: 'Venter', tone: 'neutral' });
-  });
-  it('godkjent med lønn', () => {
-    expect(proposalStatusChip('approved', 30)).toEqual({ label: 'Godkjent +30 kr', tone: 'money' });
-  });
-  it('godkjent uten lønn', () => {
-    expect(proposalStatusChip('approved', null)).toEqual({ label: 'Godkjent', tone: 'neutral' });
+    expect(proposalStatusChip('pending')).toEqual({ label: 'Venter', tone: 'neutral' });
   });
   it('avslått', () => {
-    expect(proposalStatusChip('rejected', null)).toEqual({ label: 'Ikke denne gangen', tone: 'neutral' });
+    expect(proposalStatusChip('rejected')).toEqual({ label: 'Ikke denne gangen', tone: 'neutral' });
+  });
+});
+
+describe('visibleMyProposals', () => {
+  it('viser de som venter og avslag, ikke godkjente', () => {
+    const list = [
+      { id: 'a', status: 'pending' as const },
+      { id: 'b', status: 'approved' as const },
+      { id: 'c', status: 'rejected' as const },
+    ];
+    expect(visibleMyProposals(list).map((p) => p.id)).toEqual(['a', 'c']);
   });
 });
 

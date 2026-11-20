@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Button, ChoiceChips, Hint, Message, Sheet, TextField } from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
 import { formatKroner } from '../../tasks/reward';
@@ -29,7 +30,11 @@ type Props = {
 
 /**
  * Barnets skjema «Foreslå noe»: hva, er det gjort, og om barnet vil ha lønn (med valgfritt beløp).
- * Knappene ligger i footer, så de synes over tastaturet. Skjemaet tømmes hver gang det åpnes.
+ * Skjemaet tømmes hver gang det åpnes.
+ *
+ * Laget for å få plass på en iPhone SE (667 pt): lite luft, og «Avbryt» og «Send» side om side i
+ * footer. De står alltid synlige, også med tastaturet oppe, og da synes også valgene under
+ * tekstfeltet.
  */
 export function ProposalSheet({ visible, pendingCount, saving, error, onSubmit, onClose }: Props) {
   const [title, setTitle] = useState('');
@@ -67,10 +72,16 @@ export function ProposalSheet({ visible, pendingCount, saving, error, onSubmit, 
       title="Foreslå noe"
       onClose={onClose}
       footer={
-        <>
-          {!full && <Button title="Send" onPress={send} disabled={!canSend} />}
-          <Button variant="text" title={full ? 'Lukk' : 'Avbryt'} onPress={onClose} />
-        </>
+        <View style={styles.actions}>
+          <View style={styles.action}>
+            <Button variant="text" title={full ? 'Lukk' : 'Avbryt'} onPress={onClose} />
+          </View>
+          {!full && (
+            <View style={styles.action}>
+              <Button title="Send" onPress={send} disabled={!canSend} />
+            </View>
+          )}
+        </View>
       }
     >
       {full ? (
@@ -78,7 +89,7 @@ export function ProposalSheet({ visible, pendingCount, saving, error, onSubmit, 
           {`Du har ${MAX_PENDING_PROPOSALS} forslag som venter. Vent til en voksen har sett på dem.`}
         </Message>
       ) : (
-        <>
+        <View style={styles.form}>
           <TextField
             label="Hva har du gjort, eller vil du gjøre?"
             value={title}
@@ -98,19 +109,27 @@ export function ProposalSheet({ visible, pendingCount, saving, error, onSubmit, 
           {reward === 'yes' && (
             <>
               <TextField
-                label="Hvor mye? (valgfritt)"
+                label="Hvor mye?"
                 value={amount}
                 onChangeText={(text) => setAmount(text.replace(/\D/g, ''))}
                 keyboardType="number-pad"
                 maxLength={3}
+                placeholder="La de voksne foreslå"
                 editable={!saving}
               />
-              <Hint error={!amountValid}>{`Maks ${formatKroner(MAX_PROPOSED_NOK)}. En voksen bestemmer.`}</Hint>
+              {!amountValid && <Hint error>{`Maks ${formatKroner(MAX_PROPOSED_NOK)}.`}</Hint>}
             </>
           )}
           {!!error && <Message>{toNorwegianMessage(error)}</Message>}
-        </>
+        </View>
       )}
     </Sheet>
   );
 }
+
+const styles = StyleSheet.create({
+  // Mindre luft enn arkets standard (12), så alt får plass på en liten iPhone.
+  form: { gap: 8 },
+  actions: { flexDirection: 'row', gap: 8 },
+  action: { flex: 1 },
+});

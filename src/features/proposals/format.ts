@@ -9,16 +9,19 @@ export const MAX_PENDING_PROPOSALS = 5;
 
 export type ProposalStatus = 'pending' | 'approved' | 'rejected';
 
-/** Merkelappen barnet ser: «Venter», «Godkjent +30 kr», «Godkjent», «Ikke denne gangen». */
-export function proposalStatusChip(
-  status: ProposalStatus,
-  approvedNok: number | null,
-): { label: string; tone: ChipTone } {
-  if (status === 'pending') return { label: 'Venter', tone: 'neutral' };
-  if (status === 'rejected') return { label: 'Ikke denne gangen', tone: 'neutral' };
-  return approvedNok
-    ? { label: `Godkjent +${formatKroner(approvedNok)}`, tone: 'money' }
-    : { label: 'Godkjent', tone: 'neutral' };
+/**
+ * Det «Mine forslag» viser: de som venter og de som er avslått. Godkjente er blitt en oppgave
+ * eller en avkrysning i «I dag», og vises der i stedet.
+ */
+export function visibleMyProposals<T extends { status: ProposalStatus }>(proposals: T[]): T[] {
+  return proposals.filter((p) => p.status !== 'approved');
+}
+
+/** Merkelappen barnet ser i «Mine forslag»: «Venter» eller «Ikke denne gangen». */
+export function proposalStatusChip(status: Exclude<ProposalStatus, 'approved'>): { label: string; tone: ChipTone } {
+  return status === 'pending'
+    ? { label: 'Venter', tone: 'neutral' }
+    : { label: 'Ikke denne gangen', tone: 'neutral' };
 }
 
 /** Metalinjen: «Gjort · ønsker 30 kr», «Vil gjøre det · ønsker lønn», «Gjort · uten lønn». */

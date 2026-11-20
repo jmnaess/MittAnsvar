@@ -1,3 +1,4 @@
+import type { TodayCompletion } from '../../completions/api';
 import { childTodaySections, MINE_KEY } from '../childToday';
 import { JOBS_KEY } from '../groupToday';
 import type { TodayTask } from '../types';
@@ -62,5 +63,25 @@ describe('childTodaySections', () => {
 
   it('skjuler tomme seksjoner', () => {
     expect(childTodaySections([task({ id: 'x', assigned_member_id: 'ola' })], 'leah')).toEqual([]);
+  });
+
+  it('godkjent forslag: gjort står som utført i «Mine oppgaver i dag», ikke gjort som oppgave', () => {
+    // Gjort: arkivert engangsjobb, krysset av for Leah. Ikke gjort: engangsoppgave til Leah i dag.
+    const gjort = {
+      id: 'c',
+      assigned_member_id: null,
+      completed_by_member_id: 'leah',
+      recurrence_type: 'job',
+      reward_nok: 30,
+    } as TodayCompletion;
+    const sections = childTodaySections(
+      [task({ id: 'vaske-bilen', recurrence_type: 'once', assigned_member_id: 'leah' })],
+      'leah',
+      [gjort],
+    );
+    const mine = sections.find((s) => s.key === MINE_KEY)!;
+    expect(ids(mine.data)).toEqual(['vaske-bilen']);
+    expect(mine.done.map((c) => c.id)).toEqual(['c']);
+    expect(sections.some((s) => s.key === JOBS_KEY)).toBe(false);
   });
 });

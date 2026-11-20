@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { useInvalidateTasks } from '../tasks/hooks';
 import {
   approveCompletions,
@@ -10,6 +11,12 @@ import {
   setCompletionStatus,
   type MemberBalance,
 } from './api';
+
+/**
+ * Hvor ofte det som venter på en voksen (godkjenninger og forslag) hentes mens appen er åpen.
+ * Samme takt som familieskjermen. TanStack henter ikke når appen ligger i bakgrunnen.
+ */
+export const WAITING_REFRESH_MS = 60_000;
 
 // Saldo og historikk ligger under ['rewards', householdId]. Avkrysning, angring og utbetaling
 // invaliderer den nøkkelen.
@@ -42,9 +49,13 @@ export function useRewardHistory(householdId: string, memberId: string) {
   });
 }
 
+/** Stabil, så den kan stå i deps (refetch i «I dag»). */
 export function useInvalidateRewards(householdId: string) {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: rewardKeys.all(householdId) });
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: rewardKeys.all(householdId) }),
+    [queryClient, householdId],
+  );
 }
 
 export function useRecordPayout(householdId: string) {
@@ -64,6 +75,7 @@ export function usePendingCompletions(householdId: string) {
   return useQuery({
     queryKey: rewardKeys.pending(householdId),
     queryFn: () => listPendingCompletions(householdId),
+    refetchInterval: WAITING_REFRESH_MS,
   });
 }
 

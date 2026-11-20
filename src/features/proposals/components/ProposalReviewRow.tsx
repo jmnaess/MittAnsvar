@@ -48,7 +48,7 @@ export function ProposalReviewRow({ proposal, member, busy, onDecide }: Props) {
         </View>
       </View>
       <TextField
-        label="Lønn (kr)"
+        label="Fortjent lønn"
         value={amount}
         onChangeText={(text) => setAmount(text.replace(/\D/g, ''))}
         keyboardType="number-pad"

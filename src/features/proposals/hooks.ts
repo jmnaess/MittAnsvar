@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { useInvalidateRewards } from '../rewards/hooks';
+import { useInvalidateRewards, WAITING_REFRESH_MS } from '../rewards/hooks';
 import { useInvalidateTasks } from '../tasks/hooks';
 import { decideProposal, listMyProposals, listPendingProposals, submitProposal } from './api';
 
@@ -28,11 +28,12 @@ export function useMyProposals(householdId: string, enabled = true) {
   });
 }
 
-/** Forslag som venter (voksne). */
+/** Forslag som venter (voksne). Hentes jevnlig, som godkjenningene. */
 export function usePendingProposals(householdId: string) {
   return useQuery({
     queryKey: proposalKeys.pending(householdId),
     queryFn: () => listPendingProposals(householdId),
+    refetchInterval: WAITING_REFRESH_MS,
   });
 }
 

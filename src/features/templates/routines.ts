@@ -27,11 +27,19 @@ export function childAge(birthYear: number | null, year: number): number | null 
 
 /**
  * Passer barnemalen barnet? Med alder: mellom min_age og max_age (null = ingen grense).
- * Uten alder: bare maler uten aldersgrense.
+ * Uten alder: bare maler uten aldersgrense. Alderen sorterer forslagene, den skjuler dem ikke:
+ * resten ligger under «Vis flere forslag».
  */
 export function fitsAge(t: Pick<TaskTemplate, 'min_age' | 'max_age'>, age: number | null): boolean {
   if (age === null) return t.min_age === null && t.max_age === null;
   return (t.min_age === null || age >= t.min_age) && (t.max_age === null || age <= t.max_age);
+}
+
+/** Sortert etter alder: min_age (null = 0), så max_age (null = 18). Ellers samme rekkefølge. */
+export function byAge(templates: TaskTemplate[]): TaskTemplate[] {
+  return [...templates].sort(
+    (a, b) => (a.min_age ?? 0) - (b.min_age ?? 0) || (a.max_age ?? 18) - (b.max_age ?? 18),
+  );
 }
 
 /** Nøkkelen for en aktiv rutine: malen og barnet, eller malen alene for felles. */
@@ -56,11 +64,16 @@ export function activeRoutineKeys(
   return { templates, pairs };
 }
 
-/** added: maler barnet allerede har, vist dempet nederst («Lagt til»). Kan ikke velges. */
+/**
+ * templates: passer alderen, vises først. more: de andre barnemalene, sortert etter alder, under
+ * «Vis flere forslag» (alle, når fødselsår mangler). added: maler barnet allerede har, uansett
+ * alder, vist dempet nederst («Lagt til»). Kan ikke velges.
+ */
 export type ChildSuggestions = {
   member: Member;
   age: number | null;
   templates: TaskTemplate[];
+  more: TaskTemplate[];
   added: TaskTemplate[];
 };
 
@@ -72,9 +85,9 @@ export type RoutineSuggestions = {
 };
 
 /**
- * Forslagene: felles maler (any/adult) som passer husstanden, og barnemaler per barn som passer
- * alderen. Det som er aktivt, havner i sharedAdded/added i stedet, så det aldri kan velges igjen.
- * Barn uten forslag er med (med tomme lister), så skjermen kan si at fødselsår gir flere forslag.
+ * Forslagene: felles maler (any/adult) som passer husstanden, og alle barnemaler per barn, delt
+ * i de som passer alderen og resten. Det som er aktivt, havner i sharedAdded/added i stedet, så
+ * det aldri kan velges igjen.
  */
 export function suggestRoutines(
   templates: TaskTemplate[],
@@ -90,13 +103,14 @@ export function suggestRoutines(
     .filter((m) => m.role === 'child')
     .map((member) => {
       const age = childAge(member.birth_year, year);
-      const fitting = childTemplates.filter((t) => fitsAge(t, age));
       const isAdded = (t: TaskTemplate) => active.pairs.has(routineKey(t.id, member.id));
+      const open = childTemplates.filter((t) => !isAdded(t));
       return {
         member,
         age,
-        templates: fitting.filter((t) => !isAdded(t)),
-        added: fitting.filter(isAdded),
+        templates: open.filter((t) => fitsAge(t, age)),
+        more: byAge(open.filter((t) => !fitsAge(t, age))),
+        added: childTemplates.filter(isAdded),
       };
     });
   return {
@@ -114,22 +128,24 @@ export function routineChoices(s: RoutineSuggestions): RoutineChoice[] {
   return [
     ...s.shared.map((t) => ({ key: routineKey(t.id, null), templateId: t.id, memberId: null })),
     ...s.children.flatMap((c) =>
-      c.templates.map((t) => ({ key: routineKey(t.id, c.member.id), templateId: t.id, memberId: c.member.id })),
+      [...c.templates, ...c.more].map((t) => ({
+        key: routineKey(t.id, c.member.id),
+        templateId: t.id,
+        memberId: c.member.id,
+      })),
     ),
   ];
 }
 
 /**
- * Radene som er avhuket fra start: suggested_by_default. Barn uten fødselsår får bare maler
- * uten aldersgrense, og alle de er avhuket, så barnet også får noe.
+ * Radene som er avhuket fra start: suggested_by_default blant de som passer alderen.
+ * «Vis flere forslag» er aldri avhuket.
  */
 export function defaultSelection(s: RoutineSuggestions): Set<string> {
   return new Set([
     ...s.shared.filter((t) => t.suggested_by_default).map((t) => routineKey(t.id, null)),
     ...s.children.flatMap((c) =>
-      c.templates
-        .filter((t) => c.age === null || t.suggested_by_default)
-        .map((t) => routineKey(t.id, c.member.id)),
+      c.templates.filter((t) => t.suggested_by_default).map((t) => routineKey(t.id, c.member.id)),
     ),
   ]);
 }

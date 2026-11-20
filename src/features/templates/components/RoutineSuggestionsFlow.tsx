@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Avatar, Button, CheckRow, Chip, Hint, ListRow, Message, Section, spacing, Text, useTheme } from '../../../ui';
+import { Avatar, Button, CheckRow, Chip, Hint, ListRow, Message, Section, ShowMoreRow, spacing, Text, useTheme } from '../../../ui';
 import { toNorwegianMessage } from '../../../lib/errors';
 import { useMemberPhotoLookup, useMembers } from '../../household/hooks';
 import { describeRecurrence } from '../../tasks/recurrence';
@@ -29,8 +29,9 @@ type Props = {
 };
 
 /**
- * «Forslag til hverdagen»: felles rutiner og rutiner per barn ut fra alderen. Noen få er avhuket
- * fra start (suggested_by_default). «Legg til» lager oppgavene via activate_templates: barnemaler
+ * «Forslag til hverdagen»: felles rutiner og rutiner per barn. Forslagene som passer alderen
+ * vises først, resten under «Vis flere forslag», sortert etter alder. Noen få av de som passer
+ * alderen er avhuket fra start (suggested_by_default). «Legg til» lager oppgavene via activate_templates: barnemaler
  * tildeles barnet (med lønnsforslaget), resten blir felles. Det som er lagt til, vises dempet
  * nederst i seksjonen, merket «Lagt til», og kan ikke velges igjen.
  */
@@ -75,6 +76,7 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
   const photoOf = useMemberPhotoLookup(householdId);
   const [suggestions] = useState(initial);
   const [selected, setSelected] = useState(() => defaultSelection(suggestions));
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const choices = routineChoices(suggestions);
   const busy = activate.isPending;
 
@@ -83,6 +85,15 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleExpanded(memberId: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(memberId)) next.delete(memberId);
+      else next.add(memberId);
       return next;
     });
   }
@@ -137,18 +148,25 @@ function SuggestionList({ householdId, householdType, suggestions: initial, vari
         </Section>
       )}
 
-      {suggestions.children.map(({ member, age, templates, added }) => (
+      {suggestions.children.map(({ member, age, templates, more, added }) => (
         <Section
           key={member.id}
           title={childHeading(member.display_name, age)}
           right={<Avatar avatar={member.avatar} photo={photoOf(member)} size={32} />}
         >
-          {templates.length + added.length > 0 && (
-            <View style={styles.list}>
-              {templates.map((t) => row(t, member.id))}
-              {added.map((t) => addedRow(t, member.id))}
-            </View>
+          {templates.length > 0 && <View style={styles.list}>{templates.map((t) => row(t, member.id))}</View>}
+          {more.length > 0 && (
+            <ShowMoreRow
+              label="Vis flere forslag"
+              accessibilityLabel={`Vis flere forslag til ${member.display_name}`}
+              expanded={expanded.has(member.id)}
+              onPress={() => toggleExpanded(member.id)}
+            />
           )}
+          {more.length > 0 && expanded.has(member.id) && (
+            <View style={styles.list}>{more.map((t) => row(t, member.id))}</View>
+          )}
+          {added.length > 0 && <View style={styles.list}>{added.map((t) => addedRow(t, member.id))}</View>}
           {age === null && (
             <Hint>{`Legg inn fødselsår under Husstand, så får ${member.display_name} forslag som passer alderen.`}</Hint>
           )}

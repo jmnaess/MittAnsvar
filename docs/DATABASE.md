@@ -449,10 +449,10 @@ Det planlagte `is_annual_wheel` trengs ikke, fordi årshjulet viser maler med `r
 
 Forslag filtreres i TypeScript (`templates/suggest.ts`) på husstandstype, boligtype og hjemprofilen (`requires`, se `templates/requires.ts`), og grupperes i tolv måneder med denne måneden først.
 
-**Rutinemaler (steg 16, `*_routine_template_columns.sql` og `*_routine_templates.sql`):** 25 maler for «Forslag til hverdagen». En rutine er fast kalender hver dag, uke eller måned uten periode (`isRoutineTemplate` i `templates/routines.ts`), så den vises aldri i årshjulet eller i forslagene fra hjemprofilen. Ingen rutiner bruker `requires`, fordi «hverdagen» kommer før hjemprofilen i oppstarten (bil og kjæledyr venter derfor).
-- 15 barnemaler (`{family}`) i aldersgruppene 3–5, 6–8, 9–12 og 13+. Et barn med fødselsår får 5–8 forslag, 2–3 avhuket. Én mal har ingen aldersgrense, og den er den eneste et barn uten fødselsår får. For slike barn er den avhuket (det gjør appen). Lønn bare på ekstra jobber.
+**Rutinemaler (steg 16, `*_routine_template_columns.sql`, `*_routine_templates.sql` og `*_child_routine_templates.sql`):** 28 maler for «Forslag til hverdagen». En rutine er fast kalender hver dag, uke eller måned uten periode (`isRoutineTemplate` i `templates/routines.ts`), så den vises aldri i årshjulet eller i forslagene fra hjemprofilen. Ingen rutiner bruker `requires`, fordi «hverdagen» kommer før hjemprofilen i oppstarten (bil og kjæledyr venter derfor).
+- 18 barnemaler (`{family}`), alle med aldersgrense. Det finnes ingen fasit for hva barn i en alder gjør, så alderen **sorterer** forslagene i stedet for å skjule dem: de som passer alderen vises først (noen avhuket, `suggested_by_default`), og resten ligger under «Vis flere forslag», sortert etter alder og aldri avhuket. Et barn uten fødselsår får alle under «Vis flere forslag». Lønn på ekstra innsats, ikke på egne ting som å re opp senga.
 - 6 felles maler for alle husstander (3 avhuket) og 4 for par og enslige (ingen avhuket).
-- Forslagene regnes ut i `templates/routines.ts`: felles maler på mal-id, barnemaler per barn på mal + barn. Det som er aktivt, er ikke med.
+- Forslagene regnes ut i `templates/routines.ts`: felles maler på mal-id, barnemaler per barn på mal + barn. Det som er aktivt, vises dempet nederst som «Lagt til» og kan ikke velges.
 
 ### `feedback_messages`
 | Kolonne | Type | Merknad |

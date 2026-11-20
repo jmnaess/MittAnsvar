@@ -1,6 +1,7 @@
 import type { Member } from '../../household/types';
 import {
   activeRoutineKeys,
+  byAge,
   childAge,
   childHeading,
   defaultSelection,
@@ -100,12 +101,41 @@ describe('suggestRoutines', () => {
     expect(s.shared.map((t) => t.id)).toEqual(['bathroom']);
   });
 
-  it('per barn: maler som passer alderen; uten fødselsår bare maler uten grense', () => {
+  it('per barn: maler som passer alderen først, resten under «Vis flere» sortert etter alder', () => {
     const s = suggestRoutines(templates, household, members, none, YEAR);
-    expect(s.children.map((c) => [c.member.id, c.age, c.templates.map((t) => t.id)])).toEqual([
-      ['leah', 9, ['table', 'bed', 'any-age']],
-      ['iver', null, ['any-age']],
+    expect(
+      s.children.map((c) => [c.member.id, c.age, c.templates.map((t) => t.id), c.more.map((t) => t.id)]),
+    ).toEqual([
+      ['leah', 9, ['table', 'bed', 'any-age'], ['toys']],
+      ['iver', null, ['any-age'], ['toys', 'bed', 'table']],
     ]);
+  });
+
+  it('byAge: min_age først (null = 0), så max_age (null = 18)', () => {
+    const sorted = byAge([
+      template('teen', { min_age: 13 }),
+      template('six-twelve', { min_age: 6, max_age: 12 }),
+      template('six-up', { min_age: 6 }),
+      template('small', { max_age: 5 }),
+    ]);
+    expect(sorted.map((t) => t.id)).toEqual(['small', 'six-twelve', 'six-up', 'teen']);
+  });
+
+  it('«Vis flere» kan velges, men er aldri avhuket', () => {
+    const s = suggestRoutines(templates, household, members, none, YEAR);
+    const keys = routineChoices(s).map((c) => c.key);
+    expect(keys).toContain(routineKey('toys', 'leah'));
+    expect(keys).toContain(routineKey('bed', 'iver'));
+    const selected = defaultSelection(s);
+    expect(selected.has(routineKey('toys', 'leah'))).toBe(false);
+    expect(selected.has(routineKey('bed', 'iver'))).toBe(false);
+  });
+
+  it('lagt til uansett alder vises som lagt til, ikke under «Vis flere»', () => {
+    const active = activeRoutineKeys([{ template_id: 'toys', assigned_member_id: 'leah' }]);
+    const s = suggestRoutines(templates, household, members, active, YEAR);
+    expect(s.children[0].added.map((t) => t.id)).toEqual(['toys']);
+    expect(s.children[0].more).toEqual([]);
   });
 
   it('det som er aktivt, er lagt til og kan ikke velges (felles på mal, barn på mal + barn)', () => {
@@ -134,11 +164,10 @@ describe('suggestRoutines', () => {
     expect(selected.has(routineKey('bathroom', null))).toBe(true);
   });
 
-  it('barn uten fødselsår: malene uten aldersgrense er avhuket', () => {
+  it('barn uten fødselsår følger også suggested_by_default', () => {
     const s = suggestRoutines(templates, household, members, none, YEAR);
     const selected = defaultSelection(s);
-    expect(selected.has(routineKey('any-age', 'iver'))).toBe(true);
-    // Barn med fødselsår følger suggested_by_default, også for malen uten aldersgrense.
+    expect(selected.has(routineKey('any-age', 'iver'))).toBe(false);
     expect(selected.has(routineKey('any-age', 'leah'))).toBe(false);
   });
 

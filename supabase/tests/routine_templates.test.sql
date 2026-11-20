@@ -4,7 +4,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(27);
+select plan(33);
 
 create schema tests;
 grant usage on schema tests to anon, authenticated;
@@ -64,11 +64,11 @@ values
 -- 1. Kolonnene
 -- ===========================================================================
 -- Startsettet (*_routine_templates.sql).
-select is((select count(*)::int from public.task_templates where slug like 'routine-%'), 25,
-  '25 rutinemaler');
+select is((select count(*)::int from public.task_templates where slug like 'routine-%'), 28,
+  '28 rutinemaler');
 select is((select count(*)::int from public.task_templates
-           where slug like 'routine-%' and audience = 'child' and household_types = '{family}'), 15,
-  '15 barnemaler, bare for familier');
+           where slug like 'routine-%' and audience = 'child' and household_types = '{family}'), 18,
+  '18 barnemaler, bare for familier');
 select is((select count(*)::int from public.task_templates
            where slug like 'routine-%' and audience <> 'child' and household_types is null
              and suggested_by_default), 3,
@@ -82,8 +82,8 @@ select is((select count(*)::int from public.task_templates
                       and season_start_month is null and requires is null)), 0,
   'alle rutiner er fast dag, uke eller måned, uten periode og uten betingelser');
 select is((select count(*)::int from public.task_templates
-           where slug like 'routine-%' and audience = 'child' and min_age is null and max_age is null), 1,
-  'én barnemal uten aldersgrense (til barn uten fødselsår)');
+           where slug like 'routine-%' and audience = 'child' and (min_age is null or max_age is null)), 0,
+  'alle barnemaler har aldersgrense');
 
 select is((select count(*)::int from public.task_templates
            where slug not like 'test-%' and slug not like 'routine-%'
@@ -206,6 +206,33 @@ select is(
   (select title || ' / ' || description from public.task_templates where slug = 'routine-kid-trash'),
   'Tømme søppel på kjøkken og bad / Knyt igjen posene på kjøkkenet og badet, bær dem ut og sett i nye poser.',
   'søppelmalen har ny tittel og beskrivelse');
+
+-- 20261127090000_child_routine_templates.sql
+select is(
+  (select min_age || '-' || max_age || ' ' || suggested_by_default from public.task_templates
+   where slug = 'routine-kid-plate'),
+  '3-5 false', 'tallerkenmalen er for 3–5 år og ikke avhuket');
+select is(
+  (select title || ' ' || min_age || '-' || max_age || ' ' || reward_nok from public.task_templates
+   where slug = 'routine-kid-fold'),
+  'Brette klær og pare sokker 7-14 20', 'brettemalen har ny tittel, 7–14 år og 20 kr');
+select is((select reward_nok from public.task_templates where slug = 'routine-kid-plants'), 5,
+  'blomstene gir 5 kr');
+select is(
+  (select title || ' ' || category || ' ' || min_age || '-' || max_age || ' ' || weekdays::text
+          || ' ' || coalesce(reward_nok::text, '-') || ' ' || suggested_by_default
+   from public.task_templates where slug = 'routine-kid-lunchbox'),
+  'Smøre egen matpakke kitchen 6-18 {1,2,3,4,5} - false', 'matpakkemalen');
+select is(
+  (select title || ' ' || category || ' ' || min_age || '-' || max_age || ' ' || weekdays::text
+          || ' ' || coalesce(reward_nok::text, '-') || ' ' || suggested_by_default
+   from public.task_templates where slug = 'routine-kid-school-bag'),
+  'Pakke sekken og gymtøyet tidying 6-12 {7,1,2,3,4} - false', 'sekkemalen');
+select is(
+  (select title || ' ' || category || ' ' || min_age || '-' || max_age || ' ' || weekdays::text
+          || ' ' || coalesce(reward_nok::text, '-') || ' ' || suggested_by_default
+   from public.task_templates where slug = 'routine-kid-load-dishwasher'),
+  'Sette inn i oppvaskmaskinen kitchen 6-13 {1,2,3,4,5} 5 false', 'malen for å sette inn i oppvaskmaskinen');
 
 select * from finish();
 rollback;

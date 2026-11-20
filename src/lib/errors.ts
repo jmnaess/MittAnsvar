@@ -85,6 +85,12 @@ const KNOWN: Record<string, string> = {
   not_pending: 'Denne er allerede godkjent eller avvist.',
   reward_already_paid: 'Beløpet er allerede betalt ut, så det kan ikke trekkes tilbake.',
   status_not_changeable: 'Statusen kan ikke endres. Last inn på nytt og prøv igjen.',
+  // Forslag fra barn
+  not_child: 'Bare barn kan sende forslag.',
+  proposals_disabled: 'Forslag er slått av. Spør en voksen.',
+  too_many_pending: 'Du har 5 forslag som venter. Vent til en voksen har sett på dem.',
+  invalid_title: 'Skriv hva du har gjort eller vil gjøre (maks 60 tegn).',
+  invalid_amount: 'Beløpet er ikke gyldig.',
   // Profilbilder
   no_photo: 'Det finnes ikke noe bilde ennå. Be en voksen legge inn et.',
   camera_permission_denied: 'Appen har ikke tilgang til kameraet. Gi tilgang i innstillingene på telefonen.',

@@ -17,7 +17,8 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
     ├──* invites                      feedback_messages (global, les-bare)
     ├──* household_displays           invite_attempts, link_attempts (per auth-bruker, stengt)
     ├──* link_tokens
-    └──* preparedness_items
+    ├──* preparedness_items
+    └──* task_proposals (member_id → members, task_id → tasks)
 
 View: today_tasks (tasks), today_completions (task_completions + tasks), recent_completions (task_completions + tasks), member_balances (members + task_completions + payouts)
 ```
@@ -36,6 +37,7 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | `sewage_type` | `municipal`, `septic_tank`, `mini_treatment_plant` (hjemprofil) |
 | `avatar_mode` | `figure`, `photo` (profilbilder) |
 | `preparedness_status` | `have`, `not_needed` (beredskapslager) |
+| `proposal_status` | `pending`, `approved`, `rejected` (forslag fra barn) |
 
 ### `households`
 | Kolonne | Type | Merknad |
@@ -50,6 +52,7 @@ View: today_tasks (tasks), today_completions (task_completions + tasks), recent_
 | created_at | timestamptz not null default now() | |
 | has_garden, has_car, has_cabin, has_air_heat_pump, has_fireplace, has_balanced_ventilation, has_hydronic_heating, has_private_well | boolean null | **hjemprofil**. `null` = ikke svart |
 | sewage_type | sewage_type null | hjemprofil: avløp. `null` = ikke svart |
+| child_proposals_enabled | boolean not null default true | «Barn kan foreslå oppgaver» (Innstillinger → Barna). Av = `submit_task_proposal` gir `proposals_disabled`. Ventende forslag kan fortsatt avgjøres |
 
 **Hjemprofil:** spørsmål om boligen som styrer forslag i årshjulet (via `task_templates.requires`, §4). Boligtype er `housing_type`. Profilen ligger som kolonner på `households` (én per husstand), så RLS er som for resten av husstanden: alle medlemmer leser, voksne endrer. Et ubesvart spørsmål oppfyller aldri en betingelse.
 
@@ -199,6 +202,31 @@ Kjent kanttilfelle: en utbetaling, og så en angring innen 10 minutter, kan gi n
 - **Holdbarhet er ikke en oppgave.** En vare som er på plass, med `expires_on` høyst 28 dager fram (eller passert), vises i et eget kort i «I dag» for voksne: «Bytt ut: … (går ut 1. mars)». Trykk åpner varen. Grunnen: felles oppgaver vises på familieskjermen og i barnas «I dag», der barn kan krysse dem av. Det gir ingen push-varsel og ingen historikk for byttene.
 - Appen skriver med `upsert` på primærnøkkelen. Det finnes ingen `delete`-rettighet: et svar fjernes med `status = null`.
 - Kortet øverst i Årshjul viser «X av Y på plass · N går snart ut» og åpner skjermen «Beredskapslager» (`app/(app)/preparedness.tsx`).
+
+### `task_proposals` (forslag fra barn)
+Et barn foreslår noe det har gjort eller vil gjøre, og kan spørre om lønn. En voksen godkjenner eller avslår. Migrasjon `*_task_proposals.sql`.
+
+| Kolonne | Type | Merknad |
+|---------|------|---------|
+| id | uuid pk | |
+| household_id | uuid not null → households on delete cascade | |
+| member_id | uuid not null | barnet. Sammensatt FK `(household_id, member_id) → members on delete cascade`, så forslagene slettes med barneprofilen |
+| title | text not null | 1–60 tegn, trimmet (check `task_proposals_title_len`) |
+| is_done | boolean not null | «Er det gjort?» |
+| wants_reward | boolean not null | «Vil du ha lønn for det?» |
+| proposed_nok | integer null | barnets forslag, 1–200, bare med `wants_reward` |
+| status | proposal_status not null default `pending` | |
+| approved_nok | integer null | beløpet den voksne godkjente, 1–10 000. Bare `approved`. Til visning: saldoen regnes fortsatt bare fra `task_completions` og `payouts` |
+| decided_by_member_id | uuid null → members on delete set null | den voksne som avgjorde |
+| decided_at | timestamptz null | satt ⇔ ikke `pending` (check) |
+| task_id | uuid null → tasks on delete set null | oppgaven godkjenningen laget. Aldri ved avslag. Ingen check på «godkjent ⇒ satt», fordi cascade fra husstanden kan nullstille den før forslaget slettes |
+| created_at | timestamptz not null default now() | |
+
+- **Lese:** voksne i husstanden via RLS (`private.is_adult`). Barnet leser bare egne via `list_my_task_proposals` (de som venter, og de som er avgjort de siste 3 dagene). Familieskjermen og andre husstander ser ingenting. Ingen insert-, update- eller delete-rettighet: all skriving skjer via RPC.
+- **Godkjent og gjort:** `decide_task_proposal` lager en engangsjobb for barnet (`job`, `job_repeats false`, `job_member_ids {barnet}`, kategori `other`, `reward_nok` = beløpet) og kaller `complete_task(…, p_last_today => false)` uendret. Kalleren er voksen, så lønnen er `approved` med én gang, og `complete_task` arkiverer jobben. Den står derfor ikke i «Oppgaver», men i barnets kort i «I dag» (`doneSectionKey`). Resultatet (tilbakemelding og feiring) forkastes. En engangsoppgave ble ikke valgt, fordi utførte engangsoppgaver blir stående i «Oppgaver».
+- **Godkjent, ikke gjort:** en engangsoppgave til barnet for i dag (`once`, `once_on` = i dag, `reward_nok`). Barnet krysser av som vanlig, og med lønn blir det `pending` («Til godkjenning»).
+- **Kjent kanttilfelle:** «Ikke gjort» (`remove_completion`) på et godkjent «gjort»-forslag gjør engangsjobben ledig igjen for barnet (vanlig regel), og forslaget står fortsatt som godkjent. Det godtas.
+- **Opprydding:** `private.delete_old_task_proposals(p_now default now())` sletter avgjorte forslag eldre enn 30 dager (fritekst fra barn). Den kjøres av pg_cron hver natt (`cron.job` `delete-old-task-proposals`, `15 3 * * *`). Innloggede kan ikke kjøre den. Oppgavene som ble laget, blir stående.
 
 ### `task_completions` → §3
 ### `task_templates`, `feedback_messages` → §4
@@ -541,6 +569,7 @@ Merk: Anonyme brukere (barneenheter og familieskjermer) har også rollen `authen
 | household_displays | voksen i husstanden; ikke `auth_user_id` | – (RPC `redeem_link_token`) | – | – (RPC `unlink_display`) |
 | link_attempts | – | – (RPC) | – | – |
 | household_subscriptions | medlem | – (service role) | – | – |
+| task_proposals | voksen i husstanden (barn: RPC `list_my_task_proposals`) | – (RPC `submit_task_proposal`) | – (RPC `decide_task_proposal`) | – (cascade, og nattjobben) |
 | preparedness_items | medlem (også barn; ikke familieskjermen) | voksen **og** `household_has_access` | voksen **og** `household_has_access` | – (ingen rettighet; `status = null` i stedet) |
 | task_templates | alle innloggede, `is_active` | – | – | – |
 | feedback_messages | alle innloggede, `is_active` | – | – | – |
@@ -575,10 +604,12 @@ grant update (name, type, housing_type, feedback_tone) on public.households to a
 grant update (has_garden, has_car, has_cabin, has_air_heat_pump, has_fireplace,
               has_balanced_ventilation, has_hydronic_heating, has_private_well, sewage_type)
   on public.households to authenticated;
+-- Forslag fra barn (*_task_proposals.sql):
+grant update (child_proposals_enabled) on public.households to authenticated;
 ```
 
 ### RPC-oversikt
-Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences` og `activate_templates`, som kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`. Hjelpefunksjoner i `private` som bare kalles fra slike RPC-er (`delete_anonymous_users`, `assert_adult_for_completions`, `member_balance`, `lock_today_completion`, `assert_reward_not_paid`, `lock_task_for_adult`, `board_template`) og systemjobbene (`roll_over_seasons`, `delete_stale_anonymous_users`) har ikke `execute` for `authenticated`. Gi og ta rettigheter per funksjon, ikke med `on all functions in schema private`: det åpner igjen det som er stengt.
+Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences` og `activate_templates`, som kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`. Hjelpefunksjoner i `private` som bare kalles fra slike RPC-er (`delete_anonymous_users`, `assert_adult_for_completions`, `member_balance`, `lock_today_completion`, `assert_reward_not_paid`, `lock_task_for_adult`, `board_template`) og systemjobbene (`roll_over_seasons`, `delete_stale_anonymous_users`, `delete_old_task_proposals`) har ikke `execute` for `authenticated`. Gi og ta rettigheter per funksjon, ikke med `on all functions in schema private`: det åpner igjen det som er stengt.
 
 | Funksjon | Hvem | Gjør |
 |----------|------|------|
@@ -605,6 +636,9 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `postpone_task(p_task_id, p_to) returns date` | voksen, `household_has_access` | «Utsett til» (se §2 Utsettelse). Låser oppgaven. Returnerer fristen før. Alle oppgaver med åpen frist, også kommende og allerede utsatte, men ikke jobber eller utførte engangsoppgaver. `p_to` må være etter både i dag og fristen, og høyst 366 dager fram. Feil: `not_adult` (barn, annen husstand, ukjent eller arkivert), `subscription_required`, `not_postponable`, `invalid_date` |
 | `undo_postpone(p_task_id)` | voksen, `household_has_access` | «Angre»: fristen før kommer tilbake, også forfalt. For engangsoppgaver settes `once_on` først og fristen i en egen spørring, ellers ville triggeren flyttet en passert dato til i dag. Bare mens oppgaven fortsatt er utsatt. Feil: `not_adult`, `subscription_required`, `undo_postpone_expired` (krysset av eller redigert siden) |
 | `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Fra steg 10b er grensen godkjent saldo (ventende og avviste teller ikke). Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
+| `submit_task_proposal(p_title, p_is_done, p_wants_reward, p_proposed_nok default null) returns uuid` | barn (på egen enhet), `household_has_access` | barnet sender et forslag. `household_id` og `member_id` kommer fra kalleren. Låser barnets `members`-rad, så grensen på 5 som venter holder ved samtidige kall. Feil: `not_child` (voksen, familieskjerm, uten medlemskap), `subscription_required`, `proposals_disabled`, `invalid_title` (tom eller over 60 tegn etter trimming), `invalid_amount` (utenfor 1–200, eller beløp uten `p_wants_reward`), `too_many_pending` |
+| `list_my_task_proposals()` | barn | egne forslag som venter eller er avgjort de siste 3 dagene, nyeste først. Tom for alle andre |
+| `decide_task_proposal(p_proposal_id, p_approve, p_amount_nok default null) returns uuid` | voksen, `household_has_access` | godkjenn (beløp `null`/0 = ingen lønn, ellers 1–10 000) eller avslå. Låser forslaget. Godkjent lager oppgaven (og avkrysningen når det er gjort) i samme transaksjon, se `task_proposals`. Returnerer oppgavens id, `null` ved avslag. Feil: `not_adult` (barn, skjerm, annen husstand, ukjent id), `subscription_required`, `not_pending`, `invalid_amount` |
 | `get_access(household_id)` | medlem | `{ trial_ends_at, is_active }` |
 | `delete_my_account_data()` | innlogget (kalles av Edge `delete-account`) | ingen parametere, bruker `auth.uid()`. Siste voksne: sletter husstanden (cascade) og de anonyme brukerne til barna og familieskjermene. Andre voksne finnes: sletter bare egen `members`-rad. Barn/uten medlemskap: ingenting. Låser husstandsraden (`for update`) før voksne telles |
 
@@ -717,6 +751,15 @@ Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
     - Barnet leser, men kan ikke skrive. En annen husstand, familieskjermen og anon ser ingenting og kan ikke skrive. En vare kan ikke flyttes til en annen husstand.
     - Utløpt prøvetid: kan lese, ikke skrive. Radene slettes med husstanden.
     - Begge malene finnes med DSB som kilde, og vannmalen sier ikke «anbefaler».
+
+21. Forslag fra barn (`task_proposals.test.sql`):
+    - Barnet sender og leser egne forslag (tittelen trimmes), men ikke søskens, og kan ikke lese tabellen direkte. Ugyldig tittel og beløp avvises. Nr. 6 som venter gir `too_many_pending`.
+    - Voksen og familieskjerm kan ikke sende. Voksne ser alle i husstanden. Familieskjermen, en annen husstand og anon ser ingenting.
+    - Godkjent og gjort uten lønn: arkivert engangsjobb, avkrysning `approved` uten beløp. Med 30 kr (barnet ba om 50): saldoen øker med én gang, og beløpet kan betales ut.
+    - Godkjent, ikke gjort, med 20 kr: engangsoppgave i barnets «I dag», ingen avkrysning. Barnet krysser av, og den venter. En voksen godkjenner, og saldoen øker.
+    - Avslag: ingen oppgave, barnet ser det, og et avgjort forslag kan ikke avgjøres igjen. Barn, skjerm, annen husstand og ukjent id kan ikke avgjøre. Ingen kan skrive direkte.
+    - Avgjort for over 3 dager siden vises ikke for barnet. Barnet kan ikke slå av innstillingen. Av: nye forslag avvises, og ventende kan avgjøres. Utløpt prøvetid: kan ikke sende eller avgjøre.
+    - Sletting: med barnet, med husstanden (siste voksne), og `decided_by_member_id = null` når en av flere voksne sletter seg. Oppryddingen sletter bare avgjorte forslag eldre enn 30 dager, og jobben finnes.
 
 19. Rettigheter i `private` (`private_function_privileges.test.sql`):
     - `authenticated`, `anon` og `public` har ikke `execute` på hjelpefunksjonene som bare kalles fra `security definer`-RPC-er eller systemjobber.

@@ -40,11 +40,12 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<stri
 }
 
 /**
- * Det voksne kan endre på husstanden: navn, type (bare i oppstarten i appen), tone og hjemprofilen.
- * Andre kolonner er stengt med kolonnerettigheter.
+ * Det voksne kan endre på husstanden: navn, type (bare i oppstarten i appen), tone, om barna kan
+ * sende forslag, og hjemprofilen. Andre kolonner er stengt med kolonnerettigheter.
  */
 export type HouseholdChanges = Partial<
-  { name: string; type: HouseholdType; feedback_tone: FeedbackTone } & HomeProfile
+  { name: string; type: HouseholdType; feedback_tone: FeedbackTone; child_proposals_enabled: boolean } &
+    HomeProfile
 >;
 
 export async function updateHousehold(id: string, changes: HouseholdChanges): Promise<void> {

@@ -10,6 +10,7 @@ import {
   Section,
   pageWidth,
   spacing,
+  Switch,
   Text,
   TextField,
   useTheme,
@@ -19,7 +20,7 @@ import { useSession } from '../../../src/features/auth/SessionProvider';
 import { useAccountActions } from '../../../src/features/auth/useAccountActions';
 import { hasAnyAnswer } from '../../../src/features/household/homeProfile';
 import { MemberAvatar } from '../../../src/features/household/components/MemberAvatar';
-import { useMyHousehold, useMyMember, useUpdateHousehold } from '../../../src/features/household/hooks';
+import { useMembers, useMyHousehold, useMyMember, useUpdateHousehold } from '../../../src/features/household/hooks';
 import { FEEDBACK_TONE_OPTIONS } from '../../../src/features/household/labels';
 import type { Household } from '../../../src/features/household/types';
 import { ReminderSettingsSection } from '../../../src/features/notifications/components/ReminderSettingsSection';
@@ -40,6 +41,7 @@ export default function SettingsScreen() {
     >
       <ProfileSection household={household!} />
       <HouseholdSection household={household!} />
+      <ChildrenSection household={household!} />
       <HomeSection household={household!} />
       <Section title="Påminnelser">
         <ReminderSettingsSection userId={session!.user.id} />
@@ -123,6 +125,36 @@ function HouseholdSection({ household }: { household: Household }) {
 
       {update.error && <Message>{toNorwegianMessage(update.error)}</Message>}
     </>
+  );
+}
+
+/** «Barna»: om barna kan sende forslag. Bare voksne, og bare når husstanden har barn. */
+function ChildrenSection({ household }: { household: Household }) {
+  const me = useMyMember(household.id);
+  const { data: members = [] } = useMembers(household.id);
+  const update = useUpdateHousehold(household.id);
+  if (me?.role !== 'adult' || !members.some((m) => m.role === 'child')) return null;
+
+  // Vis det brukeren trykket på mens lagringen pågår.
+  const value =
+    update.isPending && update.variables.child_proposals_enabled !== undefined
+      ? update.variables.child_proposals_enabled
+      : household.child_proposals_enabled;
+
+  return (
+    <Section
+      title="Barna"
+      description="Barna kan sende forslag til oppgaver og spørre om lønn. En voksen godkjenner."
+    >
+      <Switch
+        label="Barn kan foreslå oppgaver"
+        accessibilityLabel="Barn kan foreslå oppgaver"
+        value={value}
+        onValueChange={(on) => update.mutate({ child_proposals_enabled: on })}
+        disabled={update.isPending}
+      />
+      {update.error && <Message>{toNorwegianMessage(update.error)}</Message>}
+    </Section>
   );
 }
 

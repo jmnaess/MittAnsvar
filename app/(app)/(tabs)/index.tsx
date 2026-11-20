@@ -24,6 +24,7 @@ import { useMemberPhotoLookup, useMembers, useMyHousehold } from '../../../src/f
 import type { Member } from '../../../src/features/household/types';
 import { ExpiringCard } from '../../../src/features/preparedness/components/ExpiringCard';
 import { useInvalidatePreparedness } from '../../../src/features/preparedness/hooks';
+import { useInvalidateProposals } from '../../../src/features/proposals/hooks';
 import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances } from '../../../src/features/rewards/hooks';
@@ -144,6 +145,8 @@ export default function TodayScreen() {
   );
   // Beredskapslageret: varer som snart går ut (ExpiringCard).
   const refetchPreparedness = useInvalidatePreparedness(householdId);
+  // Forslag fra barna (banneret øverst).
+  const refetchProposals = useInvalidateProposals(householdId);
   // Dra for å oppdatere, fokus og midnatt: også personvisningen når en person er valgt.
   const refetch = useCallback(
     () =>
@@ -154,8 +157,10 @@ export default function TodayScreen() {
         refetchActiveTasks(),
         focusedId !== null ? refetchRecentQuery() : undefined,
         refetchPreparedness(),
+        refetchProposals(),
       ]),
-    [refetchTasks, refetchDone, refetchUpcoming, refetchActiveTasks, refetchRecentQuery, focusedId, refetchPreparedness],
+    [refetchTasks, refetchDone, refetchUpcoming, refetchActiveTasks, refetchRecentQuery, focusedId, refetchPreparedness,
+      refetchProposals],
   );
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);

@@ -18,6 +18,10 @@ import { isLastOfToday, toCelebration, type Celebration } from '../../../src/fea
 import { CelebrationOverlay } from '../../../src/features/feedback/components/CelebrationOverlay';
 import { MyProfileButton } from '../../../src/features/household/components/MyProfileButton';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
+import type { ProposalInput } from '../../../src/features/proposals/api';
+import { MyProposalsCard } from '../../../src/features/proposals/components/MyProposalsCard';
+import { ProposalSheet } from '../../../src/features/proposals/components/ProposalSheet';
+import { useMyProposals, useSubmitProposal } from '../../../src/features/proposals/hooks';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalance } from '../../../src/features/rewards/hooks';
 import { childTodaySections, MINE_KEY } from '../../../src/features/tasks/childToday';
@@ -34,8 +38,10 @@ import { toNorwegianMessage } from '../../../src/lib/errors';
 import { useMidnightRefetch } from '../../../src/lib/useMidnightRefetch';
 import { usePullToRefresh } from '../../../src/lib/usePullToRefresh';
 import {
+  AddFab,
   EmptyState,
   makeStyles,
+  NoticeToast,
   PageHeader,
   SectionCard,
   pageWidth,
@@ -51,6 +57,8 @@ import {
  * «Gjort siste 3 dager». Den nærmeste forekomsten i «Kommende» kan krysses av tidlig.
  * Etter avkrysning vises en feiring i fullskjerm (CelebrationOverlay). Angring: trykk på den
  * utførte raden (DoneList).
+ * «Foreslå» (når husstanden har slått det på) åpner ProposalSheet. «Mine forslag» viser det som
+ * venter og det som ble avgjort de siste 3 dagene.
  */
 export default function ChildTodayScreen() {
   const { colors, personColor } = useTheme();
@@ -73,6 +81,7 @@ export default function ChildTodayScreen() {
   );
   // RLS: barnet får bare sine egne avkrysninger.
   const { data: recent = [], refetch: refetchRecentQuery } = useRecentCompletions(householdId, today, !!me);
+  const { data: myProposals = [], refetch: refetchProposals } = useMyProposals(householdId, !!me);
   // Dra for å oppdatere, fokus og midnatt: også «Kommende» og «Gjort siste 3 dager».
   const hasMe = !!me;
   const refetch = useCallback(
@@ -82,8 +91,9 @@ export default function ChildTodayScreen() {
         refetchDone(),
         refetchUpcoming(),
         hasMe ? refetchRecentQuery() : undefined,
+        hasMe ? refetchProposals() : undefined,
       ]),
-    [refetchTasks, refetchDone, refetchUpcoming, refetchRecentQuery, hasMe],
+    [refetchTasks, refetchDone, refetchUpcoming, refetchRecentQuery, refetchProposals, hasMe],
   );
   const pullToRefresh = usePullToRefresh(refetch);
   const day = useMidnightRefetch(refetch);
@@ -93,6 +103,12 @@ export default function ChildTodayScreen() {
   const insets = useSafeAreaInsets();
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const submitProposal = useSubmitProposal(householdId);
+  const [proposalOpen, setProposalOpen] = useState(false);
+  /** Satt = «Sendt!» vises. Ny verdi starter nedtellingen på nytt. */
+  const [sentKey, setSentKey] = useState<string | null>(null);
+  const canPropose = !!me && !!household?.child_proposals_enabled;
+  const pendingProposals = myProposals.filter((p) => p.status === 'pending').length;
   /** Alle utførte vises. Ny dag: foldes inn igjen. */
   const [expanded, setExpanded] = useState(false);
   useEffect(() => setExpanded(false), [day]);
@@ -134,6 +150,20 @@ export default function ChildTodayScreen() {
     undo.mutate(completion.id, {
       onSuccess: () => setCelebration((c) => (c?.completionId === completion.id ? null : c)),
       onError: (e) => setActionError(toNorwegianMessage(e)),
+    });
+  }
+
+  function openProposal() {
+    submitProposal.reset();
+    setProposalOpen(true);
+  }
+
+  function sendProposal(input: ProposalInput) {
+    submitProposal.mutate(input, {
+      onSuccess: () => {
+        setProposalOpen(false);
+        setSentKey(String(Date.now()));
+      },
     });
   }
 
@@ -186,6 +216,8 @@ export default function ChildTodayScreen() {
 
           <TodayJobsSection jobs={jobs} whoOf={(job) => ((job.job_member_ids ?? []).length === 0 ? 'Alle barna' : 'Til deg')} busyId={busyId} onPress={markDone} />
 
+          <MyProposalsCard proposals={myProposals} />
+
           {me && (
             <>
               <UpcomingCard
@@ -206,6 +238,19 @@ export default function ChildTodayScreen() {
 
       {howToSheet}
 
+      {canPropose && <AddFab label="Foreslå" onPress={openProposal} />}
+      <ProposalSheet
+        visible={proposalOpen}
+        pendingCount={pendingProposals}
+        saving={submitProposal.isPending}
+        error={submitProposal.error}
+        onSubmit={sendProposal}
+        onClose={() => setProposalOpen(false)}
+      />
+      {sentKey && (
+        <NoticeToast message="Sendt! En voksen ser på det." resetKey={sentKey} aboveFab onHide={() => setSentKey(null)} />
+      )}
+
       {celebration && me && (
         <CelebrationOverlay celebration={celebration} member={me} onHide={() => setCelebration(null)} />
       )}
@@ -216,7 +261,7 @@ export default function ChildTodayScreen() {
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
-    container: { ...pageWidth, paddingBottom: 120, gap: spacing.section },
+    container: { ...pageWidth, paddingBottom: spacing.fabClearance, gap: spacing.section },
     body: { paddingHorizontal: spacing.page, gap: spacing.section },
   }),
 );

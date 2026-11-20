@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(20);
 
 create function pg_temp.closed(p_fn text, p_role text)
 returns boolean language sql as $$
@@ -30,6 +30,8 @@ select ok(pg_temp.closed('private.lock_task_for_adult(uuid)', 'anon'),          
 select ok(pg_temp.closed('private.roll_over_seasons(timestamptz)', 'authenticated'),                 'roll_over_seasons: ikke authenticated');
 select ok(pg_temp.closed('private.delete_stale_anonymous_users(timestamptz)', 'authenticated'),      'delete_stale_anonymous_users: ikke authenticated');
 select ok(pg_temp.closed('private.board_template(uuid)', 'authenticated'),                           'board_template: ikke authenticated');
+select ok(pg_temp.closed('private.delete_old_task_proposals(timestamptz)', 'authenticated'),        'delete_old_task_proposals: ikke authenticated');
+select ok(pg_temp.closed('private.delete_old_task_proposals(timestamptz)', 'anon'),                 'delete_old_task_proposals: ikke anon');
 
 -- Ingen av dem gir execute til PUBLIC (alle roller).
 select is(

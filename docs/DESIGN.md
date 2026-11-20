@@ -56,6 +56,7 @@ tilgjengelighetstekster. Se [VISJON.md](VISJON.md) for tonen.
 | Opptjent / saldo | Det et barn har tjent minus utbetalinger | |
 | Utbetaling | Når en voksen registrerer at pengene er gitt | |
 | Til godkjenning | Barnets avkrysninger med lønn som venter på en voksen | |
+| Forslag | Noe et barn har gjort eller vil gjøre, og sender til en voksen («Foreslå»). Status: «Venter», «Godkjent», «Ikke denne gangen» | «søknad», «ønske» |
 | Figur / profilbilde | Den tegnede avataren / et eget bilde | |
 | Familieskjerm | En felles enhet (typisk iPad) som viser dagens oppgaver | «kiosk» |
 | Beredskapslager | Det husstanden trenger for å klare seg selv i en uke, basert på råd fra DSB. Varene er «på plass» eller «trenger vi ikke» | «nødlager», «DSBs liste» |
@@ -220,7 +221,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
 | `AvatarStack` | overlappende avatarer (−10 px fra 32 og opp, ca. 30 % av størrelsen under). Flere enn `max`: en rund «+N» i `surfaceMuted` til slutt |
 | `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle. Opptil seks: én rad, ringen (maks 56 px) regnes ut fra antall og skjermbredde (`familyStripLayout.ts`). Sju eller flere: raden kan sveipes og falmer mot høyre. Navn: «Leah», «John M.», uten «…» |
-| `ApprovalBanner` | gult banner: hvem som venter, antall og sum, knappen «Se» |
+| `ApprovalBanner` | gult banner: avatarer, tittel og metalinje, knappen «Se». Teksten regnes i `approvalBannerText` (`features/proposals/format.ts`): «Leah har et forslag» / «Leah venter», «2 til godkjenning · 35 kr · 1 forslag» |
 | `JobCard` / `JobGrid` | ekstrajobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
@@ -348,6 +349,22 @@ Etter at husstanden er opprettet, lagres steget på enheten (`features/household
 på fremdriften før noe vises, så fanene blinker aldri forbi. Første steg bygges da fra databasen. Fremdriften slettes
 når siste steg er ferdig eller hoppet over. På en ny enhet eller etter en reinstallasjon (Android) finnes ingen
 fremdrift, og man havner i fanene; resten finnes under Husstand og Innstillinger.
+
+### Forslag fra barn
+
+`features/proposals/`. På barnets «I dag»: `AddFab label="Foreslå"` (bare når husstanden har slått det på)
+åpner `ProposalSheet`: «Hva har du gjort, eller vil du gjøre?» (maks 60 tegn), «Er det gjort?» (Ja / Nei, jeg
+vil gjøre det) og «Vil du ha lønn for det?» (Nei / Ja, med valgfritt beløp, maks 200 kr). «Send» / «Avbryt» i
+`footer`. Etter sending: `NoticeToast aboveFab` «Sendt! En voksen ser på det.». Med 5 som venter viser arket bare
+en melding. `MyProposalsCard` «Mine forslag» står etter «Ekstrajobber»: én `ListRow` per forslag med
+`proposalMeta` («Gjort · ønsker 30 kr») og `Chip` «Venter», «Godkjent +30 kr» (`money`), «Godkjent» eller «Ikke
+denne gangen». Avgjorte forsvinner etter 3 dager.
+
+Hos de voksne står forslagene i samme banner og ark som «Til godkjenning» (`PendingApprovalBanner`), først under
+«Forslag». `ProposalReviewRow`: avatar, tittel, «Leah · Vil gjøre det · ønsker 50 kr», feltet «Lønn (kr)»
+(forhåndsutfylt med barnets beløp, tomt = ingen lønn), et hint om hva godkjenning gjør, «Avslå» (bekreftes) og
+«Godkjenn». Innstillinger → «Barna»: bryteren «Barn kan foreslå oppgaver» (bare voksne, bare med barn).
+Familieskjermen viser ingenting om forslag.
 
 ## Avatarer
 

@@ -215,6 +215,7 @@ En egen enhet, typisk en iPad på kjøkkenet, som viser «I dag» for hele husst
 **Barns data (dataminimering)**
 - Vi lagrer bare fornavn (eller kallenavn), innebygd avatar og fødselsår, og eventuelt et profilbilde. Ingen e-post, fullt navn, fødselsdato eller posisjon.
 - **Profilbilde (valgfritt):** legges inn av en voksen, aldri av barnet. Det ligger i en privat bøtte i EU som bare husstanden kan lese (RLS), og vises via signerte URL-er som varer i én time. Bildet krympes til 512×512 på enheten, og EXIF (posisjon) fjernes før opplasting. Det slettes når bildet fjernes, når personen fjernes og når kontoen eller husstanden slettes. Se DATABASE.md §6.
+- **Forslag fra barn:** barnet kan skrive fritekst (maks 60 tegn) i et forslag. Bare barnet selv og de voksne i husstanden ser teksten, ikke familieskjermen eller andre husstander. Avgjorte forslag slettes etter 30 dager. Ventende ligger til en voksen avgjør dem. Et godkjent forslag blir en oppgave, og tittelen følger da oppgavehistorikken, som slettes med barnet eller husstanden. En voksen kan slå funksjonen av. Se DATABASE.md (`task_proposals`).
 - Barnet samtykker aldri selv. Det er den voksne som oppretter profilen, og GDPR art. 8 om barns samtykke kommer derfor ikke i spill.
 - Ingen analyse- eller reklame-SDK-er i MVP. Hvis vi trenger analyse senere, velger vi en EU-basert løsning og holder barn utenfor.
 - Barnets enhet har en anonym Supabase-bruker uten e-post eller andre opplysninger.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import {
   ApprovalBanner,
   Button,
@@ -15,6 +15,10 @@ import { toNorwegianMessage } from '../../../lib/errors';
 import { MemberAvatar } from '../../household/components/MemberAvatar';
 import { useMemberPhotoLookup } from '../../household/hooks';
 import type { Member } from '../../household/types';
+import type { PendingProposal } from '../../proposals/api';
+import { ProposalReviewRow } from '../../proposals/components/ProposalReviewRow';
+import { approvalBannerText } from '../../proposals/format';
+import { useDecideProposal, usePendingProposals } from '../../proposals/hooks';
 import { formatKroner } from '../../tasks/reward';
 import type { PendingCompletion } from '../api';
 import { useApproveCompletions, usePendingCompletions, useRejectCompletion } from '../hooks';
@@ -22,43 +26,85 @@ import { useApproveCompletions, usePendingCompletions, useRejectCompletion } fro
 type Props = { householdId: string; members: Member[] };
 
 /**
- * «Til godkjenning» i de voksnes «I dag» (steg 10b). Vises bare når noe venter.
- * Banneret viser hvem som venter og summen. «Se» åpner listen med «Godkjenn» og «Ikke godkjent»
- * per rad (bekreftes, fordi oppgaven da regnes som ikke gjort), og «Godkjenn alle» ved flere.
+ * Banneret øverst i de voksnes «I dag» når barna venter: forslag fra barna og avkrysninger med
+ * lønn («Til godkjenning», steg 10b). Vises bare når noe venter.
+ * «Se» åpner arket: først forslagene (Godkjenn med beløp, eller Avslå), så avkrysningene med
+ * «Godkjenn» og «Ikke godkjent» per rad (bekreftes, fordi oppgaven da regnes som ikke gjort), og
+ * «Godkjenn alle» ved flere.
  */
 export function PendingApprovalBanner({ householdId, members }: Props) {
   const { data: pending = [] } = usePendingCompletions(householdId);
+  const { data: proposals = [] } = usePendingProposals(householdId);
   const photoOf = useMemberPhotoLookup(householdId);
   const [open, setOpen] = useState(false);
+  const waitingCount = pending.length + proposals.length;
 
-  // Lukk listen når alt er behandlet.
+  // Lukk arket når alt er behandlet.
   useEffect(() => {
-    if (pending.length === 0) setOpen(false);
-  }, [pending.length]);
+    if (waitingCount === 0) setOpen(false);
+  }, [waitingCount]);
 
-  if (pending.length === 0) return null;
+  if (waitingCount === 0) return null;
 
   const memberOf = (id: string) => members.find((m) => m.id === id);
-  const waitingIds = [...new Set(pending.map((p) => p.memberId))];
+  const nameOf = (id: string) => memberOf(id)?.display_name ?? 'Barn';
+  // Forslagene først, så de som har krysset av.
+  const waitingIds = [...new Set([...proposals.map((p) => p.memberId), ...pending.map((p) => p.memberId)])];
   const people = waitingIds.map((id) => {
     const m = memberOf(id);
-    return { name: m?.display_name ?? 'Barn', avatar: m?.avatar ?? '', photo: photoOf(m) };
+    return { name: nameOf(id), avatar: m?.avatar ?? '', photo: photoOf(m) };
   });
-  const total = pending.reduce((sum, p) => sum + p.amount, 0);
+  const text = approvalBannerText({
+    names: people.map((p) => p.name),
+    proposalNames: [...new Set(proposals.map((p) => p.memberId))].map(nameOf),
+    completionCount: pending.length,
+    completionTotal: pending.reduce((sum, p) => sum + p.amount, 0),
+    proposalCount: proposals.length,
+  });
 
   return (
     <>
-      <ApprovalBanner
-        people={people}
-        count={pending.length}
-        total={formatKroner(total)}
-        onOpen={() => setOpen(true)}
-      />
-      <Sheet visible={open} onClose={() => setOpen(false)}>
+      <ApprovalBanner people={people} title={text.title} meta={text.meta} onOpen={() => setOpen(true)} />
+      <Sheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        footer={<Button title="Lukk" variant="text" onPress={() => setOpen(false)} />}
+      >
+        <ProposalList householdId={householdId} proposals={proposals} memberOf={memberOf} />
         <PendingApprovalList householdId={householdId} pending={pending} memberOf={memberOf} />
-        <Button title="Lukk" variant="text" onPress={() => setOpen(false)} />
       </Sheet>
     </>
+  );
+}
+
+type ProposalListProps = {
+  householdId: string;
+  proposals: PendingProposal[];
+  memberOf: (id: string) => Member | undefined;
+};
+
+/** «Forslag»: ett kort per forslag, med lønnsfelt, «Avslå» og «Godkjenn». */
+function ProposalList({ householdId, proposals, memberOf }: ProposalListProps) {
+  const styles = useStyles();
+  const decide = useDecideProposal(householdId);
+  if (proposals.length === 0) return null;
+
+  return (
+    <View style={styles.list}>
+      <Text variant="sectionTitle" accessibilityRole="header">Forslag</Text>
+      <View style={styles.rows}>
+        {proposals.map((p) => (
+          <ProposalReviewRow
+            key={p.id}
+            proposal={p}
+            member={memberOf(p.memberId)}
+            busy={decide.isPending}
+            onDecide={(approve, amountNok) => decide.mutate({ id: p.id, approve, amountNok })}
+          />
+        ))}
+      </View>
+      {decide.error && <Message>{toNorwegianMessage(decide.error)}</Message>}
+    </View>
   );
 }
 
@@ -75,6 +121,8 @@ function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
   const reject = useRejectCompletion(householdId);
   const busy = approve.isPending || reject.isPending;
   const error = approve.error ?? reject.error;
+
+  if (pending.length === 0) return null;
 
   function confirmReject(item: PendingCompletion) {
     const name = memberOf(item.memberId)?.display_name ?? 'Barnet';
@@ -105,7 +153,7 @@ function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
         )}
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.rows}>
+      <View style={styles.rows}>
         {pending.map((item) => {
           const member = memberOf(item.memberId);
           return (
@@ -132,7 +180,7 @@ function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
             </View>
           );
         })}
-      </ScrollView>
+      </View>
 
       {error && <Message>{toNorwegianMessage(error)}</Message>}
     </View>
@@ -141,10 +189,9 @@ function PendingApprovalList({ householdId, pending, memberOf }: ListProps) {
 
 const useStyles = makeStyles(({ colors }) =>
   StyleSheet.create({
-    list: { gap: 12, flexShrink: 1 },
+    list: { gap: 12 },
     header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     flex: { flex: 1 },
-    scroll: { flexGrow: 0 },
     rows: { gap: spacing.row },
     row: { backgroundColor: colors.surfaceMuted, borderRadius: radius.row, padding: 12, gap: 10 },
     rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },

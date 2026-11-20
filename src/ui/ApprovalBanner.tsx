@@ -6,29 +6,31 @@ import { Text } from './Text';
 import { makeStyles } from './makeStyles';
 import { radius, spacing } from './theme';
 import { useTheme } from './ThemeProvider';
-import { waitingText } from './waitingText';
 
 type Props = {
   /** Én per barn som venter (unike), i rekkefølge. */
   people: { name: string; avatar: string; photo?: AvatarPhotoSource }[];
-  /** Antall avkrysninger som venter. */
-  count: number;
-  /** Ferdig formatert sum, f.eks. «35 kr». */
-  total: string;
+  /** «Leah venter» / «Leah har et forslag». */
+  title: string;
+  /** «2 til godkjenning · 35 kr · 1 forslag». */
+  meta: string;
   onOpen: () => void;
 };
 
-/** Gult banner i «I dag» når barn har krysset av med lønn og venter på godkjenning. */
-export function ApprovalBanner({ people, count, total, onOpen }: Props) {
+/**
+ * Gult banner i «I dag» når barn venter på en voksen: avkrysninger med lønn og forslag.
+ * Teksten regnes ut av den som bruker banneret (approvalBannerText i features/proposals).
+ */
+export function ApprovalBanner({ people, title, meta, onOpen }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
     <View style={styles.banner}>
       <AvatarStack people={people} size={32} />
       <View style={styles.text}>
-        <Text variant="rowTitle">{waitingText(people.map((p) => p.name))}</Text>
+        <Text variant="rowTitle">{title}</Text>
         <Text variant="meta" color={colors.textWarm}>
-          {count} til godkjenning · {total}
+          {meta}
         </Text>
       </View>
       <Button title="Se" small onPress={onOpen} />

@@ -39,6 +39,8 @@ Utvikling på Ubuntu. Testing på fysisk mobil med Expo Go – ikke emulator.
 - Lønn per oppgave: voksne kan sette et beløp i hele kroner. Bare barn får lønn.
   Beløpet lagres på utføringen. Voksne registrerer utbetalinger manuelt, maks saldoen.
 - Ledige jobber: oppgaver uten dato (engangs eller gjentakende) som barna kan ta.
+- Forslag fra barn: barnet foreslår noe det har gjort eller vil gjøre, og kan spørre om lønn.
+  En voksen godkjenner (beløpet kan endres) eller avslår. Kan slås av i Innstillinger. Ikke på familieskjermen.
 - Profilbilder: en voksen kan legge inn bilde for alle i husstanden. Barnet velger selv figur
   eller bilde, men kan ikke laste opp eller slette. Privat bøtte, bare husstanden leser,
   signerte URL-er. Bildet slettes med personen, kontoen og husstanden (docs/DATABASE.md §6).

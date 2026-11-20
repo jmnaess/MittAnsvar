@@ -14,14 +14,14 @@ describe('proposalAction', () => {
   it('gjort, uten lønn: «Registrer» (utført med en gang)', () => {
     expect(proposalAction(true, false)).toEqual({ kind: 'register', label: 'Registrer' });
   });
-  it('med lønn: «Send til de voksne», både gjort og vil gjøre', () => {
-    expect(proposalAction(true, true)).toEqual({ kind: 'send', label: 'Send til de voksne' });
-    expect(proposalAction(false, true)).toEqual({ kind: 'send', label: 'Send til de voksne' });
+  it('med lønn: «Spør om lønn», både gjort og vil gjøre', () => {
+    expect(proposalAction(true, true)).toEqual({ kind: 'send', label: 'Spør om lønn' });
+    expect(proposalAction(false, true)).toEqual({ kind: 'send', label: 'Spør om lønn' });
   });
   it('mangler et valg: ingen handling (knappen er av), teksten følger det som er valgt', () => {
     expect(proposalAction(null, null)).toEqual({ kind: null, label: 'Legg til' });
     expect(proposalAction(true, null)).toEqual({ kind: null, label: 'Registrer' });
-    expect(proposalAction(null, true)).toEqual({ kind: null, label: 'Send til de voksne' });
+    expect(proposalAction(null, true)).toEqual({ kind: null, label: 'Spør om lønn' });
   });
 });
 
@@ -69,21 +69,22 @@ describe('parseAmount', () => {
 describe('approvalBannerText', () => {
   const base = { names: [], proposalNames: [], completionCount: 0, completionTotal: 0, proposalCount: 0 };
 
-  it('ett forslag', () => {
+  it('ett spørsmål om lønn', () => {
     expect(approvalBannerText({ ...base, names: ['Leah'], proposalNames: ['Leah'], proposalCount: 1 })).toEqual({
-      title: 'Leah har et forslag',
-      meta: '1 forslag',
+      title: 'Leah spør om lønn',
+      meta: '1 spørsmål om lønn',
     });
   });
-  it('flere forslag fra ett barn', () => {
-    expect(approvalBannerText({ ...base, names: ['Leah'], proposalNames: ['Leah'], proposalCount: 2 }).title).toBe(
-      'Leah har 2 forslag',
-    );
+  it('flere fra ett barn: antallet står i metalinjen', () => {
+    expect(approvalBannerText({ ...base, names: ['Leah'], proposalNames: ['Leah'], proposalCount: 2 })).toEqual({
+      title: 'Leah spør om lønn',
+      meta: '2 spørsmål om lønn',
+    });
   });
-  it('forslag fra flere barn', () => {
+  it('fra flere barn', () => {
     expect(
-      approvalBannerText({ ...base, names: ['Leah', 'Ola'], proposalNames: ['Leah', 'Ola'], proposalCount: 2 }).title,
-    ).toBe('Leah og Ola har forslag');
+      approvalBannerText({ ...base, names: ['Leah', 'Ola'], proposalNames: ['Leah', 'Ola'], proposalCount: 3 }),
+    ).toEqual({ title: 'Leah og Ola spør om lønn', meta: '3 spørsmål om lønn' });
   });
   it('bare avkrysninger: som før', () => {
     expect(approvalBannerText({ ...base, names: ['Leah'], completionCount: 2, completionTotal: 35 })).toEqual({
@@ -100,6 +101,6 @@ describe('approvalBannerText', () => {
         completionTotal: 35,
         proposalCount: 1,
       }),
-    ).toEqual({ title: 'Leah og Ola venter', meta: '2 til godkjenning · 35 kr · 1 forslag' });
+    ).toEqual({ title: 'Leah og Ola venter', meta: '2 til godkjenning · 35 kr · 1 spørsmål om lønn' });
   });
 });

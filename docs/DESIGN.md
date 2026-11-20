@@ -56,7 +56,7 @@ tilgjengelighetstekster. Se [VISJON.md](VISJON.md) for tonen.
 | Opptjent / saldo | Det et barn har tjent minus utbetalinger | |
 | Utbetaling | Når en voksen registrerer at pengene er gitt | |
 | Til godkjenning | Barnets avkrysninger med lønn som venter på en voksen | |
-| Forslag | Noe et barn har gjort eller vil gjøre og vil ha lønn for, og sender til en voksen («Send til de voksne»). Status: «Venter», «Godkjent», «Ikke denne gangen». Uten lønn er det ikke et forslag: barnet legger det inn selv | «søknad», «ønske» |
+| Forslag | Noe et barn har gjort eller vil gjøre og vil ha lønn for, og sender til en voksen («Spør om lønn»). Status: «Venter», «Godkjent», «Ikke denne gangen». Uten lønn er det ikke et forslag: barnet legger det inn selv | «søknad», «ønske» |
 | Figur / profilbilde | Den tegnede avataren / et eget bilde | |
 | Familieskjerm | En felles enhet (typisk iPad) som viser dagens oppgaver | «kiosk» |
 | Beredskapslager | Det husstanden trenger for å klare seg selv i en uke, basert på råd fra DSB. Varene er «på plass» eller «trenger vi ikke» | «nødlager», «DSBs liste» |
@@ -221,7 +221,7 @@ Med egne fonter velges vekten med familienavnet (`fonts.bold` = `Nunito_700Bold`
 | `Avatar` | tegnet SVG (react-native-svg), størrelse 22/32/44/48/100, valgfri `ring` |
 | `AvatarStack` | overlappende avatarer (−10 px fra 32 og opp, ca. 30 % av størrelsen under). Flere enn `max`: en rund «+N» i `surfaceMuted` til slutt |
 | `FamilyStrip` | alle i husstanden; trykk viser bare én person, trykk igjen viser alle. Opptil seks: én rad, ringen (maks 56 px) regnes ut fra antall og skjermbredde (`familyStripLayout.ts`). Sju eller flere: raden kan sveipes og falmer mot høyre. Navn: «Leah», «John M.», uten «…» |
-| `ApprovalBanner` | gult banner: avatarer, tittel og metalinje, knappen «Se». Teksten regnes i `approvalBannerText` (`features/proposals/format.ts`): «Leah har et forslag» / «Leah venter», «2 til godkjenning · 35 kr · 1 forslag» |
+| `ApprovalBanner` | gult banner: avatarer, tittel og metalinje, knappen «Se». Teksten regnes i `approvalBannerText` (`features/proposals/format.ts`): «Leah spør om lønn» / «Leah og Ola spør om lønn» med «2 spørsmål om lønn», eller «Leah venter», «2 til godkjenning · 35 kr · 1 spørsmål om lønn» |
 | `JobCard` / `JobGrid` | ekstrajobber. 1 = full bredde, 2–3 side om side, 4+ tre i bredden |
 | `EmptyState` | tom liste: tittel og forklaring |
 | `PageHeader` | stor sidetittel med linje over og knapp til høyre |
@@ -363,7 +363,7 @@ voksne foreslå», maks 200 kr). Knappen skifter tekst etter valgene (`proposalA
 |------|-------|----------|
 | Vil gjøre, uten lønn | «Legg til» | oppgave i «Mine oppgaver i dag» med en gang, `NoticeToast` «Lagt til i dagens oppgaver.» |
 | Gjort, uten lønn | «Registrer» | utført med en gang, vanlig feiring (`CelebrationOverlay`) |
-| Med lønn | «Send til de voksne» | forslag, `NoticeToast` «Sendt! En voksen ser på det.» |
+| Med lønn | «Spør om lønn» | forslag, `NoticeToast` «Sendt! En voksen ser på det.» |
 
 Knappen er av til begge valgene er gjort. Hele skjemaet skal få plass på en iPhone SE (667 pt): luft 8 mellom
 feltene, og «Avbryt» og handlingen side om side i `footer`, så de og valgene under tekstfeltet synes også med
@@ -380,9 +380,11 @@ Avslag forsvinner etter 3 dager. Godkjente vises ikke her: de står i «Mine opp
 (gjort) eller som en vanlig oppgave (ikke gjort).
 
 Hos de voksne står forslagene i samme banner og ark som «Til godkjenning» (`PendingApprovalBanner`), først under
-«Forslag». `ProposalReviewRow`: avatar, tittel, «Leah · Vil gjøre det · ønsker 50 kr», feltet «Fortjent lønn»
-(forhåndsutfylt med barnets beløp, tomt = ingen lønn), et hint om hva godkjenning gjør, «Avslå» (bekreftes) og
-«Godkjenn». Banneret hentes på nytt ved fokus, ved dra for å oppdatere og hvert minutt mens appen er åpen
+«Spør om lønn» (eldre ventende forslag uten lønn står i samme seksjon). Banneret: «Leah spør om lønn» / «Leah og Ola
+spør om lønn», antallet i metalinjen («2 spørsmål om lønn»). `ProposalReviewRow`: avatar, tittel, «Leah · Vil gjøre
+det · ønsker 50 kr», feltet «Fortjent lønn» med plassholder «Beløp i kr» (forhåndsutfylt med barnets beløp hvis det
+finnes, tomt eller 0 = ingen lønn), et hint om hva godkjenning gjør, «Avslå» (bekreftes) og «Godkjenn» når det står
+et beløp, ellers «Godkjenn uten lønn». Banneret hentes på nytt ved fokus, ved dra for å oppdatere og hvert minutt mens appen er åpen
 (`WAITING_REFRESH_MS`, samme for forslag og godkjenninger). Innstillinger → «Barna»: bryteren «Barn kan legge inn egne oppgaver og spørre om lønn» (bare voksne, bare med
 barn), med beskrivelsen «Uten lønn legges det inn med en gang. Med lønn godkjenner en voksen.». Av = ingen «Legg inn».
 Familieskjermen viser ingenting om forslag.

@@ -83,7 +83,7 @@ type ProposalListProps = {
   memberOf: (id: string) => Member | undefined;
 };
 
-/** «Forslag»: ett kort per forslag, med lønnsfelt, «Avslå» og «Godkjenn». */
+/** «Spør om lønn»: ett kort per forslag (også eldre uten lønn), med lønnsfelt, «Avslå» og «Godkjenn». */
 function ProposalList({ householdId, proposals, memberOf }: ProposalListProps) {
   const styles = useStyles();
   const decide = useDecideProposal(householdId);
@@ -91,7 +91,7 @@ function ProposalList({ householdId, proposals, memberOf }: ProposalListProps) {
 
   return (
     <View style={styles.list}>
-      <Text variant="sectionTitle" accessibilityRole="header">Forslag</Text>
+      <Text variant="sectionTitle" accessibilityRole="header">Spør om lønn</Text>
       <View style={styles.rows}>
         {proposals.map((p) => (
           <ProposalReviewRow

@@ -13,14 +13,14 @@ export const MAX_OWN_TASKS_PER_DAY = 10;
  * Hva «Legg inn noe» gjør. Uten lønn skjer det med en gang, med lønn trengs en voksen.
  * - add:      vil gjøre, uten lønn → engangsoppgave i dag («Legg til»)
  * - register: gjort, uten lønn → registreres som utført med en gang («Registrer»)
- * - send:     med lønn → forslag til de voksne («Send til de voksne»)
+ * - send:     med lønn → forslag til de voksne («Spør om lønn»)
  */
 export type ProposalActionKind = 'add' | 'register' | 'send';
 
 const ACTION_LABELS: Record<ProposalActionKind, string> = {
   add: 'Legg til',
   register: 'Registrer',
-  send: 'Send til de voksne',
+  send: 'Spør om lønn',
 };
 
 /**
@@ -87,11 +87,11 @@ function joinNames(names: string[]): string {
 
 /**
  * Teksten i det gule banneret i «I dag» når noe venter på en voksen: avkrysninger med lønn
- * og forslag fra barna.
+ * og forslag fra barna (spørsmål om lønn, og eldre forslag uten lønn som fortsatt venter).
  *
- * - Bare forslag: «Leah har et forslag» / «Leah har 2 forslag» / «Leah og Ola har forslag».
+ * - Bare forslag: «Leah spør om lønn» / «Leah og Ola spør om lønn», «2 spørsmål om lønn».
  * - Bare avkrysninger: «Leah venter», «2 til godkjenning · 35 kr».
- * - Begge: «Leah og Ola venter», «2 til godkjenning · 35 kr · 1 forslag».
+ * - Begge: «Leah og Ola venter», «2 til godkjenning · 35 kr · 1 spørsmål om lønn».
  *
  * names: unike navn i rekkefølge (alle som venter). proposalNames: unike navn med forslag.
  */
@@ -103,14 +103,10 @@ export function approvalBannerText(input: {
   proposalCount: number;
 }): { title: string; meta: string } {
   const { names, proposalNames, completionCount, completionTotal, proposalCount } = input;
-  const proposalsText = `${proposalCount} forslag`;
+  const proposalsText = `${proposalCount} spørsmål om lønn`;
 
   if (completionCount === 0) {
-    let title: string;
-    if (proposalNames.length > 1) title = `${joinNames(proposalNames)} har forslag`;
-    else if (proposalCount === 1) title = `${proposalNames[0]} har et forslag`;
-    else title = `${proposalNames[0]} har ${proposalCount} forslag`;
-    return { title, meta: proposalsText };
+    return { title: `${joinNames(proposalNames)} spør om lønn`, meta: proposalsText };
   }
 
   const completionsText = `${completionCount} til godkjenning · ${formatKroner(completionTotal)}`;

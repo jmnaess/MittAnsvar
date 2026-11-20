@@ -15,8 +15,9 @@ type Props = {
 };
 
 /**
- * Ett forslag i «Til godkjenning»: «Leah · Gjort · ønsker 30 kr», lønnsfelt (forhåndsutfylt med
- * barnets beløp, tomt eller 0 = ingen lønn), «Avslå» (bekreftes) og «Godkjenn».
+ * Ett forslag i «Spør om lønn»: «Leah · Gjort · ønsker 30 kr», «Fortjent lønn» (forhåndsutfylt med
+ * barnets beløp, tomt eller 0 = ingen lønn), «Avslå» (bekreftes) og «Godkjenn» (med beløp) eller
+ * «Godkjenn uten lønn».
  */
 export function ProposalReviewRow({ proposal, member, busy, onDecide }: Props) {
   const { colors } = useTheme();
@@ -53,7 +54,7 @@ export function ProposalReviewRow({ proposal, member, busy, onDecide }: Props) {
         onChangeText={(text) => setAmount(text.replace(/\D/g, ''))}
         keyboardType="number-pad"
         maxLength={5}
-        placeholder="Ingen lønn"
+        placeholder="Beløp i kr"
         editable={!busy}
       />
       <Hint error={parsed === null}>
@@ -62,7 +63,7 @@ export function ProposalReviewRow({ proposal, member, busy, onDecide }: Props) {
       <View style={styles.actions}>
         <Button title="Avslå" variant="secondary" small onPress={confirmReject} disabled={busy} />
         <Button
-          title="Godkjenn"
+          title={parsed ? 'Godkjenn' : 'Godkjenn uten lønn'}
           small
           onPress={() => onDecide(true, parsed || null)}
           disabled={busy || parsed === null}

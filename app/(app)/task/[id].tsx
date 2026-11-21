@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useMembers, useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
 import { HowToContent, useTaskHowTo } from '../../../src/features/tasks/components/HowToSheet';
 import { TaskFields, useTaskForm } from '../../../src/features/tasks/components/TaskForm';
 import { useArchiveTask, useTasks, useUpdateTask } from '../../../src/features/tasks/hooks';
+import { markDeleted, markGone } from '../../../src/features/tasks/leftForm';
 import { isJob } from '../../../src/features/tasks/recurrence';
 import { isFromTasks, revealSaved } from '../../../src/features/tasks/tasksSegment';
 import type { Task } from '../../../src/features/tasks/types';
@@ -17,13 +18,32 @@ export default function EditTaskScreen() {
   const { id } = params;
   const { data: household } = useMyHousehold();
   const { data: tasks, isPending } = useTasks(household!.id);
-  const [archived, setArchived] = useState(false);
+  // Slettingen ligger her, ikke i skjemaet: skjemaet forsvinner når listen er hentet på nytt.
+  const archiveTask = useArchiveTask(household!.id);
+  const deleting = archiveTask.isPending || archiveTask.isSuccess;
 
   const task = tasks?.find((t) => t.id === id);
+  // Borte uten at vi slettet den selv (en annen voksen): lukk med en kort melding, hvis vi kan.
+  const closeGone = !isPending && !deleting && !task && router.canGoBack();
+  useEffect(() => {
+    if (!closeGone) return;
+    markGone('Oppgaven er slettet');
+    router.back();
+  }, [closeGone]);
 
-  // Etter sletting hentes listen på nytt før vi går tilbake. Da vises ingenting i stedet for «Fant ikke».
-  if (isPending || archived) return <ModalFormScreen>{null}</ModalFormScreen>;
+  function remove(t: Task) {
+    archiveTask.mutate(t.id, {
+      onSuccess: () => {
+        markDeleted(t);
+        router.back();
+      },
+    });
+  }
+
+  if (isPending) return <ModalFormScreen>{null}</ModalFormScreen>;
   if (!task) {
+    // På vei tilbake: vis ingenting i stedet for «Fant ikke».
+    if (deleting || closeGone) return <ModalFormScreen>{null}</ModalFormScreen>;
     return (
       <ModalFormScreen>
         <Message tone="muted">Fant ikke oppgaven. Den kan være slettet.</Message>
@@ -36,7 +56,9 @@ export default function EditTaskScreen() {
       task={task}
       householdId={household!.id}
       fromTasks={isFromTasks(params)}
-      onArchived={() => setArchived(true)}
+      onDelete={() => remove(task)}
+      deleting={archiveTask.isPending}
+      deleteError={archiveTask.error}
     />
   );
 }
@@ -46,22 +68,24 @@ type FormProps = {
   householdId: string;
   /** Åpnet fra «Oppgaver»: etter lagring vises oppgaven i segmentet der den havnet. */
   fromTasks: boolean;
-  onArchived: () => void;
+  /** Sletter oppgaven og går tilbake (ligger i skjermen over). */
+  onDelete: () => void;
+  deleting: boolean;
+  deleteError: Error | null;
 };
 
-function EditTaskForm({ task, householdId, fromTasks, onArchived }: FormProps) {
+function EditTaskForm({ task, householdId, fromTasks, onDelete, deleting, deleteError }: FormProps) {
   const { colors } = useTheme();
   const { data: members } = useMembers(householdId);
   const updateTask = useUpdateTask(householdId);
-  const archiveTask = useArchiveTask(householdId);
   const me = useMyMember(householdId);
   const { data: household } = useMyHousehold();
   const form = useTaskForm(members ?? [], task, { householdType: household?.type });
   // Øverst for alle oppgaver med beskrivelse, også rutiner (som ikke har (i) i listene).
   const howTo = useTaskHowTo()(task, { always: true });
 
-  const busy = updateTask.isPending || archiveTask.isPending;
-  const error = updateTask.error ?? archiveTask.error;
+  const busy = updateTask.isPending || deleting;
+  const error = updateTask.error ?? deleteError;
 
   function save() {
     const input = form.value;
@@ -83,13 +107,7 @@ function EditTaskForm({ task, householdId, fromTasks, onArchived }: FormProps) {
       {
         text: 'Slett',
         style: 'destructive',
-        onPress: () =>
-          archiveTask.mutate(task.id, {
-            onSuccess: () => {
-              onArchived();
-              router.back();
-            },
-          }),
+        onPress: onDelete,
       },
     ]);
   }

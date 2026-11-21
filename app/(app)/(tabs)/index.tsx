@@ -25,6 +25,7 @@ import type { Member } from '../../../src/features/household/types';
 import { ExpiringCard } from '../../../src/features/preparedness/components/ExpiringCard';
 import { useInvalidatePreparedness } from '../../../src/features/preparedness/hooks';
 import { useInvalidateProposals } from '../../../src/features/proposals/hooks';
+import { useLeftFormToast } from '../../../src/features/tasks/components/LeftFormToast';
 import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
 import { earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances, useInvalidateRewards } from '../../../src/features/rewards/hooks';
@@ -502,6 +503,8 @@ export default function TodayScreen() {
 
   const addItems = todayAddMenu({ isAdult, memberId: focusedId, hasChildren });
   const hasFab = addItems.length > 0;
+  // Tilbake fra «Endre oppgave»/«Endre ekstrajobb» etter sletting: «Angre» eller en kort melding.
+  const leftFormToast = useLeftFormToast(householdId, hasFab);
 
   return (
     <View style={[styles.flex, { paddingTop: insets.top }]}>
@@ -678,6 +681,8 @@ export default function TodayScreen() {
           aboveFab={hasFab}
         />
       )}
+
+      {leftFormToast}
     </View>
   );
 }

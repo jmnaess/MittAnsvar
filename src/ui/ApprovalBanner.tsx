@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { AvatarPhotoSource } from './Avatar';
 import { AvatarStack } from './AvatarStack';
 import { Button } from './Button';
@@ -20,12 +20,19 @@ type Props = {
 /**
  * Gult banner i «I dag» når barn venter på en voksen: avkrysninger med lønn og forslag.
  * Teksten regnes ut av den som bruker banneret (approvalBannerText i features/proposals).
+ * Hele banneret er én knapp. «Se» er bare et hint, og skjermleseren hopper over den.
  */
 export function ApprovalBanner({ people, title, meta, onOpen }: Props) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
-    <View style={styles.banner}>
+    <Pressable
+      onPress={onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${meta}`}
+      accessibilityHint="Åpner listen"
+      style={({ pressed }) => [styles.banner, pressed && styles.pressed]}
+    >
       <AvatarStack people={people} size={32} />
       <View style={styles.text}>
         <Text variant="rowTitle">{title}</Text>
@@ -33,8 +40,10 @@ export function ApprovalBanner({ people, title, meta, onOpen }: Props) {
           {meta}
         </Text>
       </View>
-      <Button title="Se" small onPress={onOpen} />
-    </View>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Button title="Se" small onPress={onOpen} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -48,6 +57,7 @@ const useStyles = makeStyles(({ colors }) =>
       borderRadius: radius.card,
       padding: spacing.card,
     },
+    pressed: { opacity: 0.8 },
     text: { flex: 1, gap: 2 },
   }),
 );

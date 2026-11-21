@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AddFab, makeStyles, NoticeToast, SegmentedControl } from '../../../src/ui';
 import { useMyHousehold, useMyMember } from '../../../src/features/household/hooks';
+import { useLeftFormToast } from '../../../src/features/tasks/components/LeftFormToast';
 import { EverydayTasks } from '../../../src/features/tasks/components/EverydayTasks';
 import { tasksAddButton } from '../../../src/features/tasks/addMenu';
 import type { TaskSection } from '../../../src/features/tasks/section';
@@ -65,6 +66,8 @@ export default function TasksScreen() {
   // fra filteret) og «Ny årshjul-oppgave» i Årshjul. Teksten følger segmentet.
   const addButton = tasksAddButton({ segment, isAdult, memberId: personId });
   const hasFab = addButton !== null;
+  // Tilbake fra et skjema etter sletting: «Angre» eller en kort melding (leftForm.ts).
+  const leftFormToast = useLeftFormToast(householdId, hasFab);
 
   // Tittel og avatar står i navigasjonsheaderen (app/(app)/(tabs)/_layout.tsx). Segmentene ruller med listen.
   const header = <SegmentedControl options={SEGMENTS} value={segment} onChange={setTasksSegment} />;
@@ -91,6 +94,7 @@ export default function TasksScreen() {
           aboveFab={hasFab}
         />
       )}
+      {leftFormToast}
     </View>
   );
 }

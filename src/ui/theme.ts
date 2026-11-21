@@ -206,6 +206,8 @@ export const typography = {
   hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
   /** Store koder (koble til enhet). */
   code: { fontFamily: fonts.heading, fontSize: 32, lineHeight: 40, letterSpacing: 4 },
+  /** Mynter og hjerter som spretter i feiringen (CelebrationOverlay). */
+  celebrationEmoji: { fontSize: 30, lineHeight: 38 },
   tab: { fontFamily: fonts.bold, fontSize: 12 },
   tabSelected: { fontFamily: fonts.extrabold, fontSize: 12 },
 } satisfies Record<string, TextStyle>;

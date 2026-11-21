@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
@@ -15,8 +16,9 @@ import { spacing, Text, useTheme } from '../../../ui';
 import { MemberAvatar } from '../../household/components/MemberAvatar';
 import type { Member } from '../../household/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PENDING_TEXT, type Celebration } from '../celebration';
+import type { Celebration } from '../celebration';
 import { Confetti } from './Confetti';
+import { EmojiBurst } from './EmojiBurst';
 
 type Props = {
   celebration: Celebration;
@@ -29,20 +31,28 @@ type Props = {
 const AVATAR_SIZE = 140;
 /** «Trykk for å lukke» kommer etter feiringen, så den ikke tar oppmerksomheten. */
 const CLOSE_HINT_DELAY_MS = 1000;
+/** «Reduser bevegelse»: tekstene tones rolig inn i stedet for å sprette. */
+const CALM_FADE_MS = 600;
 
 /**
  * Fullskjermsfeiring for barn etter avkrysning (barnets enhet og familieskjermen). Lukkes ved
  * trykk hvor som helst, eller av seg selv etter celebration.durationMs (etter tekstlengden, se
  * celebrationDurationMs). «Trykk for å lukke» tones inn nederst etter et sekund.
- * Animasjon: figuren hopper inn. 5 år eller yngre: vrikk i tillegg. Siste for dagen: konfetti.
- * Med «Reduser bevegelse» står figuren og teksten stille.
+ * Samme glede, ulik smak: med lønn «Ka-ching!» og mynter, uten lønn «❤️-ching!» og hjerter
+ * (5 år eller yngre får alltid hjerter). Overskriften leses som «Bra jobba!» av skjermleseren.
+ * Animasjon: figuren hopper inn og mynter/hjerter spretter opp. 5 år eller yngre: vrikk i tillegg.
+ * Siste for dagen: konfetti i tillegg. Lett haptikk (ikke for de minste).
+ * Med «Reduser bevegelse»: ingen sprett eller partikler, bare en rolig inntoning av teksten.
  */
 export function CelebrationOverlay({ celebration, member, showName, onHide }: Props) {
   const { personColor } = useTheme();
   const color = personColor(member.avatar);
   const reduceMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
-  const { completionId, durationMs, kind, text, reward, pending, confetti, wiggle } = celebration;
+  const {
+    completionId, durationMs, kind, headline, headlineLabel, text, reward,
+    particles, particleCount, confetti, haptic, wiggle,
+  } = celebration;
 
   // Som i Toast: nedtellingen starter bare på nytt ved en ny avkrysning, ikke ved hver render.
   const onHideRef = useRef(onHide);
@@ -51,6 +61,12 @@ export function CelebrationOverlay({ celebration, member, showName, onHide }: Pr
     const timer = setTimeout(() => onHideRef.current(), durationMs);
     return () => clearTimeout(timer);
   }, [completionId, durationMs]);
+
+  // Én lett dunk per avkrysning. Feiler stille der haptikk ikke finnes.
+  useEffect(() => {
+    if (!haptic) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }, [completionId, haptic]);
 
   const scale = useSharedValue(1);
   const lift = useSharedValue(0);
@@ -77,7 +93,7 @@ export function CelebrationOverlay({ celebration, member, showName, onHide }: Pr
     transform: [{ translateY: lift.value }, { scale: scale.value }, { rotate: `${rotate.value}deg` }],
   }));
 
-  const label = [showName ? member.display_name : null, text, reward, pending ? PENDING_TEXT : null]
+  const label = [showName ? member.display_name : null, headlineLabel, text, reward]
     .filter(Boolean)
     .join('. ');
 
@@ -96,23 +112,26 @@ export function CelebrationOverlay({ celebration, member, showName, onHide }: Pr
           <MemberAvatar member={member} size={AVATAR_SIZE} ring={color.ring} />
         </Animated.View>
         {!reduceMotion && confetti > 0 && <Confetti count={confetti} burstKey={completionId} />}
+        {!reduceMotion && (
+          <EmojiBurst particles={particles} count={particleCount} color={color.ring} burstKey={completionId} />
+        )}
       </View>
 
       <Animated.View
         key={completionId}
-        entering={reduceMotion ? undefined : FadeIn.delay(150)}
+        entering={reduceMotion ? FadeIn.duration(CALM_FADE_MS) : FadeIn.delay(150)}
         style={styles.texts}
       >
         {showName && <Text variant="personName" color={color.ink} style={styles.center}>{member.display_name}</Text>}
-        <Text variant={kind === 'day_done' ? 'pageTitle' : 'screenTitle'} color={color.ink} style={styles.center}>
-          {text}
+        <Text variant="pageTitle" color={color.ink} style={styles.center} accessibilityLabel={headlineLabel}>
+          {headline}
         </Text>
         {reward && (
           <Text variant="jobAmount" color={color.ink} style={styles.center}>{reward}</Text>
         )}
-        {pending && (
-          <Text variant="meta" color={color.ink} style={styles.center}>{PENDING_TEXT}</Text>
-        )}
+        <Text variant={kind === 'day_done' ? 'screenTitle' : 'sectionTitle'} color={color.ink} style={styles.center}>
+          {text}
+        </Text>
       </Animated.View>
 
       {/* Med «Reduser bevegelse» står den der fra start, uten inntoning. */}

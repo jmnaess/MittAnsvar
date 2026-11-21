@@ -7,10 +7,13 @@ import { useMyHousehold, useMyMember } from '../../../src/features/household/hoo
 import type { Member } from '../../../src/features/household/types';
 import { RewardEventRow } from '../../../src/features/rewards/components/RewardEventRow';
 import { useBalances, useRewardHistory } from '../../../src/features/rewards/hooks';
-import { formatBalance } from '../../../src/features/rewards/format';
+import { advanceNote, formatBalance, isAdvance } from '../../../src/features/rewards/format';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
-/** «Min lønn» på barnets enhet: egen saldo og historikk. RLS gjør at barnet bare ser sitt eget. */
+/**
+ * «Min lønn» på barnets enhet: egen saldo (eller forskudd) og historikk, også ekstra lønn.
+ * RLS gjør at barnet bare ser sitt eget.
+ */
 export default function MyEarningsScreen() {
   const { data: household } = useMyHousehold();
   const householdId = household!.id;
@@ -43,6 +46,7 @@ function Earnings({ householdId, me }: Props) {
         <View style={styles.headerText}>
           <Text variant="personName" color={color.ink}>{name}</Text>
           <Text variant="jobAmount" color={color.ink}>{formatBalance(balance)}</Text>
+          {isAdvance(balance) && <Text variant="meta" color={color.ink}>{advanceNote(name, true)}</Text>}
         </View>
       </View>
 

@@ -12,7 +12,8 @@ auth.users ─┐ (0..1)
             ▼
 households 1──* members 1──* task_completions *──1 tasks *──1 households
     │  1           │     (assigned_member_id)──────────┘ │
-    │  │           └──* payouts                          └──0..1 task_templates
+    │  │           ├──* payouts                          └──0..1 task_templates
+    │  │           └──* extra_rewards
     │  └──1 household_subscriptions
     ├──* invites                      feedback_messages (global, les-bare)
     ├──* household_displays           invite_attempts, link_attempts (per auth-bruker, stengt)
@@ -20,7 +21,7 @@ households 1──* members 1──* task_completions *──1 tasks *──1 ho
     ├──* preparedness_items
     └──* task_proposals (member_id → members, task_id → tasks)
 
-View: today_tasks (tasks), today_completions (task_completions + tasks), recent_completions (task_completions + tasks), member_balances (members + task_completions + payouts)
+View: today_tasks (tasks), today_completions (task_completions + tasks), recent_completions (task_completions + tasks), member_balances (members + task_completions + payouts + extra_rewards)
 ```
 
 ### Enum-typer
@@ -185,9 +186,25 @@ Indekser: `(household_id, next_due_on) where archived_at is null`, og en **unik*
 
 Indeks `(household_id, member_id, paid_at desc)`. Skrives bare via RPC-en `record_payout` (se §5).
 
-**View `member_balances`** (`security_invoker = true`): én rad per barn (et barn ser bare sin egen rad, steg 10a) med `member_id`, `household_id`, `earned_nok` (sum av godkjente `task_completions.reward_nok`), `pending_nok` (sum av ventende, steg 10b), `paid_nok` (sum av `payouts.amount_nok`) og `balance_nok = earned_nok − paid_nok` (det som kan betales ut). Avviste beløp teller ikke. Appen viser `balance_nok + pending_nok` med det som venter i parentes: «35 kr (10 kr venter)» (`rewards/format.ts`). Saldoen lagres ikke, så den kan aldri komme ut av takt med historikken. RLS på de underliggende tabellene gjelder.
+**View `member_balances`** (`security_invoker = true`): én rad per barn (et barn ser bare sin egen rad, steg 10a) med `member_id`, `household_id`, `earned_nok` (sum av godkjente `task_completions.reward_nok`), `pending_nok` (sum av ventende, steg 10b), `paid_nok` (sum av `payouts.amount_nok`), `extra_nok` (sum av `extra_rewards.amount_nok`) og `balance_nok = earned_nok + extra_nok − paid_nok`. Avviste beløp teller ikke. Appen viser `balance_nok + pending_nok` med det som venter i parentes: «35 kr (10 kr venter)» (`rewards/format.ts`). Saldoen lagres ikke, så den kan aldri komme ut av takt med historikken. RLS på de underliggende tabellene gjelder.
 
-Kjent kanttilfelle: en utbetaling, og så en angring innen 10 minutter, kan gi negativ saldo. Det godtas.
+**Forskudd** (`*_extra_rewards_and_advances.sql`): `balance_nok` kan være under 0. Det skjer når en utbetaling er større enn saldoen, eller når lønn som er betalt ut, trekkes (lavere beløp, «Ikke godkjent», «Ikke gjort», «Endre hvem», fjernet ekstra lønn, angring). Databasen har ingen grense og ingen sperre. Appen spør først («Lønnen for denne er betalt ut. Dette gir Leah et forskudd på 30 kr.»), og viser negativ saldo som «Forskudd: 30 kr», aldri med minus. Det barnet tjener etterpå, betaler ned forskuddet av seg selv, fordi saldoen bare er en sum.
+
+### `extra_rewards` (ekstra lønn)
+En voksen gir et barn lønn som ikke hører til en oppgave («Ekstra for at du hjalp Thelma»). Teller i saldoen med én gang, uten godkjenning. Egen tabell fordi `task_completions.task_id` er påkrevd og en utbetaling betyr at penger er gitt.
+
+| Kolonne | Type | Merknad |
+|---------|------|---------|
+| id | uuid pk | |
+| household_id | uuid not null → households on delete cascade | |
+| member_id | uuid not null | barnet. Sammensatt FK `(household_id, member_id) → members on delete cascade` |
+| amount_nok | integer not null | 1–10 000 |
+| reason | text null | «Hvorfor?», 1–80 tegn, trimmet av RPC-en. null = «Ekstra lønn» i appen |
+| given_on | date not null | husstandens dato (`household_today`), til uka på barnets motivasjonskort |
+| created_at | timestamptz not null default now() | |
+| created_by_member_id | uuid null → members on delete set null | den voksne som ga det |
+
+Indeks `(household_id, member_id, created_at desc)`. Lese: voksne i husstanden og barnet selv (som `payouts`). Familieskjermen og andre husstander ser ingenting. Skrives bare via `add_extra_reward` og `delete_extra_reward` (§5). Slettes ikke automatisk, men med barnet og husstanden.
 
 ### `preparedness_items` (beredskapslager)
 | Kolonne | Type | Merknad |
@@ -405,7 +422,7 @@ Angring, aktivering og `today_tasks` testes i `templates.test.sql` (se §5).
 
 ## 3. `task_completions` og historikk
 
-Hver avkrysning blir en ny rad. Tabellen er nesten append-only: bare `status` kan endres (steg 10b, via `approve_completions`, `reject_completion` og `set_completion_status`), `reassign_completion` kan flytte dagens avkrysning til en annen person (`completed_by_member_id`, `reward_nok`, `status`, `recorded_by`), og raden slettes bare ved «angre» og «Ikke gjort» (`undo_completion`, `remove_completion`).
+Hver avkrysning blir en ny rad. Tabellen er nesten append-only: bare `status` kan endres (steg 10b, via `approve_completions`, `reject_completion` og `set_completion_status`), `reward_nok` via `set_completion_reward`, `reassign_completion` kan flytte dagens avkrysning til en annen person (`completed_by_member_id`, `reward_nok`, `status`, `recorded_by`), og raden slettes bare ved «angre» og «Ikke gjort» (`undo_completion`, `remove_completion`).
 
 | Kolonne | Type | Merknad |
 |---------|------|---------|
@@ -440,13 +457,14 @@ Indekser: `(task_id, completed_at desc)`, `(household_id, completed_on)` og `(ho
 - `approve_completions(p_completion_ids uuid[]) returns int` (steg 10b): en voksen godkjenner én eller flere («Godkjenn alle»). Bare `pending` endres, så det er trygt å trykke to ganger. Returnerer antall godkjente.
 - `reject_completion(p_completion_id)` (steg 10b): «Ikke godkjent». Status blir `rejected`. Er det den siste ikke-avviste avkrysningen på oppgaven, settes `next_due_on` tilbake til `due_on`, og en engangsjobb får `archived_at = null` (som angring). Finnes en nyere, endres bare statusen. Låser oppgaven og leser raden på nytt, så to voksne ikke behandler samme rad samtidig. Feil: `not_pending`.
 - `set_completion_status(p_completion_id, p_status)`: endre godkjenning i ettertid fra barnets historikk, godkjent ↔ ikke godkjent. Bare rader med lønn som ikke venter (ventende behandles med de to over). Låser oppgaven, barnets `members`-rad (som `record_payout`) og raden.
-  - Til `rejected`: som `reject_completion`. I tillegg avvises det med `reward_already_paid` hvis godkjent − utbetalt − beløpet blir under 0.
+  - Til `rejected`: som `reject_completion`. Er beløpet betalt ut, gir det forskudd (ingen sperre, appen spør først).
   - Til `approved`: beløpet teller igjen. Er det fortsatt den siste ikke-avviste avkrysningen, settes `next_due_on = compute_next_due(oppgaven, completed_on)` (regnet fra dagen den ble gjort), og en engangsjobb som fortsatt er ledig (`archived_at is null`), arkiveres igjen. Er oppgaven gjort på nytt siden (også når en annen har tatt jobben), endres bare statusen.
-  - Feil: `status_not_changeable` (venter, uten lønn, samme status eller `p_status = pending`), `reward_already_paid`.
-- `remove_completion(p_completion_id)`: «Ikke gjort» for voksne i «I dag», uten tidsgrense. Bare avkrysninger fra i dag (`completed_on = household_today`) som ikke er avvist. Raden slettes. Er det den siste ikke-avviste avkrysningen på oppgaven, settes `next_due_on` tilbake til `due_on`, og en engangsjobb får `archived_at = null`. Ellers slettes bare raden. Et godkjent beløp som allerede er betalt ut (saldo − beløp < 0), gir `reward_already_paid`. Ventende rader kan alltid fjernes.
-- `reassign_completion(p_completion_id, p_member_id)`: «Endre hvem som gjorde det», samme krav om i dag og ikke avvist. Frist og arkivering endres ikke. Et barn får beløpet som ble lagret på avkrysningen, eller oppgavens nåværende `reward_nok` hvis avkrysningen ikke hadde beløp (en voksen gjorde den). En voksen får `null`. `status = approved` og `recorded_by = auth.uid()` (en voksen registrerte det, og det forrige barnet kan ikke angre). En jobb kan bare flyttes til et barn jobben gjelder (tom `job_member_ids` = alle barna). Samme sjekk for utbetalt beløp hos personen den flyttes fra. Samme person: ingen endring.
-  - Begge låser oppgaven, så de berørte `members`-radene sortert på id, så raden. Feil: `completion_not_found` (borte eller avvist), `not_today`, `reward_already_paid`, `invalid_member` (bare reassign: ikke i husstanden, eller jobben gjelder ikke personen).
-- Alle fem krever at kalleren er voksen i husstanden til alle radene og `household_has_access`. Barn, andre husstander og ukjente id-er gir samme feil (`not_adult`), via `private.assert_adult_for_completions`.
+  - Feil: `status_not_changeable` (venter, uten lønn, samme status eller `p_status = pending`).
+- `set_completion_reward(p_completion_id, p_amount_nok)`: endre lønnen på en godkjent avkrysning fra barnets historikk. 0–10 000, og 0 gir `reward_nok = null` (raden er da ikke lenger med i lønnshistorikken). Bare beløpet endres: frist, status og oppgavens pris står. Et lavere beløp kan gi forskudd. Feil: `not_adult`, `subscription_required`, `reward_not_changeable` (ikke godkjent, eller gjort av en voksen), `invalid_amount`.
+- `remove_completion(p_completion_id)`: «Ikke gjort» for voksne i «I dag», uten tidsgrense. Bare avkrysninger fra i dag (`completed_on = household_today`) som ikke er avvist. Raden slettes. Er det den siste ikke-avviste avkrysningen på oppgaven, settes `next_due_on` tilbake til `due_on`, og en engangsjobb får `archived_at = null`. Ellers slettes bare raden. Et beløp som er betalt ut, gir forskudd (appen spør først).
+- `reassign_completion(p_completion_id, p_member_id)`: «Endre hvem som gjorde det», samme krav om i dag og ikke avvist. Frist og arkivering endres ikke. Et barn får beløpet som ble lagret på avkrysningen, eller oppgavens nåværende `reward_nok` hvis avkrysningen ikke hadde beløp (en voksen gjorde den). En voksen får `null`. `status = approved` og `recorded_by = auth.uid()` (en voksen registrerte det, og det forrige barnet kan ikke angre). En jobb kan bare flyttes til et barn jobben gjelder (tom `job_member_ids` = alle barna). Er lønnen betalt ut, får personen den flyttes fra, forskudd. Samme person: ingen endring.
+  - Begge låser oppgaven, så de berørte `members`-radene sortert på id, så raden. Feil: `completion_not_found` (borte eller avvist), `not_today`, `invalid_member` (bare reassign: ikke i husstanden, eller jobben gjelder ikke personen).
+- Alle seks krever at kalleren er voksen i husstanden til alle radene og `household_has_access`. Barn, andre husstander og ukjente id-er gir samme feil (`not_adult`), via `private.assert_adult_for_completions`.
 
 **Historikkspørringer** (vanlig select, ingen egne tabeller):
 - Sist utført: `select completed_at from task_completions where task_id = $1 order by completed_at desc limit 1`
@@ -571,6 +589,7 @@ Merk: Anonyme brukere (barneenheter og familieskjermer) har også rollen `authen
 | recent_completions (view) | som task_completions: voksen alt, barn bare egne | – | – | – |
 | task_completions | voksen i husstanden, eller barnet som gjorde den (steg 10a) | – (RPC `complete_task`) | – | – (RPC `undo_completion`) |
 | payouts | voksen i husstanden, eller barnet som fikk den (steg 10a) | – (RPC `record_payout`) | – | – |
+| extra_rewards | voksen i husstanden, eller barnet som fikk det | – (RPC `add_extra_reward`) | – | – (RPC `delete_extra_reward`, cascade) |
 | member_balances (view) | voksen: alle barna; barn: bare seg selv (filter i viewet + RLS på tabellene under) | – | – | – |
 | invites | voksen i husstanden; alle kolonner unntatt `code_hash` | – (RPC `create_invite`) | – (RPC `accept_invite`) | voksen, bare `used_at is null` (= trekke tilbake) |
 | invite_attempts | – | – (RPC) | – | – |
@@ -618,7 +637,7 @@ grant update (child_proposals_enabled) on public.households to authenticated;
 ```
 
 ### RPC-oversikt
-Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences` og `activate_templates`, som kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`. Hjelpefunksjoner i `private` som bare kalles fra slike RPC-er (`delete_anonymous_users`, `assert_adult_for_completions`, `member_balance`, `lock_today_completion`, `assert_reward_not_paid`, `lock_task_for_adult`, `board_template`) og systemjobbene (`roll_over_seasons`, `delete_stale_anonymous_users`, `delete_old_task_proposals`) har ikke `execute` for `authenticated`. Gi og ta rettigheter per funksjon, ikke med `on all functions in schema private`: det åpner igjen det som er stengt.
+Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcoming_occurrences` og `activate_templates`, som kjører som `security invoker` (RLS gjelder). `execute` er revoked fra `anon` og `public` og granted til `authenticated`. Hjelpefunksjoner i `private` som bare kalles fra slike RPC-er (`delete_anonymous_users`, `assert_adult_for_completions`, `lock_today_completion`, `lock_task_for_adult`, `board_template`) og systemjobbene (`roll_over_seasons`, `delete_stale_anonymous_users`, `delete_old_task_proposals`) har ikke `execute` for `authenticated`. Gi og ta rettigheter per funksjon, ikke med `on all functions in schema private`: det åpner igjen det som er stengt.
 
 | Funksjon | Hvem | Gjør |
 |----------|------|------|
@@ -640,11 +659,14 @@ Alle RPC-er er `security definer` og `set search_path = ''`, unntatt `get_upcomi
 | `activate_templates(p_household_id, p_template_ids, p_member_ids default null) returns int` | voksen, `household_has_access` (via RLS på `tasks`) | kopierer maler til oppgaver, med valgfri ansvarlig per mal (barnemaler til et barn, ellers felles), hopper over aktive og inaktive maler, returnerer antall nye. Feil: `42501` (barn, annen husstand, utløpt prøvetid), `invalid_assignment` (feil eller manglende barn, ulik lengde) |
 | `get_upcoming_occurrences(household_id, from, to)` | medlem (via RLS) | fremtidige forekomster til årshjulet (se §2) |
 | `approve_completions(p_completion_ids)` / `reject_completion(p_completion_id)` | voksen, `household_has_access` | godkjenning av lønn (se §3). Feil: `not_adult` (barn, annen husstand, ukjent id), `subscription_required`, `not_pending` (bare avvisning) |
-| `set_completion_status(p_completion_id, p_status)` | voksen, `household_has_access` | endre godkjenning i ettertid, godkjent ↔ ikke godkjent (se §3). Feil: `not_adult`, `subscription_required`, `status_not_changeable`, `reward_already_paid` |
-| `remove_completion(p_completion_id)` / `reassign_completion(p_completion_id, p_member_id)` | voksen, `household_has_access` | rette dagens avkrysninger i «I dag» hele dagen: «Ikke gjort» og «Endre hvem som gjorde det» (se §3). Feil: `not_adult`, `subscription_required`, `completion_not_found`, `not_today`, `reward_already_paid`, `invalid_member` |
+| `set_completion_status(p_completion_id, p_status)` | voksen, `household_has_access` | endre godkjenning i ettertid, godkjent ↔ ikke godkjent (se §3). Feil: `not_adult`, `subscription_required`, `status_not_changeable` |
+| `set_completion_reward(p_completion_id, p_amount_nok)` | voksen, `household_has_access` | endre lønnen på en godkjent avkrysning, 0 = ingen lønn (se §3). Feil: `not_adult`, `subscription_required`, `reward_not_changeable`, `invalid_amount` |
+| `add_extra_reward(p_member_id, p_amount_nok, p_reason default null) returns uuid` | voksen, `household_has_access` | ekstra lønn til et barn (se `extra_rewards`). Låser barnets `members`-rad. Feil: `not_adult` (barn, skjerm, annen husstand, ukjent id), `invalid_member` (ikke et barn), `subscription_required`, `invalid_amount` (utenfor 1–10 000), `invalid_reason` (over 80 tegn) |
+| `delete_extra_reward(p_extra_reward_id)` | voksen, `household_has_access` | angrer ekstra lønn, uten tidsgrense. Kan gi forskudd. Feil: `not_adult` (også ukjent id og annen husstand), `subscription_required` |
+| `remove_completion(p_completion_id)` / `reassign_completion(p_completion_id, p_member_id)` | voksen, `household_has_access` | rette dagens avkrysninger i «I dag» hele dagen: «Ikke gjort» og «Endre hvem som gjorde det» (se §3). Feil: `not_adult`, `subscription_required`, `completion_not_found`, `not_today`, `invalid_member` |
 | `postpone_task(p_task_id, p_to) returns date` | voksen, `household_has_access` | «Utsett til» (se §2 Utsettelse). Låser oppgaven. Returnerer fristen før. Alle oppgaver med åpen frist, også kommende og allerede utsatte, men ikke jobber eller utførte engangsoppgaver. `p_to` må være etter både i dag og fristen, og høyst 366 dager fram. Feil: `not_adult` (barn, annen husstand, ukjent eller arkivert), `subscription_required`, `not_postponable`, `invalid_date` |
 | `undo_postpone(p_task_id)` | voksen, `household_has_access` | «Angre»: fristen før kommer tilbake, også forfalt. For engangsoppgaver settes `once_on` først og fristen i en egen spørring, ellers ville triggeren flyttet en passert dato til i dag. Bare mens oppgaven fortsatt er utsatt. Feil: `not_adult`, `subscription_required`, `undo_postpone_expired` (krysset av eller redigert siden) |
-| `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn. Fra steg 10b er grensen godkjent saldo (ventende og avviste teller ikke). Låser barnets `members`-rad, så to samtidige utbetalinger ikke begge går gjennom. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `amount_exceeds_balance` (under 1 eller over saldoen) |
+| `record_payout(p_member_id, p_amount_nok) returns uuid` | voksen, `household_has_access` | registrerer en utbetaling til et barn, 1–10 000 kr. Over saldoen er lov og gir forskudd (`*_extra_rewards_and_advances.sql`, før: maks godkjent saldo). Låser barnets `members`-rad. Feil: `not_adult` (barn, annen husstand), `invalid_member` (ikke et barn), `subscription_required`, `invalid_amount` |
 | `submit_task_proposal(p_title, p_is_done, p_wants_reward, p_proposed_nok default null) returns uuid` | barn (på egen enhet), `household_has_access` | barnet sender et forslag. `household_id` og `member_id` kommer fra kalleren. Låser barnets `members`-rad, så grensen på 5 som venter holder ved samtidige kall. Feil: `not_child` (voksen, familieskjerm, uten medlemskap), `subscription_required`, `proposals_disabled`, `invalid_title` (tom eller over 60 tegn etter trimming), `reward_required` (`p_wants_reward` false: uten lønn brukes `add_own_task`), `invalid_amount` (utenfor 1–200), `too_many_pending` |
 | `add_own_task(p_title, p_is_done) returns table (task_id, completion_id, feedback_text, next_due_on, reward_nok, status, feedback_kind)` | barn (på egen enhet), `household_has_access` | barnet legger inn noe uten lønn, se «Barnets egne oppgaver». Ingen medlems- eller beløpsparameter: alltid til barnet selv, aldri lønn. Gjort: raden fra `complete_task` (til feiringen). Ikke gjort: bare `task_id`, resten null. Feil: `not_child`, `subscription_required`, `proposals_disabled`, `invalid_title` (tom, over 60 tegn, eller `p_is_done` null), `too_many_own_tasks` (10 i dag) |
 | `list_my_task_proposals()` | barn | egne forslag som venter eller er avgjort de siste 3 dagene, nyeste først. Tom for alle andre |
@@ -685,7 +707,7 @@ Minimum før lansering:
 11. Lønn og jobber (`rewards.test.sql`):
     - Beløpet lagres ved avkrysning, endret pris endrer ikke tidligere beløp, angring fjerner beløpet, og voksne får ikke lønn.
     - Bare voksne kan sette beløp og registrere utbetaling. Ingen kan skrive direkte i `payouts`.
-    - Saldoen regnes riktig. Utbetaling over saldoen, på 0 kr og til en voksen avvises.
+    - Saldoen regnes riktig. Utbetaling på 0 kr, over 10 000 kr og til en voksen avvises (over saldoen er lov, se 23).
     - En engangsjobb arkiveres etter utføring (og kan ikke gjøres igjen), og angring henter den tilbake. En gjentakende jobb kan gjøres flere ganger.
     - Jobber har aldri frist, er ikke forfalt i `today_tasks` og er ikke med i `get_upcoming_occurrences`.
     - Ingen ser saldo, utbetalinger eller jobber i en annen husstand. Check-constraints for `job` og `job_repeats`.
@@ -708,7 +730,7 @@ Minimum før lansering:
 
 14. Godkjenning av lønn (`reward_approval.test.sql`, steg 10b):
     - Barn med lønn på egen enhet gir `pending`. Uten lønn, og alt en voksen registrerer (også for barnet), gir `approved`.
-    - Saldoen viser ventende med én gang, men utbetaling over godkjent saldo avvises, selv om noe venter.
+    - Saldoen viser ventende med én gang, og bare godkjent beløp er i `balance_nok`.
     - Barn, en annen husstand, ukjente id-er og anon kan ikke godkjenne eller avvise. Status kan ikke endres direkte.
     - Godkjenning endrer bare ventende rader og er trygg å gjenta. «Godkjenn alle» godkjenner flere.
     - Avvisning trekker beløpet. Siste avkrysning på en gjentakende oppgave gir fristen tilbake, og oppgaven er i «I dag» igjen. En engangsjobb blir ledig igjen. Finnes en nyere avkrysning, står fristen.
@@ -781,6 +803,14 @@ Tester for `compute_next_due` og månedsoppgaver med faste datoer: se §2.
     - Voksen endrer og arkiverer oppgaven. Barnet angrer egen avkrysning.
     - Grensen: 10 per dag, også med slettede og angrede. Nr. 11 avvises for begge typer. Oppgaver fra godkjente forslag teller ikke, og søsken har egen grense.
     - Innstillingen av og utløpt prøvetid avviser. En annen husstand (voksen og barn) ser verken oppgaver eller avkrysninger.
+
+23. Lønn i ettertid, ekstra lønn og forskudd (`extra_rewards_and_advances.test.sql`):
+    - Voksen endrer beløpet: opp, ned, til 0 (`reward_nok` null) og ned etter utbetaling (forskudd). Status, frist og oppgavens pris er uendret. Ugyldig beløp, ventende, avviste og voksnes avkrysninger avvises.
+    - Ekstra lønn med og uten tekst (trimmes, bare mellomrom gir null), 80 tegn går og 81 avvises, 0 og over 10 000 avvises, en voksen og et barn i en annen husstand kan ikke få. `given_on` og `created_by_member_id` settes.
+    - Angring av ekstra lønn trekker saldoen, også til forskudd. Utbetaling over saldoen gir forskudd, og ny lønn betaler det ned.
+    - «Ikke godkjent», «Ikke gjort» og «Endre hvem» på utbetalt lønn går og gir forskudd.
+    - Barnet kan verken endre beløp, gi eller slette ekstra lønn, eller skrive direkte, og ser bare egne tillegg. Familieskjermen, en annen husstand (voksen og barn) og anon ser ingenting og kan ikke skrive.
+    - Utløpt prøvetid stopper alle tre RPC-ene og `record_payout`, men ikke lesing. Tilleggene slettes med barnet og med husstanden.
 
 19. Rettigheter i `private` (`private_function_privileges.test.sql`):
     - `authenticated`, `anon` og `public` har ikke `execute` på hjelpefunksjonene som bare kalles fra `security definer`-RPC-er eller systemjobber.

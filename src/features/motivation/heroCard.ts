@@ -47,23 +47,25 @@ export type WeekCompletion = { reward_nok: number | null; status: 'pending' | 'a
 export type WeekStats = { count: number; earnedNok: number };
 
 /**
- * Antall gjort og tjent denne uka. Avviste regnes som ikke gjort. Tjent = godkjent + venter,
- * samme tall som saldoen viser (earnedLabel).
+ * Antall gjort og tjent denne uka. Avviste regnes som ikke gjort. Tjent = godkjent + venter +
+ * ekstra lønn. Utbetalinger og forskudd er aldri med: kortet viser det barnet tjente.
  */
-export function weekStats(rows: WeekCompletion[]): WeekStats {
+export function weekStats(rows: WeekCompletion[], extras: number[] = []): WeekStats {
   const counted = rows.filter((r) => r.status !== 'rejected');
+  const fromTasks = counted.reduce((sum, r) => sum + (r.reward_nok ?? 0), 0);
   return {
     count: counted.length,
-    earnedNok: counted.reduce((sum, r) => sum + (r.reward_nok ?? 0), 0),
+    earnedNok: fromTasks + extras.reduce((sum, n) => sum + n, 0),
   };
 }
 
 /** «Denne uka: 12 oppgaver gjort · 85 kr tjent». Uten lønn bare antall. Ingenting gjort: undefined. */
 export function weekText(stats: WeekStats): string | undefined {
-  if (stats.count === 0) return undefined;
-  const done = `${stats.count} ${stats.count === 1 ? 'oppgave' : 'oppgaver'} gjort`;
-  const earned = stats.earnedNok > 0 ? ` · ${formatKroner(stats.earnedNok)} tjent` : '';
-  return `Denne uka: ${done}${earned}`;
+  const done = stats.count > 0 ? `${stats.count} ${stats.count === 1 ? 'oppgave' : 'oppgaver'} gjort` : undefined;
+  const earned = stats.earnedNok > 0 ? `${formatKroner(stats.earnedNok)} tjent` : undefined;
+  if (!done && !earned) return undefined;
+  // Bare ekstra lønn denne uka: «Denne uka: 50 kr tjent».
+  return `Denne uka: ${[done, earned].filter(Boolean).join(' · ')}`;
 }
 
 /**

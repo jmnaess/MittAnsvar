@@ -81,9 +81,9 @@ const KNOWN: Record<string, string> = {
   invalid_date: 'Velg en senere dato, innen ett år fra i dag.',
   undo_postpone_expired: 'Oppgaven er endret siden, så utsettelsen kan ikke angres.',
   // Utbetaling og godkjenning
-  amount_exceeds_balance: 'Beløpet kan ikke være større enn det som er godkjent.',
   not_pending: 'Denne er allerede godkjent eller avvist.',
-  reward_already_paid: 'Beløpet er allerede betalt ut, så det kan ikke trekkes tilbake.',
+  reward_not_changeable: 'Lønnen på denne kan ikke endres.',
+  invalid_reason: 'Begrunnelsen kan være maks 80 tegn.',
   status_not_changeable: 'Statusen kan ikke endres. Last inn på nytt og prøv igjen.',
   // Forslag fra barn
   not_child: 'Bare barn kan legge inn egne oppgaver.',

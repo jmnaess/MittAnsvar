@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(37);
+select plan(38);
 
 -- ---------------------------------------------------------------------------
 -- Testhjelpere (samme som i change_completion_status.test.sql)
@@ -291,12 +291,14 @@ select is(tests.row_of('t7'), 'A2/8/approved/a001', 'jobben står uendret');
 -- ===========================================================================
 select lives_ok($$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 15)$$,
   'betaler ut hele saldoen til A1');
-select throws_ok($$select tests.remove('t4')$$, 'P0001', 'reward_already_paid',
-  'kan ikke fjerne et beløp som er betalt ut');
-select throws_ok($$select tests.move('t4', 'aaaaaaaa-0000-0000-0000-000000000001')$$,
-  'P0001', 'reward_already_paid', 'kan ikke flytte et utbetalt beløp til en voksen');
-select throws_ok($$select tests.move('t4', 'aaaaaaaa-0000-0000-0000-000000000003')$$,
-  'P0001', 'reward_already_paid', 'kan ikke flytte et utbetalt beløp til et annet barn');
+-- Forskudd er lov: et utbetalt beløp kan flyttes og fjernes (appen spør først).
+select lives_ok($$select tests.move('t4', 'aaaaaaaa-0000-0000-0000-000000000003')$$,
+  'et utbetalt beløp kan flyttes til et annet barn');
+select is((select balance_nok from public.member_balances where member_id = 'aaaaaaaa-0000-0000-0000-000000000002'), -5,
+  'A1 får forskudd på 5 kr');
+select lives_ok($$select tests.move('t4', 'aaaaaaaa-0000-0000-0000-000000000001')$$,
+  'kan flyttes videre til en voksen');
+select lives_ok($$select tests.remove('t4')$$, 'kan fjernes etterpå');
 select lives_ok($$select tests.remove('t6')$$,
   'en ventende avkrysning kan fjernes selv om saldoen er 0');
 select tests.logout();

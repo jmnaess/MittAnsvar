@@ -90,7 +90,7 @@ export default function ChildTodayScreen() {
   // Uka og dagens setning går etter husstandens dato, som completed_on i databasen.
   const homeToday = householdToday(household!.timezone);
   const { monday, sunday } = weekRange(homeToday);
-  const { data: weekRows = [], refetch: refetchWeek } = useWeekCompletions(householdId, me?.id, monday, sunday);
+  const { data: week, refetch: refetchWeek } = useWeekCompletions(householdId, me?.id, monday, sunday);
   // Dra for å oppdatere, fokus og midnatt: også «Kommende» og «Gjort siste 3 dager».
   const hasMe = !!me;
   const refetch = useCallback(
@@ -218,7 +218,7 @@ export default function ChildTodayScreen() {
               member={me}
               open={mine.length}
               done={mineDone.length}
-              week={weekText(weekStats(weekRows))}
+              week={weekText(weekStats(week?.completions ?? [], week?.extras ?? []))}
               phrase={phraseForDate(homeToday)}
               young={isYoungChild(me, Number(homeToday.slice(0, 4)))}
               hour={new Date().getHours()}

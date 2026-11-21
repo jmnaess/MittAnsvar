@@ -53,7 +53,9 @@ tilgjengelighetstekster. Se [VISJON.md](VISJON.md) for tonen.
 | Felles | Hvem som helst i husstanden kan gjøre den | «alle» |
 | Alle barna | En ekstrajobb alle barna kan ta | |
 | Lønn | Beløpet i hele kroner på en oppgave eller ekstrajobb. Bare barn får lønn | «belønning», «poeng» |
-| Opptjent / saldo | Det et barn har tjent minus utbetalinger | |
+| Opptjent / saldo | Det et barn har tjent (lønn og ekstra lønn) minus utbetalinger | |
+| Ekstra lønn | Lønn en voksen gir uten en oppgave, med en valgfri begrunnelse («Ekstra for at du hjalp Thelma») | «bonus», «tillegg» i appen |
+| Forskudd | Når barnet har fått mer enn det har tjent. Vises som «Forskudd: 30 kr», aldri som minus | «gjeld», «minus» |
 | Utbetaling | Når en voksen registrerer at pengene er gitt | |
 | Til godkjenning | Barnets avkrysninger med lønn som venter på en voksen | |
 | Forslag | Noe et barn har gjort eller vil gjøre og vil ha lønn for, og sender til en voksen («Spør om lønn»). Status: «Venter», «Godkjent», «Ikke denne gangen». Uten lønn er det ikke et forslag: barnet legger det inn selv | «søknad», «ønske» |
@@ -390,6 +392,29 @@ et beløp, ellers «Godkjenn uten lønn». Banneret hentes på nytt ved fokus, v
 barn), med beskrivelsen «Uten lønn legges det inn med en gang. Med lønn godkjenner en voksen.». Av = ingen «Legg inn».
 Familieskjermen viser ingenting om forslag.
 
+### Barnets lønn (saldo, ekstra lønn og forskudd)
+
+Barnets side hos de voksne (`app/(app)/earnings/[id].tsx`, fra «Husstand») og «Min lønn» på barnets enhet
+(`(child)/my-earnings.tsx`). Teksten regnes i `features/rewards/format.ts`.
+
+- **Saldo eller forskudd** øverst i barnets `tint`: «35 kr (10 kr venter)», eller «Forskudd: 30 kr» når barnet har
+  fått mer enn det har tjent. Aldri minus. Under forskuddet: «Det Leah tjener, går først til å betale ned
+  forskuddet.» (på barnets enhet «Det du tjener …»). Husstand-raden: «Opptjent: 35 kr» / «Forskudd: 30 kr».
+  Kortoverskriftene i «I dag» («35 kr tjent») viser ingenting ved forskudd. Familieskjermen viser ingen summer.
+- **Knappene** (bare voksne): «Legg til ekstra lønn» (sekundær) over «Registrer utbetaling» (alltid synlig).
+- **«Legg til ekstra lønn»** (`ExtraRewardSheet`): «Beløp (kr)» (1–10 000, påkrevd) og «Hvorfor? (frivillig)»
+  (maks 80 tegn, plassholder «Ekstra for at du hjalp til»). Går rett inn i saldoen. I historikken: tittel =
+  teksten, eller «Ekstra lønn», og «+50 kr» til høyre. Skjermleser: «+50 kr · Ekstra for at du hjalp Thelma».
+  Trykk (voksne) gir «Fjerne ekstra lønn?».
+- **«Endre lønn»** (`RewardEditSheet`): trykk på en godkjent rad med lønn. Feltet er forhåndsutfylt, 0 = ingen lønn
+  (raden forsvinner fra historikken). «Lagre», «Ikke godkjent» og «Avbryt». Avvist rad: «Endre til godkjent?».
+- **«Registrer utbetaling»** tillater 1–10 000 kr. Over godkjent saldo sier bekreftelsen «Dette gir Leah et forskudd
+  på 30 kr.».
+- **Bekreftelse før forskudd:** når lønn som er betalt ut, trekkes («Ikke godkjent», «Ikke gjort» og «Endre hvem» i
+  «I dag», lavere beløp, fjernet ekstra lønn): «Lønnen for denne er betalt ut. Dette gir Leah et forskudd på 30 kr.»
+  (har barnet forskudd fra før: «Forskuddet blir 30 kr.»), med «Avbryt» og «Fortsett». Regnes fra godkjent saldo
+  (`advanceWarningFor`). Alert-en vises mens arket er åpent, før det lukkes.
+
 ### Barnets kort øverst i «I dag»
 
 `features/motivation/components/ChildHeroCard.tsx`, over «Mine oppgaver i dag», bare på barnets egen enhet
@@ -402,7 +427,8 @@ Familieskjermen viser ingenting om forslag.
   konfetti: `CelebrationOverlay` feirer allerede. Ingen oppgaver: «Ingen oppgaver i dag.» «Ser du noe du kan
   hjelpe til med?» og «Legg inn» når innstillingen er på.
 - «Denne uka: 12 oppgaver gjort · 85 kr tjent» (mandag–søndag i husstandens tidssone, `householdToday`). Tjent =
-  godkjent + venter, som saldoen. Uten lønn bare antall, ingenting gjort: ingen linje. Leses fra barnets egne
+  godkjent + venter + ekstra lønn gitt denne uka. Utbetalinger og forskudd er aldri med: kortet viser det barnet
+  tjente. Bare ekstra lønn: «Denne uka: 50 kr tjent». Uten lønn bare antall, ingenting: ingen linje. Leses fra barnets egne
   rader i `task_completions` (RLS), ingen egen tabell.
 - Dagens setning (`features/motivation/phrases.ts`): fast per dag, i rekkefølge. Hardt mellomrom før siste ord
   (`noWidow`), så det aldri står ett ord alene. Den lengste bryter etter kommaet på en iPhone SE.

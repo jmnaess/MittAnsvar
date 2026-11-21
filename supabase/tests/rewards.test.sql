@@ -196,12 +196,13 @@ select is((select count(*)::int from public.today_tasks where id = '11111111-000
 -- ===========================================================================
 select is((select earned_nok from public.member_balances where member_id = 'aaaaaaaa-0000-0000-0000-000000000002'), 35,
   'opptjent er summen av beløpene på avkrysningene');
+-- Over saldoen er lov (forskudd), se extra_rewards_and_advances.test.sql. Grensen er 1–10 000.
 select throws_ok(
-  $$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 36)$$,
-  'P0001', 'amount_exceeds_balance', 'utbetaling over saldoen avvises');
+  $$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 10001)$$,
+  'P0001', 'invalid_amount', 'utbetaling over 10 000 kr avvises');
 select throws_ok(
   $$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 0)$$,
-  'P0001', 'amount_exceeds_balance', 'utbetaling på 0 kr avvises');
+  'P0001', 'invalid_amount', 'utbetaling på 0 kr avvises');
 select throws_ok(
   $$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000001', 5)$$,
   'P0001', 'invalid_member', 'utbetaling til en voksen avvises');

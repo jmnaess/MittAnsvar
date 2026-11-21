@@ -14,7 +14,7 @@ import {
 } from '../../../src/features/household/hooks';
 import { inviteShareMessage } from '../../../src/features/household/inviteCode';
 import { useBalances } from '../../../src/features/rewards/hooks';
-import { formatBalance } from '../../../src/features/rewards/format';
+import { balanceLine } from '../../../src/features/rewards/format';
 import type { Household, Member } from '../../../src/features/household/types';
 import { toNorwegianMessage } from '../../../src/lib/errors';
 
@@ -33,7 +33,7 @@ export default function HouseholdScreen() {
   // Synlig hint om hvor navnet endres (bare voksne kan trykke). Barn: via «Opptjent».
   function memberExtra(member: Member): string[] | undefined {
     if (member.role === 'child') {
-      const earned = `Opptjent: ${formatBalance(balanceOf(member.id))}${member.auth_user_id ? ' · Egen enhet' : ''}`;
+      const earned = `${balanceLine(balanceOf(member.id))}${member.auth_user_id ? ' · Egen enhet' : ''}`;
       return isAdult ? [earned, 'Endre navn og profil'] : [earned];
     }
     return isAdult && member.id === me?.id ? ['Endre navn og profilbilde'] : undefined;

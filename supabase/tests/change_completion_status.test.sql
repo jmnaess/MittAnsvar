@@ -266,19 +266,17 @@ select is(tests.archived('aaaaaaaa-1111-0000-0000-000000000004'), '2026-01-01 12
   'tatt av en annen: oppgaven er urørt');
 
 -- ===========================================================================
--- 5. Utbetalt beløp kan ikke trekkes tilbake
+-- 5. Utbetalt beløp kan trekkes tilbake, og gir forskudd
 -- ===========================================================================
 select lives_ok($$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 60)$$,
   'utbetaling av 60');
 select is(tests.bal('aaaaaaaa-0000-0000-0000-000000000002'), '70/10/60/10', '10 igjen å betale ut');
-select throws_ok($$select tests.set('t4', 'rejected')$$, 'P0001', 'reward_already_paid',
-  '20 kr kan ikke trekkes når bare 10 er igjen');
-select is(tests.status_of('t4'), 'approved'::public.completion_status, 't4 er fortsatt godkjent');
-select lives_ok($$select tests.set('t3b', 'rejected')$$,
-  '10 kr kan trekkes når 10 er igjen (saldoen blir 0)');
-select is(tests.bal('aaaaaaaa-0000-0000-0000-000000000002'), '60/10/60/0', 'saldoen er 0');
-select throws_ok($$select tests.set('t7', 'rejected')$$, 'P0001', 'reward_already_paid',
-  'ingenting kan trekkes når saldoen er 0');
+select lives_ok($$select tests.set('t4', 'rejected')$$,
+  '20 kr kan trekkes når bare 10 er igjen');
+select is(tests.status_of('t4'), 'rejected'::public.completion_status, 't4 er ikke godkjent');
+select lives_ok($$select tests.set('t3b', 'rejected')$$, 'også t3b kan trekkes');
+select is(tests.bal('aaaaaaaa-0000-0000-0000-000000000002'), '40/10/60/-20', 'forskudd på 20 kr');
+select lives_ok($$select tests.set('t7', 'rejected')$$, 'kan trekkes også med forskudd');
 select tests.logout();
 
 -- ===========================================================================

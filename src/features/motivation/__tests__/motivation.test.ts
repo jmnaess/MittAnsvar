@@ -93,6 +93,15 @@ describe('denne uka', () => {
     expect(weekStats([])).toEqual({ count: 0, earnedNok: 0 });
   });
 
+  it('tar med ekstra lønn i tjent, men ikke i antallet', () => {
+    expect(weekStats([{ reward_nok: 20, status: 'approved' }], [50, 10])).toEqual({ count: 1, earnedNok: 80 });
+    expect(weekStats([], [50])).toEqual({ count: 0, earnedNok: 50 });
+  });
+
+  it('bare ekstra lønn denne uka: bare beløpet', () => {
+    expect(weekText({ count: 0, earnedNok: 50 })).toBe('Denne uka: 50 kr tjent');
+  });
+
   it('skriver uka, uten lønn bare antall', () => {
     expect(weekText({ count: 12, earnedNok: 85 })).toBe('Denne uka: 12 oppgaver gjort · 85 kr tjent');
     expect(weekText({ count: 12, earnedNok: 0 })).toBe('Denne uka: 12 oppgaver gjort');

@@ -128,7 +128,10 @@ select is((select count(*)::int from public.task_completions
 select is((select completed_by_member_id from public.task_completions where id = tests.cid('moved')),
   'aaaaaaaa-0000-0000-0000-000000000003'::uuid,
   'den flyttede avkrysningen tilhører fortsatt K');
-select is(private.member_balance('aaaaaaaa-0000-0000-0000-000000000003'), 12,
+select is((select coalesce(sum(reward_nok), 0)::int from public.task_completions
+           where completed_by_member_id = 'aaaaaaaa-0000-0000-0000-000000000003' and status = 'approved')
+         - (select coalesce(sum(amount_nok), 0)::int from public.payouts
+            where member_id = 'aaaaaaaa-0000-0000-0000-000000000003'), 12,
   'Ks saldo er uendret (10 + 7 − 5)');
 select is((select count(*)::int from public.task_completions where id = tests.cid('a1_own')), 0,
   'avkrysningen A1 gjorde selv er slettet med A1');

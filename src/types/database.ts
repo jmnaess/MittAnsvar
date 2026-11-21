@@ -23,7 +23,51 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "feedback_messages": {
+            "extra_rewards": {
+                  Row: {
+                    "amount_nok": number,"created_at": string,"created_by_member_id": string | null,"given_on": string,"household_id": string,"id": string,"member_id": string,"reason": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_nok": number,"created_at"?: string,"created_by_member_id"?: string | null,"given_on": string,"household_id": string,"id"?: string,"member_id": string,"reason"?: string | null
+                  }
+                  Update: {
+                    "amount_nok"?: number,"created_at"?: string,"created_by_member_id"?: string | null,"given_on"?: string,"household_id"?: string,"id"?: string,"member_id"?: string,"reason"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "extra_rewards_created_by_member_id_fkey"
+      columns: ["created_by_member_id"]
+isOneToOne: false
+      referencedRelation: "member_balances"
+      referencedColumns: ["member_id"]
+    },{
+      foreignKeyName: "extra_rewards_created_by_member_id_fkey"
+      columns: ["created_by_member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "extra_rewards_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "extra_rewards_member_fk"
+      columns: ["household_id","member_id"]
+isOneToOne: false
+      referencedRelation: "member_balances"
+      referencedColumns: ["household_id","member_id"]
+    },{
+      foreignKeyName: "extra_rewards_member_fk"
+      columns: ["household_id","member_id"]
+isOneToOne: false
+      referencedRelation: "members"
+      referencedColumns: ["household_id","id"]
+    }
+                  ]
+                },"feedback_messages": {
                   Row: {
                     "audience": Database["public"]['Enums']["audience"],"category": string | null,"id": string,"is_active": boolean,"kind": string,"text": string,"tone": string
                   }
@@ -458,7 +502,7 @@ isOneToOne: false
           Views: {
             "member_balances": {
                   Row: {
-                    "balance_nok": number | null,"earned_nok": number | null,"household_id": string,"member_id": string,"paid_nok": number | null,"pending_nok": number | null
+                    "balance_nok": number | null,"earned_nok": number | null,"extra_nok": number | null,"household_id": string,"member_id": string,"paid_nok": number | null,"pending_nok": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -617,6 +661,9 @@ isOneToOne: false
 "activate_templates":
 { Args: { "p_household_id": string,"p_member_ids"?: (string)[],"p_template_ids": (string)[] }; Returns: number
                            },
+"add_extra_reward":
+{ Args: { "p_amount_nok": number,"p_member_id": string,"p_reason"?: string }; Returns: string
+                           },
 "add_own_task":
 { Args: { "p_is_done": boolean,"p_title": string }; Returns: {
               "completion_id": string,"feedback_kind": string,"feedback_text": string,"next_due_on": string,"reward_nok": number,"status": Database["public"]['Enums']["completion_status"],"task_id": string
@@ -650,6 +697,9 @@ isOneToOne: false
                            },
 "decide_task_proposal":
 { Args: { "p_amount_nok"?: number,"p_approve": boolean,"p_proposal_id": string }; Returns: string
+                           },
+"delete_extra_reward":
+{ Args: { "p_extra_reward_id": string }; Returns: undefined
                            },
 "delete_my_account_data":
 { Args: Record<PropertyKey, never>; Returns: undefined
@@ -687,6 +737,9 @@ isOneToOne: false
                            },
 "remove_completion":
 { Args: { "p_completion_id": string }; Returns: undefined
+                           },
+"set_completion_reward":
+{ Args: { "p_amount_nok": number,"p_completion_id": string }; Returns: undefined
                            },
 "set_completion_status":
 { Args: { "p_completion_id": string,"p_status": Database["public"]['Enums']["completion_status"] }; Returns: undefined

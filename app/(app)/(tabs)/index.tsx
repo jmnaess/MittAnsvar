@@ -27,7 +27,7 @@ import { useInvalidatePreparedness } from '../../../src/features/preparedness/ho
 import { useInvalidateProposals } from '../../../src/features/proposals/hooks';
 import { useLeftFormToast } from '../../../src/features/tasks/components/LeftFormToast';
 import { PendingApprovalBanner } from '../../../src/features/rewards/components/PendingApprovalBanner';
-import { earnedLabel } from '../../../src/features/rewards/format';
+import { advanceWarningFor, earnedLabel } from '../../../src/features/rewards/format';
 import { useBalances, useInvalidateRewards } from '../../../src/features/rewards/hooks';
 import { useHowToSheet, useTaskHowTo } from '../../../src/features/tasks/components/HowToSheet';
 import { todayAddMenu } from '../../../src/features/tasks/addMenu';
@@ -373,13 +373,41 @@ export default function TodayScreen() {
     });
   }
 
-  // Trykk på sirkelen: bekreft først. «Ikke gjort» i valgene er allerede et bevisst valg, og en
-  // Alert mens Sheet lukkes kan forsvinne på iOS.
-  function confirmRemove(completion: TodayCompletion) {
-    Alert.alert('Merke som ikke gjort?', completion.title, [
+  // Godkjent lønn som allerede er betalt ut, kan trekkes, men det gir barnet et forskudd.
+  // Teksten til bekreftelsen, eller null når det ikke gir forskudd.
+  function advanceWarningOf(completion: TodayCompletion): string | null {
+    if (completion.status !== 'approved' || !completion.reward_nok) return null;
+    const doer = members.find((m) => m.id === completion.completed_by_member_id);
+    if (doer?.role !== 'child') return null;
+    const balance = balances.find((b) => b.member_id === doer.id);
+    return advanceWarningFor(balance, doer.display_name, completion.reward_nok);
+  }
+
+  // Spør først når det gir forskudd. Alert-en vises mens arket fortsatt er åpent: en Alert mens
+  // Sheet lukkes kan forsvinne på iOS.
+  function withAdvanceCheck(completion: TodayCompletion, run: () => void) {
+    const warning = advanceWarningOf(completion);
+    if (!warning) return run();
+    Alert.alert('Gi forskudd?', warning, [
       { text: 'Avbryt', style: 'cancel' },
-      { text: 'Ikke gjort', style: 'destructive', onPress: () => removeDone(completion) },
+      { text: 'Fortsett', onPress: run },
     ]);
+  }
+
+  // Trykk på sirkelen: bekreft først. «Ikke gjort» i valgene er allerede et bevisst valg, og
+  // spør bare når det gir forskudd.
+  function confirmRemove(completion: TodayCompletion) {
+    const warning = advanceWarningOf(completion);
+    Alert.alert('Merke som ikke gjort?', [completion.title, warning].filter(Boolean).join('\n\n'), [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: warning ? 'Fortsett' : 'Ikke gjort', style: 'destructive', onPress: () => removeDone(completion) },
+    ]);
+  }
+
+  // Valgt i «Endre hvem som gjorde det»: lønnen flyttes fra den som gjorde det.
+  function pickReassign(completion: TodayCompletion, member: Member) {
+    if (member.id === completion.completed_by_member_id) return setReassigning(null);
+    withAdvanceCheck(completion, () => reassignDone(completion, member));
   }
 
   // «Endre hvem som gjorde det»: flytter avkrysningen (og eventuell lønn) til en annen.
@@ -628,7 +656,7 @@ export default function TodayScreen() {
         meId={me?.id}
         confirmLabel="Lagre"
         onClose={() => setReassigning(null)}
-        onPick={(member) => reassigning && reassignDone(reassigning, member)}
+        onPick={(member) => reassigning && pickReassign(reassigning, member)}
       />
 
       <TaskRowMenu
@@ -643,7 +671,9 @@ export default function TodayScreen() {
           closeMenu();
           if (menuTask) pickDoer(menuTask);
         }}
-        onRemove={() => menu?.kind === 'done' && removeDone(menu.completion)}
+        onRemove={() => {
+          if (menu?.kind === 'done') withAdvanceCheck(menu.completion, () => removeDone(menu.completion));
+        }}
         onReassign={() => {
           closeMenu();
           if (menu?.kind === 'done') setReassigning(menu.completion);

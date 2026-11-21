@@ -2,12 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useInvalidateTasks } from '../tasks/hooks';
 import {
+  addExtraReward,
   approveCompletions,
+  deleteExtraReward,
   listBalances,
   listPendingCompletions,
   listRewardHistory,
   recordPayout,
   rejectCompletion,
+  setCompletionReward,
   setCompletionStatus,
   type MemberBalance,
 } from './api';
@@ -65,6 +68,30 @@ export function useRecordPayout(householdId: string) {
       recordPayout(memberId, amountNok),
     onSettled,
   });
+}
+
+/** Ny lønn på en godkjent avkrysning. Bare beløpet endres, så bare lønnen hentes på nytt. */
+export function useSetCompletionReward(householdId: string) {
+  const onSettled = useInvalidateRewards(householdId);
+  return useMutation({
+    mutationFn: ({ id, amountNok }: { id: string; amountNok: number }) =>
+      setCompletionReward(id, amountNok),
+    onSettled,
+  });
+}
+
+export function useAddExtraReward(householdId: string) {
+  const onSettled = useInvalidateRewards(householdId);
+  return useMutation({
+    mutationFn: ({ memberId, amountNok, reason }: { memberId: string; amountNok: number; reason: string | null }) =>
+      addExtraReward(memberId, amountNok, reason),
+    onSettled,
+  });
+}
+
+export function useDeleteExtraReward(householdId: string) {
+  const onSettled = useInvalidateRewards(householdId);
+  return useMutation({ mutationFn: deleteExtraReward, onSettled });
 }
 
 // ---------------------------------------------------------------------------

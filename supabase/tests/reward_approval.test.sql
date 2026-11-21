@@ -157,8 +157,9 @@ select tests.logout();
 select tests.login_as('00000000-0000-0000-0000-00000000a001');
 select is(tests.bal('aaaaaaaa-0000-0000-0000-000000000002'), '10/55/0/10',
   'den voksne ser samme saldo');
-select throws_ok($$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 11)$$,
-  'P0001', 'amount_exceeds_balance', 'utbetaling over godkjent saldo avvises, selv om noe venter');
+-- Over godkjent saldo er lov (forskudd), se extra_rewards_and_advances.test.sql.
+select throws_ok($$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 10001)$$,
+  'P0001', 'invalid_amount', 'utbetaling over 10 000 kr avvises');
 select lives_ok($$select public.record_payout('aaaaaaaa-0000-0000-0000-000000000002', 10)$$,
   'utbetaling av hele den godkjente saldoen går');
 select is(tests.bal('aaaaaaaa-0000-0000-0000-000000000002'), '10/55/10/0',
